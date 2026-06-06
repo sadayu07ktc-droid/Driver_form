@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>สั่งงานขนส่ง — SSB</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#4A7C3F;--green-d:#2d5a24;--green-l:#D6E8D0;--green-pale:#EEF7EB;
+  --brown:#8B7355;--brown-l:#C4AD8F;
+  --cream:#F5F0E8;--cream2:#EDE7D9;--cream3:#FDFAF5;
+  --text:#2C3E1F;--text-m:#5C6B4A;--text-l:#8B9E7A;
+  --border:rgba(74,124,63,.18);--red:#DC2626;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Sarabun',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;padding-bottom:32px}
+.hdr{background:linear-gradient(135deg,var(--green-d),var(--green));padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+.hdr-logo{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:22px}
+.hdr h1{font-size:17px;font-weight:600;color:#fff;margin:0}
+.hdr p{font-size:11px;color:var(--green-l);margin:2px 0 0}
+.body{padding:14px;max-width:480px;margin:0 auto}
+.user-card{border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.uc-g{background:var(--green-l);border:.5px solid var(--border)}
+.uc-b{background:var(--cream2);border:.5px solid rgba(139,115,85,.25)}
+.uc-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.av-g{background:var(--green)}.av-b{background:var(--brown)}.av-i{background:#6366F1}
+.uc-name{font-size:14px;font-weight:600;color:var(--text)}
+.uc-sub{font-size:11px;color:var(--text-m);margin-top:2px}
+.uc-badge{margin-left:auto;font-size:10px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;color:#fff;flex-shrink:0}
+.bg-g{background:var(--green)}.bg-b{background:var(--brown)}.bg-i{background:#6366F1}
+.hint{font-size:11px;padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:14px}
+.hw{background:#EFE9DC;border-left:3px solid var(--brown-l);color:var(--brown)}
+.hi{background:var(--green-pale);border-left:3px solid var(--green);color:var(--green-d)}
+.card{background:var(--cream3);border:.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;position:relative}
+.stitle{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--brown);display:flex;align-items:center;gap:6px;margin-bottom:12px}
+.fld{margin-bottom:12px}.fld:last-child{margin-bottom:0}
+.fld label{font-size:12px;color:var(--text-m);display:block;margin-bottom:5px}
+.req{color:var(--red)}
+.inp{width:100%;font-size:14px;font-family:'Sarabun',sans-serif;background:var(--cream);border:.5px solid var(--border);border-radius:9px;padding:10px 12px;color:var(--text);outline:none;transition:border-color .15s;-webkit-appearance:none}
+.inp:focus{border-color:var(--green)}
+.inp.ro{background:var(--cream2);color:var(--text-m)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{padding:7px 14px;border-radius:999px;border:.5px solid var(--border);font-size:12px;font-family:'Sarabun',sans-serif;cursor:pointer;color:var(--text-m);background:var(--cream);transition:all .15s;user-select:none}
+.chip.on{background:var(--green);border-color:var(--green);color:#fff;font-weight:600}
+.lkbadge{position:absolute;top:10px;right:12px;font-size:9px;color:var(--brown);background:var(--cream2);border:.5px solid var(--brown-l);border-radius:999px;padding:2px 8px;display:inline-flex;align-items:center;gap:3px}
+.locked{filter:blur(2.5px);opacity:.5;pointer-events:none;user-select:none}
+.stat-pill{display:inline-flex;align-items:center;gap:4px;background:#FFF8E8;border:.5px solid var(--brown-l);color:var(--brown);font-size:11px;padding:4px 10px;border-radius:8px}
+.btn-submit{width:100%;padding:14px;border-radius:12px;background:var(--green);color:#fff;font-size:16px;font-weight:600;font-family:'Sarabun',sans-serif;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-submit:active{opacity:.85}
+.btn-submit:disabled{opacity:.45;cursor:not-allowed}
+.note-txt{text-align:center;font-size:11px;color:var(--text-l);margin-top:10px}
+#overlay{display:none;position:fixed;inset:0;background:rgba(245,240,232,.88);z-index:100;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+#overlay.show{display:flex}
+.spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--green-l);border-top-color:var(--green);animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#overlay p{font-size:14px;color:var(--text-m)}
+#success{display:none;position:fixed;inset:0;background:var(--cream);z-index:200;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;gap:12px}
+#success.show{display:flex}
+.si{font-size:60px}
+#success h2{font-size:22px;font-weight:700;color:var(--green)}
+#success p{font-size:14px;color:var(--text-m);line-height:1.8}
+.btn-close{margin-top:10px;padding:12px 32px;border-radius:999px;background:var(--green);color:#fff;font-size:15px;font-family:'Sarabun',sans-serif;border:none;cursor:pointer}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div id="overlay"><div class="spinner"></div><p>กำลังส่งข้อมูล...</p></div>
+<div id="success">
+  <div class="si">✅</div>
+  <h2>ส่งคำขอสำเร็จ!</h2>
+  <p id="success-msg">ระบบได้รับออเดอร์แล้วครับ<br>Admin จะยืนยันเร็วๆ นี้</p>
+  <button class="btn-close" onclick="liff.closeWindow()">ปิดหน้าต่าง</button>
+</div>
+
+<div class="hdr">
+  <div class="hdr-logo">🌴</div>
+  <div><h1>แจ้งรับงานขนส่ง</h1><p>SSB Smart Supply</p></div>
+</div>
+
+<div class="body">
+  <div class="user-card uc-g" id="ucard">
+    <div class="uc-avatar av-g" id="uavatar">🌳</div>
+    <div><div class="uc-name" id="uname">กำลังโหลด...</div><div class="uc-sub" id="usub">—</div></div>
+    <span class="uc-badge bg-g" id="ubadge">—</span>
+  </div>
+  <div class="hint hw hide" id="h-ramp">🔒 ลานเท: กรอกได้เฉพาะ วันที่ · เวลา · กระบะ · หมายเหตุ</div>
+  <div class="hint hi hide" id="h-admin">⚙️ Admin: เลือกสวนได้จาก dropdown</div>
+
+  <!-- วันและเวลา -->
+  <div class="card">
+    <div class="stitle">📅 วันและเวลา</div>
+    <div class="row2">
+      <div class="fld" style="margin:0"><label>วันที่ <span class="req">*</span></label><input class="inp" type="date" id="inp-date"></div>
+      <div class="fld" style="margin:0"><label>เวลา <span class="req">*</span></label>
+        <select class="inp" id="inp-time">
+          <option value="">-- เลือก --</option>
+          <option>06:00</option><option>07:00</option><option>08:00</option><option>09:00</option>
+          <option>10:00</option><option>11:00</option><option>12:00</option><option>13:00</option>
+          <option>14:00</option><option>15:00</option><option>16:00</option><option>17:00</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- บิล/จุดรับ -->
+  <div class="card" id="card-bill">
+    <span class="lkbadge hide" id="lk-bill">🔒 ล็อก</span>
+    <div id="inner-bill">
+      <div class="stitle">📄 บิล / จุดรับ</div>
+      <div class="fld"><label>ชื่อสวน / เจ้าของ</label>
+        <select class="inp" id="inp-garden" onchange="onGardenChange()">
+          <option value="">-- เลือกสวน --</option>
+        </select>
+      </div>
+      <div class="fld"><label>ชื่อในบิล <span class="req">*</span></label>
+        <select class="inp" id="inp-bill"><option value="">-- เลือกชื่อ --</option></select>
+      </div>
+      <div class="fld" style="margin:0"><label>จุดรับ <span class="req">*</span></label>
+        <select class="inp" id="inp-pickup"><option value="">-- เลือกจุดรับ --</option></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- รายละเอียด -->
+  <div class="card" id="card-detail">
+    <span class="lkbadge hide" id="lk-detail">🔒 ล็อก</span>
+    <div id="inner-detail">
+      <div class="stitle">🚛 รายละเอียดงาน</div>
+      <div class="fld"><label>มาตรฐาน RSPO</label>
+        <div class="chips"><span class="chip on" onclick="pick(this)">ไม่มี</span><span class="chip" onclick="pick(this)">มี RSPO</span></div>
+      </div>
+      <div class="fld"><label>ทีมตัด</label>
+        <div class="chips"><span class="chip on" onclick="pickSel(this,false,'inp-team')">ไม่มี</span><span class="chip" onclick="pickSel(this,true,'inp-team')">มีทีมตัด</span></div>
+        <select class="inp hide" id="inp-team" style="margin-top:8px"><option value="">-- เลือกทีม --</option></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- กระบะ + หมายเหตุ -->
+  <div class="card">
+    <div class="stitle">🧺 กระบะ + หมายเหตุ</div>
+    <div class="fld"><label>จำนวนกระบะ <span class="req">*</span></label>
+      <div class="chips">
+        <span class="chip on" onclick="pickSel(this,false,'inp-bin')">1</span>
+        <span class="chip" onclick="pickSel(this,false,'inp-bin')">2</span>
+        <span class="chip" onclick="pickSel(this,true,'inp-bin')">ระบุ</span>
+      </div>
+      <select class="inp hide" id="inp-bin" style="margin-top:8px">
+        <option>3</option><option>4</option><option>5</option><option>6</option>
+        <option>7</option><option>8</option><option>9</option><option>10</option>
+      </select>
+    </div>
+    <div class="fld" style="margin:0"><label>หมายเหตุ</label>
+      <textarea class="inp" id="inp-note" rows="2" placeholder="เส้นทาง, จุดนัดพบ..."></textarea>
+    </div>
+  </div>
+
+  <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:13px;color:var(--text-m)">สถานะเริ่มต้น</span>
+    <span class="stat-pill">⏳ รอยืนยัน</span>
+  </div>
+
+  <button class="btn-submit" id="btn-sub" onclick="submitForm()">📤 ส่งคำขอรถ</button>
+  <p class="note-txt">🔒 ข้อมูลส่งตรงถึง Admin ทันที</p>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
+const LIFF_ID = '2010274217-BF41B8c2';
+let U = {}, gData = {}, userRole = '';
+
+async function init() {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+    const p = await liff.getProfile();
+    U.userId = p.userId;
+    document.getElementById('inp-date').min = new Date().toISOString().split('T')[0];
+    const [uRes, gRes] = await Promise.all([
+      fetch(`${GAS_URL}?action=getUser&userId=${p.userId}`).then(r=>r.json()),
+      fetch(`${GAS_URL}?action=getGardenData&userId=${p.userId}`).then(r=>r.json())
+    ]);
+    gData = gRes;
+    _fillTeams(gRes.teams||[]);
+    if(uRes.status==='ok') _setup(uRes, gRes);
+    else { document.getElementById('uname').textContent=p.displayName; }
+  } catch(e){ console.error(e); document.getElementById('uname').textContent='⚠️ โหลดไม่สำเร็จ'; }
+}
+
+const roleLabel = {Owner:'เจ้าของสวน',Team:'ทีมตัด',Ramp:'ลานเท',Driver:'คนขับ',Admin:'Admin'};
+const roleIcon  = {Owner:'🌳',Team:'🌿',Ramp:'🏭',Admin:'⚙️'};
+const roleCardCls= {Owner:'uc-g',Team:'uc-g',Ramp:'uc-b',Admin:'uc-g'};
+const roleAvCls  = {Owner:'av-g',Team:'av-g',Ramp:'av-b',Admin:'av-i'};
+const roleBgCls  = {Owner:'bg-g',Team:'bg-g',Ramp:'bg-b',Admin:'bg-i'};
+
+function _setup(u, g) {
+  U={...U,...u}; userRole=u.role;
+  document.getElementById('ucard').className   = 'user-card '+(roleCardCls[u.role]||'uc-g');
+  document.getElementById('uavatar').className = 'uc-avatar '+(roleAvCls[u.role]||'av-g');
+  document.getElementById('uavatar').textContent = roleIcon[u.role]||'👤';
+  document.getElementById('ubadge').className  = 'uc-badge '+(roleBgCls[u.role]||'bg-g');
+  document.getElementById('ubadge').textContent= roleLabel[u.role]||u.role;
+
+  if(u.role==='Owner'){
+    document.getElementById('uname').textContent=u.gardenName;
+    document.getElementById('usub').textContent=`${u.phone} · ${u.gardenId}`;
+    const sel=document.getElementById('inp-garden');
+    sel.innerHTML=`<option value="${u.gardenId}" selected>${u.gardenName}</option>`;
+    sel.classList.add('ro'); U.gardenId=u.gardenId; U.gardenName=u.gardenName;
+    _fillBills(u.billNames||[]);
+    // Pickup: เพิ่ม dropdown จาก DATA (สามารถดึงจาก gardenData ได้)
+  } else if(u.role==='Ramp'){
+    document.getElementById('uname').textContent=u.name;
+    document.getElementById('usub').textContent=u.phone;
+    document.getElementById('h-ramp').classList.remove('hide');
+    document.getElementById('lk-bill').classList.remove('hide');
+    document.getElementById('inner-bill').classList.add('locked');
+    document.getElementById('lk-detail').classList.remove('hide');
+    document.getElementById('inner-detail').classList.add('locked');
+  } else {
+    document.getElementById('uname').textContent=u.name||u.gardenName;
+    document.getElementById('usub').textContent=u.phone;
+    if(u.role==='Admin') document.getElementById('h-admin').classList.remove('hide');
+    _fillGardens(g.gardens||[]);
+  }
+}
+
+function _fillGardens(gs){
+  const sel=document.getElementById('inp-garden');
+  sel.innerHTML='<option value="">-- เลือกสวน --</option>';
+  gs.forEach(g=>{const o=document.createElement('option');o.value=g.id;o.textContent=g.name;o.dataset.bills=JSON.stringify(g.billNames||[]);sel.appendChild(o);});
+}
+function onGardenChange(){
+  const o=document.getElementById('inp-garden');
+  const opt=o.options[o.selectedIndex];
+  U.gardenId=opt.value; U.gardenName=opt.textContent;
+  _fillBills(JSON.parse(opt.dataset.bills||'[]'));
+}
+function _fillBills(bills){
+  const sel=document.getElementById('inp-bill');
+  sel.innerHTML='<option value="">-- เลือกชื่อ --</option>';
+  bills.forEach(b=>{const o=document.createElement('option');o.value=o.textContent=b;sel.appendChild(o);});
+}
+function _fillTeams(ts){
+  const sel=document.getElementById('inp-team');
+  ts.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.name;sel.appendChild(o);});
+}
+
+function pick(el){el.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
+function pickSel(el,show,id){pick(el);document.getElementById(id).classList.toggle('hide',!show);}
+
+async function submitForm(){
+  const date=document.getElementById('inp-date').value;
+  const time=document.getElementById('inp-time').value;
+  const bill=document.getElementById('inp-bill').value;
+  const pickup=document.getElementById('inp-pickup').value;
+  const binEl=document.getElementById('inp-bin');
+  const teamEl=document.getElementById('inp-team');
+  const rspoEl=document.querySelector('.chips .chip.on');
+  if(!date){alert('กรุณาเลือกวันที่ครับ');return;}
+  if(!time){alert('กรุณาเลือกเวลาครับ');return;}
+
+  const chips=document.querySelectorAll('#card-detail .chip.on');
+  const rspo=document.querySelector('#inner-detail .chips:first-of-type .chip.on')?.textContent||'ไม่มี';
+  const binChip=document.querySelector('.card:nth-of-type(4) .chip.on')?.textContent;
+  const binCount=(!binEl.classList.contains('hide'))?parseInt(binEl.value)||3:parseInt(binChip)||1;
+
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('btn-sub').disabled=true;
+  try{
+    const payload={action:'submitOrder',userId:U.userId,gardenId:U.gardenId||'',gardenName:U.gardenName||'',
+      date,time,billName:bill,pickupPoint:pickup,rspo,
+      teamId:(!teamEl.classList.contains('hide'))?teamEl.value:'ไม่มี',
+      binCount,note:document.getElementById('inp-note').value};
+    const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload)});
+    const r=await res.json();
+    document.getElementById('overlay').classList.remove('show');
+    if(r.success){
+      document.getElementById('success-msg').innerHTML=`รับออเดอร์ <b>${r.orderId}</b> แล้วครับ<br>Admin จะยืนยันเร็วๆ นี้`;
+      document.getElementById('success').classList.add('show');
+    } else {alert('❌ '+(r.error||'เกิดข้อผิดพลาด'));document.getElementById('btn-sub').disabled=false;}
+  }catch(e){document.getElementById('overlay').classList.remove('show');alert('❌ เชื่อมต่อไม่ได้');document.getElementById('btn-sub').disabled=false;}
+}
+init();
+</script>
+</body>
+</html>
