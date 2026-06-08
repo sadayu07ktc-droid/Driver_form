@@ -275,27 +275,56 @@ function _renderActionButtons(status) {
 async function doStart() {
   if (!confirm('ยืนยันเริ่มงาน / ออกเดินทาง?')) return;
   _setLoading(true);
-  const r = await fetch(GAS_URL, { 
-    method:'POST', 
-    body: JSON.stringify({ 
-      action:'driverStartJob', 
-      orderId: activeOrder['Order ID'], 
-      userId: U.userId 
-    }) 
-  }).then(x=>x.json());
-  _setLoading(false);
-  
-  if (r.success) { 
-    alert('✅ บันทึกเวลาเริ่มงานแล้วครับ');
-    // ✅ แทน location.reload()
-    activeOrder['สถานะ'] = 'เริ่มงานแล้ว';
-    _renderActionButtons(activeOrder['สถานะ']);
-    document.getElementById('ob-status').textContent = '⏳ เริ่มงานแล้ว';
-  } else {
-    alert('❌ ' + (r.error||'เกิดข้อผิดพลาด'));
+  try {
+    const r = await fetch(GAS_URL, { 
+      method: 'POST', 
+      body: JSON.stringify({ 
+        action: 'driverStartJob', 
+        orderId: activeOrder['Order ID'], 
+        userId: U.userId 
+      }) 
+    }).then(x => x.json());
+    
+    _setLoading(false);
+    if (r.success) { 
+      activeOrder['สถานะ'] = 'เริ่มงานแล้ว';
+      _renderOrder(activeOrder); // ✅ render ทั้งหมดใหม่แทน
+      alert('✅ บันทึกเวลาเริ่มงานแล้วครับ');
+    } else {
+      alert('❌ ' + (r.error || 'เกิดข้อผิดพลาด'));
+    }
+  } catch(e) {
+    _setLoading(false);
+    alert('❌ เชื่อมต่อไม่ได้');
   }
 }
 
+async function doArrive() {
+  if (!confirm('ยืนยันถึงหน้างานแล้ว?')) return;
+  _setLoading(true);
+  try {
+    const r = await fetch(GAS_URL, { 
+      method: 'POST', 
+      body: JSON.stringify({ 
+        action: 'driverArrived', 
+        orderId: activeOrder['Order ID'], 
+        userId: U.userId 
+      }) 
+    }).then(x => x.json());
+    
+    _setLoading(false);
+    if (r.success) { 
+      activeOrder['สถานะ'] = 'ถึงลูกค้า';
+      _renderOrder(activeOrder); // ✅ render ทั้งหมดใหม่แทน
+      alert('✅ บันทึกแล้วครับ');
+    } else {
+      alert('❌ ' + (r.error || 'เกิดข้อผิดพลาด'));
+    }
+  } catch(e) {
+    _setLoading(false);
+    alert('❌ เชื่อมต่อไม่ได้');
+  }
+}
 async function doArrive() {
   if (!confirm('ยืนยันถึงหน้างานแล้ว?')) return;
   _setLoading(true);
