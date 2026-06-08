@@ -271,22 +271,53 @@ function _renderActionButtons(status) {
   }
 }
 
+// แทนที่ location.reload() ทุกที่ด้วย
 async function doStart() {
   if (!confirm('ยืนยันเริ่มงาน / ออกเดินทาง?')) return;
   _setLoading(true);
-  const r = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({ action:'driverStartJob', orderId: activeOrder['Order ID'], userId: U.userId }) }).then(x=>x.json());
+  const r = await fetch(GAS_URL, { 
+    method:'POST', 
+    body: JSON.stringify({ 
+      action:'driverStartJob', 
+      orderId: activeOrder['Order ID'], 
+      userId: U.userId 
+    }) 
+  }).then(x=>x.json());
   _setLoading(false);
-  if (r.success) { alert('✅ บันทึกเวลาเริ่มงานแล้วครับ'); location.reload(); }
-  else alert('❌ ' + (r.error||'เกิดข้อผิดพลาด'));
+  
+  if (r.success) { 
+    alert('✅ บันทึกเวลาเริ่มงานแล้วครับ');
+    // ✅ แทน location.reload()
+    activeOrder['สถานะ'] = 'เริ่มงานแล้ว';
+    _renderActionButtons(activeOrder['สถานะ']);
+    document.getElementById('ob-status').textContent = '⏳ เริ่มงานแล้ว';
+  } else {
+    alert('❌ ' + (r.error||'เกิดข้อผิดพลาด'));
+  }
 }
 
 async function doArrive() {
   if (!confirm('ยืนยันถึงหน้างานแล้ว?')) return;
   _setLoading(true);
-  const r = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({ action:'driverArrived', orderId: activeOrder['Order ID'], userId: U.userId }) }).then(x=>x.json());
+  const r = await fetch(GAS_URL, { 
+    method:'POST', 
+    body: JSON.stringify({ 
+      action:'driverArrived', 
+      orderId: activeOrder['Order ID'], 
+      userId: U.userId 
+    }) 
+  }).then(x=>x.json());
   _setLoading(false);
-  if (r.success) { alert('✅ บันทึกแล้วครับ'); location.reload(); }
-  else alert('❌ ' + (r.error||'เกิดข้อผิดพลาด'));
+  
+  if (r.success) { 
+    alert('✅ บันทึกแล้วครับ');
+    // ✅ แทน location.reload()
+    activeOrder['สถานะ'] = 'ถึงลูกค้า';
+    _renderActionButtons(activeOrder['สถานะ']);
+    document.getElementById('ob-status').textContent = '⏳ ถึงลูกค้า';
+  } else {
+    alert('❌ ' + (r.error||'เกิดข้อผิดพลาด'));
+  }
 }
 
 function calcNet() {
@@ -356,6 +387,13 @@ function requestCancel() {
 
 function _setLoading(on) {
   document.getElementById('overlay').classList.toggle('show', on);
+  
+  // ✅ ป้องกัน loading ค้างเกิน 15 วินาที
+  if (on) {
+    setTimeout(() => {
+      document.getElementById('overlay').classList.remove('show');
+    }, 15000);
+  }
 }
 
 init();
