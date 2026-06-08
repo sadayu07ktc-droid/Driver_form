@@ -92,9 +92,41 @@ body{font-family:'Sarabun',sans-serif;background:var(--gray);color:var(--text);m
 /* Overlay + success */
 #overlay{display:none;position:fixed;inset:0;background:rgba(30,27,75,.6);z-index:100;flex-direction:column;align-items:center;justify-content:center;gap:12px}
 #overlay.show{display:flex}
-.spinner{width:40px;height:40px;border-radius:50%;border:4px solid rgba(255,255,255,.2);border-top-color:#fff;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-#overlay p{font-size:14px;color:#fff}
+.truck-anim {
+  font-size: 55px; 
+  display: inline-block;
+  margin-bottom: -5px;
+  position: relative;
+  z-index: 2;
+  animation: bounceTruck 0.3s infinite alternate; 
+}
+.road-line {
+  width: 70px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.5); /* สีเส้นถนนแบบโปร่งแสงให้เข้ากับพื้นหลังเข้ม */
+  border-radius: 4px;
+  margin-bottom: 12px;
+  animation: moveRoad 0.4s linear infinite;
+}
+#overlay p { /* ใช้ Selector เดิมของหน้าเว็บคุณ */
+  font-size: 14px;
+  color: #fff;
+  font-weight: 500;
+  animation: pulseText 1.5s infinite; 
+}
+
+@keyframes bounceTruck {
+  0% { transform: translateY(0px) rotate(0deg); }
+  100% { transform: translateY(-5px) rotate(-3deg); }
+}
+@keyframes moveRoad {
+  0% { transform: translateX(10px); opacity: 1; }
+  100% { transform: translateX(-20px); opacity: 0; }
+}
+@keyframes pulseText {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
 #success{display:none;position:fixed;inset:0;background:linear-gradient(135deg,var(--purple-d),var(--purple),var(--pink));z-index:200;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;gap:14px;color:#fff}
 #success.show{display:flex}
 #success .si{font-size:72px}
@@ -105,7 +137,12 @@ body{font-family:'Sarabun',sans-serif;background:var(--gray);color:var(--text);m
 </style>
 </head>
 <body>
-<div id="overlay"><div class="spinner"></div><p>กำลังบันทึก...</p></div>
+<div id="overlay">
+  <div class="truck-anim">🚛</div>
+  <div class="road-line"></div>
+  <p class="loading-text">กำลังวิ่งไปบันทึก...</p>
+</div>
+
 <div id="success">
   <div class="si">🎉</div>
   <h2>บันทึกสำเร็จ!</h2>
