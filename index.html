@@ -276,23 +276,26 @@ async function doStart() {
   if (!confirm('ยืนยันเริ่มงาน / ออกเดินทาง?')) return;
   _setLoading(true);
   try {
-    const res = await fetch(GAS_URL, { 
+    const r = await fetch(GAS_URL, { 
       method: 'POST', 
       body: JSON.stringify({ 
         action: 'driverStartJob', 
         orderId: activeOrder['Order ID'], 
         userId: U.userId 
       }) 
-    });
-    const text = await res.text();
+    }).then(x => x.json());
+    
     _setLoading(false);
-    
-    // ✅ alert ดูว่า GAS ส่งอะไรกลับมา
-    alert('GAS ตอบว่า: ' + text);
-    
+    if (r.success) { 
+      activeOrder['สถานะ'] = 'เริ่มงานแล้ว';
+      _renderOrder(activeOrder);
+      alert('✅ บันทึกเวลาเริ่มงานแล้วครับ');
+    } else {
+      alert('❌ ' + (r.error || 'เกิดข้อผิดพลาด'));
+    }
   } catch(e) {
     _setLoading(false);
-    alert('❌ error: ' + e.message);
+    alert('❌ เชื่อมต่อไม่ได้');
   }
 }
 
