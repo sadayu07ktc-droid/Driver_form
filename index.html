@@ -16,9 +16,10 @@
   --text:#1E1B4B;--text-m:#6B6A85;--text-l:#A8A6B8;
   --border:rgba(124,58,237,.12);
   --red:#DC2626;
+  --blue:#3B82F6;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'Sarabun',sans-serif;background:var(--gray);color:var(--text);min-height:100vh;padding-bottom:40px}
+body{font-family:'Sarabun',sans-serif;background:var(--gray);color:var(--text);min-height:100vh;padding-bottom:150px} /* เพิ่ม padding-bottom กันคีย์บอร์ดบัง */
 
 /* Header gradient */
 .hdr{background:linear-gradient(135deg,var(--purple-d) 0%,var(--purple) 55%,var(--pink) 100%);padding:20px 18px 28px;text-align:center;color:#fff;position:relative;overflow:hidden}
@@ -67,9 +68,12 @@ body{font-family:'Sarabun',sans-serif;background:var(--gray);color:var(--text);m
 .input-field { width: 100%; font-size: 15px; font-family: 'Sarabun', sans-serif; background: var(--gray2); border: 1.5px solid transparent; border-radius: 10px; padding: 12px; color: var(--text); outline: none; transition: all 0.2s; }
 .input-field:focus { border-color: var(--purple); background: #fff; box-shadow: 0 0 0 3px var(--purple-l); }
 .input-field.error { border-color: var(--red); background: #FEF2F2; }
+.file-input { width: 100%; font-size: 12px; background: #fff; border: 1px dashed var(--purple); border-radius: 10px; padding: 10px; cursor: pointer; color: var(--purple); }
 
 .section-divider { font-size: 12px; font-weight: 700; color: var(--purple); margin: 20px 0 12px; display: flex; align-items: center; gap: 8px; }
 .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--purple-l); }
+.section-divider.blue { color: var(--blue); }
+.section-divider.blue::after { background: #DBEAFE; }
 
 /* Chip Select */
 .chip-group { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -135,6 +139,15 @@ body{font-family:'Sarabun',sans-serif;background:var(--gray);color:var(--text);m
   <div class="ls-text"><h3 id="drv-name">กำลังโหลด...</h3><p>เชื่อมต่อระบบ LINE สำเร็จ · <span id="drv-plate">—</span></p></div>
 </div>
 
+<!-- 🛠️ ทดสอบสลับประเภทงาน (ลบออกเมื่อใช้งานจริง) -->
+<div style="background: #fff; padding: 10px; margin: 12px 16px -6px; border-radius: 10px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; border: 1px dashed var(--purple);">
+  <strong>🛠️ (สำหรับทดสอบ) ประเภทงาน:</strong>
+  <select id="mockJobType" onchange="switchJobType(this.value)" style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-family:'Sarabun'; outline:none;">
+    <option value="palm">🌴 งานปาล์ม</option>
+    <option value="other" selected>📦 งานอื่นๆ (แวะลาน)</option>
+  </select>
+</div>
+
 <div class="body">
 
   <!-- Order info -->
@@ -144,7 +157,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--gray);color:var(--text);m
       <span style="background:rgba(124,58,237,.1);color:var(--purple);padding:2px 8px;border-radius:6px;font-size:11px;" id="ob-status-badge">รอรับงาน</span>
     </div>
     <div class="ob-grid" id="ob-grid">
-      <div class="ob-item"><span>สวน</span><span id="ob-garden">—</span></div>
+      <div class="ob-item"><span>ประเภทงาน</span><span id="ob-type" style="color:var(--pink);">—</span></div>
       <div class="ob-item"><span>เวลาที่กำหนด</span><span id="ob-time">—</span></div>
       <div class="ob-item" style="grid-column:1/-1"><span>จุดรับ</span><span id="ob-pickup">—</span></div>
     </div>
@@ -170,19 +183,8 @@ body{font-family:'Sarabun',sans-serif;background:var(--gray);color:var(--text);m
   <!-- ================= STEP 1 : เริ่มงาน ================= -->
   <div class="card hide" id="card-step1">
     <div class="card-title"><i class="fa-solid fa-truck-fast icon"></i> ข้อมูลก่อนออกเดินทาง</div>
+    <p style="font-size:12px; color:var(--text-m); margin-bottom:16px;">* ไม่ต้องชั่งน้ำหนักรถขาออก</p>
     
-    <div class="section-divider"><i class="fa-solid fa-weight-scale"></i> น้ำหนักรถต้นทาง (กก.)</div>
-    <div class="form-grid">
-      <div class="input-group">
-        <label class="input-label">รถเบาต้นทาง</label>
-        <input type="number" id="s1_weight_empty" class="input-field req-s1" placeholder="ระบุน้ำหนัก">
-      </div>
-      <div class="input-group">
-        <label class="input-label">รถหนักต้นทาง</label>
-        <input type="number" id="s1_weight_full" class="input-field req-s1" placeholder="ระบุน้ำหนัก">
-      </div>
-    </div>
-
     <div class="section-divider"><i class="fa-solid fa-gauge-high"></i> เลขไมล์ก่อนเดินทาง</div>
     <div class="form-grid">
       <div class="input-group">
@@ -223,15 +225,55 @@ body{font-family:'Sarabun',sans-serif;background:var(--gray);color:var(--text);m
   <div class="card hide" id="card-step3">
     <div class="card-title"><i class="fa-solid fa-flag-checkered icon"></i> สรุปข้อมูลจบงาน (ถึงโรงงาน)</div>
     
-    <div class="section-divider"><i class="fa-solid fa-weight-scale"></i> น้ำหนักรถปลายทาง (กก.)</div>
-    <div class="form-grid">
-      <div class="input-group">
-        <label class="input-label">รถเบาปลายทาง</label>
-        <input type="number" id="s3_weight_empty" class="input-field req-s3" placeholder="ระบุน้ำหนัก">
+    <!-- 🟢 โซนน้ำหนัก: กรณีงานปาล์ม (ใบเดียว) -->
+    <div id="weight_palm_block" class="hide">
+      <div class="section-divider"><i class="fa-solid fa-weight-scale"></i> ชั่งน้ำหนักรถ (งานปาล์ม)</div>
+      <div class="form-grid">
+        <div class="input-group">
+          <label class="input-label">รถเบา (กก.)</label>
+          <input type="number" id="s3_palm_empty" class="input-field req-s3-palm" placeholder="รถเบา">
+        </div>
+        <div class="input-group">
+          <label class="input-label">รถหนัก (กก.)</label>
+          <input type="number" id="s3_palm_full" class="input-field req-s3-palm" placeholder="รถหนัก">
+        </div>
       </div>
       <div class="input-group">
-        <label class="input-label">รถหนักปลายทาง</label>
-        <input type="number" id="s3_weight_full" class="input-field req-s3" placeholder="ระบุน้ำหนัก">
+        <label class="input-label">รูปถ่ายใบชั่ง</label>
+        <input type="file" accept="image/*" capture="environment" class="file-input req-s3-palm">
+      </div>
+    </div>
+
+    <!-- 🔵 โซนน้ำหนัก: กรณีงานอื่นๆ แวะลาน (2 ใบ) -->
+    <div id="weight_other_block" class="hide">
+      <div class="section-divider blue"><i class="fa-solid fa-file-invoice"></i> ใบชั่งที่ 1 : ของลูกค้า</div>
+      <div class="form-grid">
+        <div class="input-group">
+          <label class="input-label">รถเบา (กก.)</label>
+          <input type="number" id="s3_other_c_empty" class="input-field req-s3-other" placeholder="รถเบาลูกค้า">
+        </div>
+        <div class="input-group">
+          <label class="input-label">รถหนัก (กก.)</label>
+          <input type="number" id="s3_other_c_full" class="input-field req-s3-other" placeholder="รถหนักลูกค้า">
+        </div>
+      </div>
+      <div class="input-group">
+        <input type="file" accept="image/*" capture="environment" class="file-input req-s3-other" title="รูปใบชั่งลูกค้า">
+      </div>
+
+      <div class="section-divider blue" style="margin-top: 24px;"><i class="fa-solid fa-file-invoice"></i> ใบชั่งที่ 2 : ของลานเท (กระบะ)</div>
+      <div class="form-grid">
+        <div class="input-group">
+          <label class="input-label">รถเบา (กก.)</label>
+          <input type="number" id="s3_other_l_empty" class="input-field req-s3-other" placeholder="รถเบาลานเท">
+        </div>
+        <div class="input-group">
+          <label class="input-label">รถหนัก (กก.)</label>
+          <input type="number" id="s3_other_l_full" class="input-field req-s3-other" placeholder="รถหนักลานเท">
+        </div>
+      </div>
+      <div class="input-group">
+        <input type="file" accept="image/*" capture="environment" class="file-input req-s3-other" title="รูปใบชั่งลานเท">
       </div>
     </div>
 
@@ -254,16 +296,23 @@ body{font-family:'Sarabun',sans-serif;background:var(--gray);color:var(--text);m
         <label class="input-label">จำนวน (ลิตร)</label>
         <input type="number" id="s3_fuel_hq_liter" class="input-field req-s3" placeholder="จำนวนลิตร">
       </div>
-      <div class="input-group">
+      
+      <!-- เปลี่ยนจาก datalist เป็น Custom Dropdown ที่คลิกเลือกและพิมพ์ค้นหาได้ -->
+      <div class="input-group" style="position: relative;">
         <label class="input-label">ราคาต่อลิตร</label>
-        <input type="text" list="diesel-prices" id="s3_fuel_hq_price" class="input-field req-s3" placeholder="เลือกหรือพิมพ์">
-        <datalist id="diesel-prices">
-          <option value="30.01">
-          <option value="30.02">
-          <option value="30.03">
-          <option value="30.50">
-          <option value="31.00">
-        </datalist>
+        <input type="number" step="0.01" id="s3_fuel_hq_price" class="input-field req-s3" placeholder="พิมพ์ หรือเลือก"
+          onfocus="document.getElementById('priceList').classList.remove('hide')"
+          oninput="filterPrice()"
+          onblur="setTimeout(() => document.getElementById('priceList').classList.add('hide'), 200)">
+          
+        <!-- กล่อง Dropdown ที่จะเด้งลงมา -->
+        <div id="priceList" class="hide absolute left-0 right-0 bg-white border border-gray-200 shadow-xl rounded-lg mt-1 z-50 max-h-40 overflow-y-auto">
+          <div class="p-3 border-b border-gray-100 text-sm active:bg-purple-50 cursor-pointer price-item" onclick="setPrice('30.01')">30.01</div>
+          <div class="p-3 border-b border-gray-100 text-sm active:bg-purple-50 cursor-pointer price-item" onclick="setPrice('30.02')">30.02</div>
+          <div class="p-3 border-b border-gray-100 text-sm active:bg-purple-50 cursor-pointer price-item" onclick="setPrice('30.03')">30.03</div>
+          <div class="p-3 border-b border-gray-100 text-sm active:bg-purple-50 cursor-pointer price-item" onclick="setPrice('30.50')">30.50</div>
+          <div class="p-3 text-sm active:bg-purple-50 cursor-pointer price-item" onclick="setPrice('31.00')">31.00</div>
+        </div>
       </div>
     </div>
 
@@ -318,39 +367,46 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqf
 const LIFF_ID = '2010274217-SozYWeE5';
 let U = {}, activeOrder = null;
 
+// ตัวแปรเก็บประเภทงาน 'palm' หรือ 'other'
+let currentJobType = 'other'; 
+
 // เก็บ Counter สำหรับ Dynamic form
 let counts = { fuel_way: 0, toll: 0, maint: 0 };
 
 async function init() {
   try {
-    // โค้ดส่วนนี้จะทำงานเมื่อรันใน LINE LIFF จริงๆ
     if (typeof liff !== 'undefined') {
       await liff.init({ liffId: LIFF_ID });
       if (!liff.isLoggedIn()) { liff.login(); return; }
       const p = await liff.getProfile();
       U.userId = p.userId;
-      
-      // ดึงข้อมูลจริงจาก GAS
-      // ... โค้ด fetch ของคุณ ...
     }
   } catch(e) {
     console.log("Not running in LIFF or Error:", e);
   } finally {
-    // 🛠️ จำลองข้อมูลสำหรับให้คุณทดสอบ UI บนเบราว์เซอร์ได้ทันที
     document.getElementById('drv-name').textContent = 'สมชาย ขับขี่ปลอดภัย';
     document.getElementById('drv-plate').textContent = '70-1234 กทม.';
     
     activeOrder = {
-        'Order ID': 'JOB-999', 'ชื่อสวน': 'สวนสมบูรณ์ 2', 'เวลา': '09:00', 'จุดรับ': 'ลาน B', 'สถานะ': 'รับงานแล้ว'
+        'Order ID': 'JOB-999', 'ประเภทงาน': 'งานอื่นๆ (แวะลาน)', 'เวลา': '09:00', 'จุดรับ': 'ลาน B', 'สถานะ': 'รับงานแล้ว'
     };
+    
+    currentJobType = document.getElementById('mockJobType').value;
     _renderOrder(activeOrder);
   }
+}
+
+// ฟังก์ชันสำหรับทดสอบสลับประเภทงาน
+function switchJobType(type) {
+  currentJobType = type;
+  activeOrder['ประเภทงาน'] = type === 'palm' ? 'งานปาล์ม' : 'งานอื่นๆ (แวะลาน)';
+  _renderOrder(activeOrder);
 }
 
 function _renderOrder(o) {
   document.getElementById('ob-id').textContent = `📋 ${o['Order ID']}`;
   document.getElementById('ob-status-badge').textContent = o['สถานะ'];
-  document.getElementById('ob-garden').textContent = o['ชื่อสวน'] || '—';
+  document.getElementById('ob-type').textContent = o['ประเภทงาน'] || '—';
   document.getElementById('ob-time').textContent   = o['เวลา'] || '—';
   document.getElementById('ob-pickup').textContent = o['จุดรับ'] || '—';
 
@@ -359,7 +415,6 @@ function _renderOrder(o) {
 
 // ควบคุม Timeline และ Card ที่แสดง
 function updateTimelineAndCards(status) {
-  // ซ่อน Card ทั้งหมดก่อน
   document.getElementById('card-step1').classList.add('hide');
   document.getElementById('card-step2').classList.add('hide');
   document.getElementById('card-step3').classList.add('hide');
@@ -383,39 +438,62 @@ function updateTimelineAndCards(status) {
     prog.style.width = '100%';
     s1.className = 'tl-step done'; s2.className = 'tl-step done'; s3.className = 'tl-step active';
     document.getElementById('card-step3').classList.remove('hide');
+    
+    if(currentJobType === 'palm') {
+      document.getElementById('weight_palm_block').classList.remove('hide');
+      document.getElementById('weight_other_block').classList.add('hide');
+    } else {
+      document.getElementById('weight_palm_block').classList.add('hide');
+      document.getElementById('weight_other_block').classList.remove('hide');
+    }
   }
 }
 
-// ================= Validation & Submission =================
+// ================= ราคาน้ำมัน (Custom Dropdown) =================
+function filterPrice() {
+  const val = document.getElementById('s3_fuel_hq_price').value;
+  const items = document.querySelectorAll('.price-item');
+  items.forEach(el => {
+    if(el.innerText.includes(val)) el.style.display = 'block';
+    else el.style.display = 'none';
+  });
+  document.getElementById('priceList').classList.remove('hide');
+}
 
+function setPrice(val) {
+  document.getElementById('s3_fuel_hq_price').value = val;
+  document.getElementById('priceList').classList.add('hide');
+}
+
+// ================= Validation & Submission =================
 function validateFields(className) {
   let isValid = true;
   const fields = document.querySelectorAll(`.${className}`);
   fields.forEach(el => {
-    if (!el.value.trim()) {
-      el.classList.add('error');
-      isValid = false;
-    } else {
-      el.classList.remove('error');
+    if(el.closest('.hide') === null) {
+      if (!el.value.trim()) {
+        el.classList.add('error');
+        isValid = false;
+      } else {
+        el.classList.remove('error');
+      }
     }
   });
   return isValid;
 }
 
-// เคลียร์ขอบแดงเมื่อเริ่มพิมพ์
 document.addEventListener('input', function(e) {
-  if(e.target.classList.contains('error')) {
-    e.target.classList.remove('error');
-  }
+  if(e.target.classList.contains('error')) e.target.classList.remove('error');
+});
+document.addEventListener('change', function(e) {
+  if(e.target.type === 'file' && e.target.classList.contains('error')) e.target.classList.remove('error');
 });
 
 async function submitStep1() {
-  if(!validateFields('req-s1')) { alert('กรุณากรอกข้อมูลให้ครบถ้วน'); return; }
+  if(!validateFields('req-s1')) { alert('กรุณากรอกข้อมูลเลขไมล์และดุมล้อให้ครบถ้วน'); return; }
   if(!confirm('ยืนยันเริ่มงานและออกเดินทาง?')) return;
 
   _setLoading(true, 'กำลังบันทึกเริ่มงาน...');
-  
-  // จำลองการโหลดและเปลี่ยนสถานะ
   setTimeout(() => {
     _setLoading(false);
     activeOrder['สถานะ'] = 'เริ่มงานแล้ว';
@@ -425,7 +503,7 @@ async function submitStep1() {
 }
 
 async function submitStep2() {
-  if(!validateFields('req-s2')) { alert('กรุณากรอกข้อมูลให้ครบถ้วน'); return; }
+  if(!validateFields('req-s2')) { alert('กรุณากรอกข้อมูลเลขไมล์และดุมล้อให้ครบถ้วน'); return; }
   if(!confirm('ยืนยันออกจากหน้างานลูกค้า?')) return;
 
   _setLoading(true, 'กำลังบันทึกออกจากลูกค้า...');
@@ -435,7 +513,6 @@ async function submitStep2() {
     _renderOrder(activeOrder);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // โหลดฟอร์มแรกทิ้งไว้ 1 อัน เพื่อความสะดวกของคนขับ
     if(counts.fuel_way === 0) addDynamicItem('fuel_way');
     if(counts.toll === 0) addDynamicItem('toll');
     if(counts.maint === 0) addDynamicItem('maint');
@@ -443,10 +520,14 @@ async function submitStep2() {
 }
 
 async function submitStep3() {
-  // ตรวจสอบข้อมูลหลัก
-  if(!validateFields('req-s3')) { alert('กรุณากรอกข้อมูลสรุปจบงานให้ครบถ้วน'); return; }
+  if(!validateFields('req-s3')) { alert('กรุณากรอกข้อมูลเลขไมล์และน้ำมันให้ครบถ้วน'); return; }
   
-  // ตรวจสอบ Dynamic Fields เฉพาะถ้าถูกเลือก
+  if(currentJobType === 'palm') {
+    if(!validateFields('req-s3-palm')) { alert('กรุณากรอกข้อมูลน้ำหนัก และแนบรูปใบชั่งให้ครบถ้วน'); return; }
+  } else {
+    if(!validateFields('req-s3-other')) { alert('กรุณากรอกข้อมูลน้ำหนัก (ลูกค้าและลานเท) และแนบรูปให้ครบทั้ง 2 ใบ'); return; }
+  }
+
   const hasFuelWay = document.getElementById('fw_yes').checked;
   if(hasFuelWay && !validateFields('req-fw')) { alert('กรุณากรอกข้อมูลบิลน้ำมันระหว่างทางให้ครบ'); return; }
 
@@ -459,7 +540,6 @@ async function submitStep3() {
   if(!confirm('ยืนยันเสร็จงาน ส่งข้อมูลเข้าระบบ?')) return;
 
   _setLoading(true, 'กำลังส่งรายงานปิดงาน...');
-  
   setTimeout(() => {
     _setLoading(false);
     document.getElementById('success').classList.add('show');
@@ -467,19 +547,16 @@ async function submitStep3() {
 }
 
 // ================= Dynamic Forms (เพิ่มบิลเรื่อยๆ) =================
-
 function toggleBlock(blockId, isShow) {
   const el = document.getElementById(blockId);
   if(isShow) {
     el.classList.remove('hide');
-    const type = blockId.split('_')[0]; // fuel, toll, maint
-    // ถ้ายังไม่มีไอเทมเลย ให้สร้างขึ้นมา 1 อันอัตโนมัติ
+    const type = blockId.split('_')[0]; 
     if(counts[type] === 0 || (blockId==='fuel_way_block' && counts.fuel_way===0)) {
       addDynamicItem(blockId === 'fuel_way_block' ? 'fuel_way' : type);
     }
   } else {
     el.classList.add('hide');
-    // ถ้าเลือก "ไม่มี" ให้ลบกรอบสีแดงแจ้งเตือนของช่องเหล่านั้นทิ้งไปด้วย
     const inputs = el.querySelectorAll('input');
     inputs.forEach(input => input.classList.remove('error'));
   }
@@ -490,7 +567,7 @@ function addDynamicItem(type) {
   const id = `${type}_${counts[type]}`;
   const container = document.getElementById(`${type}_container`);
   const div = document.createElement('div');
-  div.className = 'dynamic-item fade-in'; // ใส่ animation ตอนเพิ่ม
+  div.className = 'dynamic-item fade-in'; 
   div.id = `item_${id}`;
 
   let html = `<button class="btn-remove-item" onclick="document.getElementById('item_${id}').remove()"><i class="fa-solid fa-times"></i></button>`;
@@ -501,18 +578,18 @@ function addDynamicItem(type) {
         <div class="input-group" style="margin:0"><input type="number" class="input-field req-fw" placeholder="จำนวน (ลิตร)"></div>
         <div class="input-group" style="margin:0"><input type="number" class="input-field req-fw" placeholder="ราคา/ลิตร"></div>
       </div>
-      <input type="file" accept="image/*" capture="environment" class="input-field" style="padding:8px; font-size:12px">
+      <input type="file" accept="image/*" capture="environment" class="file-input req-fw" style="padding:8px; font-size:12px">
     `;
   } else if (type === 'toll') {
     html += `
       <div class="input-group"><input type="number" class="input-field req-toll" placeholder="ยอดเงิน (บาท)"></div>
-      <input type="file" accept="image/*" capture="environment" class="input-field" style="padding:8px; font-size:12px">
+      <input type="file" accept="image/*" capture="environment" class="file-input req-toll" style="padding:8px; font-size:12px">
     `;
   } else if (type === 'maint') {
     html += `
       <div class="input-group"><input type="text" class="input-field req-maint" placeholder="รายการซ่อม (สั้นๆ)"></div>
       <div class="input-group"><input type="number" class="input-field req-maint" placeholder="ยอดเงิน (บาท)"></div>
-      <input type="file" accept="image/*" capture="environment" class="input-field" style="padding:8px; font-size:12px">
+      <input type="file" accept="image/*" capture="environment" class="file-input req-maint" style="padding:8px; font-size:12px">
     `;
   }
 
