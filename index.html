@@ -8,181 +8,138 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --g1: #2D5A27; --g2: #4A7C3F; --g3: #D6E8D0; --g4: #F0F7EE;
-  --b1: #7B4F2E; --b2: #C4956A; --b3: #F5E6D0; --b4: #FDF7F2;
-  --s1: #1E40AF; --s2: #3B82F6; --s3: #DBEAFE; --s4: #EFF6FF;
-  --done: #16A34A; --done-l: #DCFCE7;
-  --active: #7C3AED; --active-l: #EDE9FE;
-  --pending: #9CA3AF; --pending-l: #F3F4F6;
-  --red: #DC2626; --red-l: #FEE2E2;
-  --text: #1F2937; --text-m: #6B7280; --text-l: #9CA3AF;
-  --border: rgba(0,0,0,0.08);
-  --white: #FFFFFF;
-  --bg: #F5F5F0;
+  --g1:#2D5A27;--g2:#4A7C3F;--g3:#D6E8D0;--g4:#F0F7EE;
+  --b1:#7B4F2E;--b3:#F5E6D0;
+  --s1:#1E40AF;--s3:#DBEAFE;
+  --done:#16A34A;--done-l:#DCFCE7;
+  --active:#7C3AED;--active-l:#EDE9FE;
+  --pending:#9CA3AF;--pending-l:#F3F4F6;
+  --red:#DC2626;--red-l:#FEE2E2;
+  --text:#1F2937;--text-m:#6B7280;--text-l:#9CA3AF;
+  --border:rgba(0,0,0,0.08);--white:#FFFFFF;--bg:#F5F5F0;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 60px; }
-
-/* ── Header ── */
-.hdr { background: linear-gradient(135deg, var(--g1), var(--g2)); padding: 16px; position: sticky; top: 0; z-index: 20; }
-.hdr-inner { display: flex; align-items: center; gap: 10px; }
-.hdr-icon { font-size: 28px; }
-.hdr-title { font-size: 16px; font-weight: 700; color: #fff; }
-.hdr-sub { font-size: 11px; color: var(--g3); margin-top: 2px; }
-
-/* ── Driver Card ── */
-.drv-card { background: var(--white); margin: 12px; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.drv-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--g3); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
-.drv-name { font-size: 14px; font-weight: 600; }
-.drv-plate { font-size: 12px; color: var(--text-m); margin-top: 2px; }
-.drv-status { margin-left: auto; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; flex-shrink: 0; }
-.drv-status.busy { background: var(--g3); color: var(--g1); }
-.drv-status.free { background: var(--pending-l); color: var(--pending); }
-
-/* ── Order Banner ── */
-.order-banner { margin: 0 12px 12px; background: var(--white); border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.ob-header { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
-.ob-id { font-size: 12px; font-weight: 700; color: var(--g2); }
-.ob-type { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
-.ob-type.palm { background: var(--g3); color: var(--g1); }
-.ob-type.ramp { background: var(--b3); color: var(--b1); }
-.ob-type.other { background: var(--s3); color: var(--s1); }
-.ob-body { padding: 0 14px 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.ob-item span:first-child { font-size: 10px; color: var(--text-l); display: block; }
-.ob-item span:last-child { font-size: 13px; font-weight: 500; }
-.ob-full { grid-column: 1 / -1; }
-
-/* ── Timeline ── */
-.timeline { margin: 0 12px; }
-.tl-item { position: relative; padding-left: 36px; margin-bottom: 8px; }
-.tl-item:last-child { margin-bottom: 0; }
-.tl-line { position: absolute; left: 13px; top: 28px; bottom: -8px; width: 2px; background: var(--border); }
-.tl-item:last-child .tl-line { display: none; }
-
-.tl-dot {
-  position: absolute; left: 4px; top: 8px;
-  width: 20px; height: 20px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 700; flex-shrink: 0;
-  transition: all 0.3s;
-}
-.tl-dot.done { background: var(--done); color: #fff; }
-.tl-dot.active { background: var(--active); color: #fff; box-shadow: 0 0 0 4px var(--active-l); }
-.tl-dot.pending { background: var(--pending-l); color: var(--pending); border: 2px dashed var(--pending); }
-
-.tl-card { background: var(--white); border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.tl-card.done-card { opacity: 0.7; }
-.tl-card.active-card { border: 1.5px solid var(--active); }
-.tl-card.pending-card { opacity: 0.5; }
-
-.tl-head { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
-.tl-step-label { font-size: 13px; font-weight: 600; }
-.tl-step-time { font-size: 11px; color: var(--text-l); }
-.tl-body { padding: 0 14px 14px; border-top: 1px solid var(--border); }
-
-/* ── Form Fields ── */
-.field { margin-top: 12px; }
-label.lbl { font-size: 12px; font-weight: 600; color: var(--text-m); display: block; margin-bottom: 5px; }
-.req { color: var(--red); }
-.inp { width: 100%; font-size: 14px; font-family: 'Sarabun', sans-serif; background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); outline: none; transition: border-color 0.2s; -webkit-appearance: none; }
-.inp:focus { border-color: var(--active); background: var(--white); }
-.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-
-/* ── Net Weight Badge ── */
-.net-badge { background: var(--g4); border: 1px solid var(--g3); border-radius: 10px; padding: 8px 12px; text-align: center; margin-top: 10px; }
-.net-badge .net-lbl { font-size: 10px; color: var(--g2); font-weight: 600; }
-.net-badge .net-val { font-size: 20px; font-weight: 700; color: var(--g1); }
-.net-badge .net-unit { font-size: 12px; color: var(--g2); }
-
-/* ── Section Label ── */
-.sec-lbl { font-size: 11px; font-weight: 600; color: var(--text-m); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 14px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px dashed var(--border); }
-
-/* ── Photo Upload ── */
-.photo-box { border: 1.5px dashed var(--border); border-radius: 10px; padding: 14px; text-align: center; cursor: pointer; background: var(--bg); position: relative; }
-.photo-box input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-.photo-box .ph-icon { font-size: 24px; margin-bottom: 4px; }
-.photo-box .ph-lbl { font-size: 12px; color: var(--text-m); font-weight: 500; }
-.photo-box.has-photo { border-color: var(--done); background: var(--done-l); }
-.photo-box.has-photo .ph-icon::after { content: '✅'; }
-
-/* ── Chips ── */
-.chips { display: flex; gap: 8px; flex-wrap: wrap; }
-.chip { padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--border); font-size: 13px; font-family: 'Sarabun', sans-serif; cursor: pointer; color: var(--text-m); background: var(--white); transition: all 0.15s; user-select: none; }
-.chip.on { background: var(--g2); border-color: var(--g2); color: #fff; font-weight: 600; }
-.chip.on-b { background: var(--b1); border-color: var(--b1); color: #fff; font-weight: 600; }
-
-/* ── Buttons ── */
-.btn { width: 100%; padding: 13px; border-radius: 12px; border: none; font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; transition: all 0.2s; }
-.btn:active { transform: scale(0.98); }
-.btn-green { background: var(--g2); color: #fff; }
-.btn-brown { background: var(--b1); color: #fff; }
-.btn-purple { background: var(--active); color: #fff; }
-.btn-red { background: var(--red); color: #fff; }
-.btn-gray { background: var(--pending-l); color: var(--text-m); }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* ── Expense Section ── */
-.expense-card { background: var(--white); border-radius: 14px; margin: 0 12px 12px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.expense-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
-
-/* ── Overlay ── */
-#overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
-#overlay.show { display: flex; }
-.spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-#overlay p { font-size: 14px; color: #fff; font-weight: 500; }
-
-/* ── Success ── */
-#success { display: none; position: fixed; inset: 0; background: linear-gradient(135deg, var(--g1), var(--g2)); z-index: 200; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; text-align: center; gap: 14px; color: #fff; }
-#success.show { display: flex; }
-#success .si { font-size: 72px; }
-#success h2 { font-size: 24px; font-weight: 700; }
-#success p { font-size: 14px; opacity: 0.9; line-height: 1.8; }
-.btn-close { margin-top: 8px; padding: 12px 36px; border-radius: 999px; background: rgba(255,255,255,0.2); color: #fff; font-size: 15px; font-family: 'Sarabun', sans-serif; border: 2px solid rgba(255,255,255,0.4); cursor: pointer; }
-
-/* ── No Order ── */
-.no-order { text-align: center; padding: 48px 24px; color: var(--text-m); }
-.no-order .ni { font-size: 48px; margin-bottom: 12px; }
-.no-order p { font-size: 14px; line-height: 1.8; }
-
-.hide { display: none !important; }
-.mt8 { margin-top: 8px; }
-.sec-divider { height: 1px; background: var(--border); margin: 14px 0; }
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:60px}
+.hdr{background:linear-gradient(135deg,var(--g1),var(--g2));padding:16px;position:sticky;top:0;z-index:20}
+.hdr-inner{display:flex;align-items:center;gap:10px}
+.hdr-icon{font-size:28px}
+.hdr-title{font-size:16px;font-weight:700;color:#fff}
+.hdr-sub{font-size:11px;color:var(--g3);margin-top:2px}
+.drv-card{background:var(--white);margin:12px;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.drv-avatar{width:42px;height:42px;border-radius:50%;background:var(--g3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.drv-name{font-size:14px;font-weight:600}
+.drv-plate{font-size:12px;color:var(--text-m);margin-top:2px}
+.drv-status{margin-left:auto;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;flex-shrink:0}
+.drv-status.busy{background:var(--g3);color:var(--g1)}
+.order-banner{margin:0 12px 12px;background:var(--white);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.ob-header{padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.ob-id{font-size:12px;font-weight:700;color:var(--g2)}
+.ob-type{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
+.ob-type.palm{background:var(--g3);color:var(--g1)}
+.ob-type.ramp{background:var(--b3);color:var(--b1)}
+.ob-type.other{background:var(--s3);color:var(--s1)}
+.ob-body{padding:0 14px 12px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ob-item span:first-child{font-size:10px;color:var(--text-l);display:block}
+.ob-item span:last-child{font-size:13px;font-weight:500}
+.ob-full{grid-column:1/-1}
+.timeline{margin:0 12px}
+.tl-item{position:relative;padding-left:36px;margin-bottom:8px}
+.tl-line{position:absolute;left:13px;top:28px;bottom:-8px;width:2px;background:var(--border)}
+.tl-item:last-child .tl-line{display:none}
+.tl-dot{position:absolute;left:4px;top:8px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;transition:all .3s}
+.tl-dot.done{background:var(--done);color:#fff}
+.tl-dot.active{background:var(--active);color:#fff;box-shadow:0 0 0 4px var(--active-l)}
+.tl-dot.pending{background:var(--pending-l);color:var(--pending);border:2px dashed var(--pending)}
+.tl-card{background:var(--white);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.tl-card.done-card{opacity:.7}
+.tl-card.active-card{border:1.5px solid var(--active)}
+.tl-card.pending-card{opacity:.5}
+.tl-head{padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.tl-step-label{font-size:13px;font-weight:600}
+.tl-step-time{font-size:11px;color:var(--text-l)}
+.tl-body{padding:12px 14px 14px;border-top:1px solid var(--border)}
+.field{margin-top:12px}
+.field:first-child{margin-top:0}
+label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:5px}
+.req{color:var(--red)}
+.inp{width:100%;font-size:14px;font-family:'Sarabun',sans-serif;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);outline:none;transition:border-color .2s;-webkit-appearance:none}
+.inp:focus{border-color:var(--active);background:var(--white)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.net-badge{background:var(--g4);border:1px solid var(--g3);border-radius:10px;padding:8px 12px;text-align:center;margin-top:8px}
+.net-badge .net-lbl{font-size:10px;color:var(--g2);font-weight:600}
+.net-badge .net-val{font-size:20px;font-weight:700;color:var(--g1)}
+.net-badge .net-unit{font-size:12px;color:var(--g2)}
+.sec-lbl{font-size:11px;font-weight:600;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px;margin-top:14px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px dashed var(--border)}
+.sec-lbl:first-child{margin-top:0}
+/* Photo — ใช้ label แทน div แก้ bug คลิก 2 ครั้ง */
+.photo-box{display:block;border:1.5px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--bg);position:relative;margin-top:6px}
+.photo-box input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.ph-icon{font-size:24px;margin-bottom:4px}
+.ph-lbl{font-size:12px;color:var(--text-m);font-weight:500}
+.photo-box.has-photo{border-color:var(--done);background:var(--done-l)}
+.photo-box.has-photo .ph-lbl{color:var(--done)}
+/* Chips */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.chip{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);font-size:13px;font-family:'Sarabun',sans-serif;cursor:pointer;color:var(--text-m);background:var(--white);transition:all .15s;user-select:none}
+.chip.on{background:var(--g2);border-color:var(--g2);color:#fff;font-weight:600}
+.chip.on-r{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+/* Expense chip toggle */
+.exp-chip{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);font-size:13px;font-family:'Sarabun',sans-serif;cursor:pointer;color:var(--text-m);background:var(--white);transition:all .15s;user-select:none;display:inline-flex;align-items:center;gap:6px}
+.exp-chip.on{background:var(--g4);border-color:var(--g2);color:var(--g1);font-weight:600}
+.exp-section{background:var(--g4);border:1px solid var(--g3);border-radius:12px;padding:12px;margin-top:10px}
+/* Fuel rows */
+.fuel-row{background:var(--white);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--border)}
+.fuel-row-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.fuel-row-title{font-size:12px;font-weight:600;color:var(--text-m)}
+.btn-remove{background:var(--red-l);color:var(--red);border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'Sarabun',sans-serif}
+.btn-add{background:var(--g3);color:var(--g1);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;margin-top:8px;width:100%}
+.total-badge{background:var(--g2);color:#fff;border-radius:10px;padding:8px 12px;text-align:center;margin-top:8px;font-size:13px;font-weight:600}
+/* Buttons */
+.btn{width:100%;padding:13px;border-radius:12px;border:none;font-family:'Sarabun',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px;transition:all .2s}
+.btn:active{transform:scale(.98)}
+.btn-green{background:var(--g2);color:#fff}
+.btn-brown{background:var(--b1);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+#overlay.show{display:flex}
+.spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#overlay p{font-size:14px;color:#fff;font-weight:500}
+#success{display:none;position:fixed;inset:0;background:linear-gradient(135deg,var(--g1),var(--g2));z-index:200;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;gap:14px;color:#fff}
+#success.show{display:flex}
+#success .si{font-size:72px}
+#success h2{font-size:24px;font-weight:700}
+#success p{font-size:14px;opacity:.9;line-height:1.8}
+.btn-close{margin-top:8px;padding:12px 36px;border-radius:999px;background:rgba(255,255,255,.2);color:#fff;font-size:15px;font-family:'Sarabun',sans-serif;border:2px solid rgba(255,255,255,.4);cursor:pointer}
+.no-order{text-align:center;padding:48px 24px;color:var(--text-m)}
+.no-order .ni{font-size:48px;margin-bottom:12px}
+.sec-divider{height:1px;background:var(--border);margin:14px 0}
+.hide{display:none!important}
+.mt8{margin-top:8px}
 </style>
 </head>
 <body>
-
 <div id="overlay"><div class="spinner"></div><p>กำลังบันทึก...</p></div>
 <div id="success">
-  <div class="si">🏁</div>
-  <h2>เสร็จงานแล้ว!</h2>
+  <div class="si">🏁</div><h2>เสร็จงานแล้ว!</h2>
   <p id="success-msg">ส่งข้อมูลให้ Admin และเจ้าของสวนแล้วครับ</p>
   <button class="btn-close" onclick="liff.closeWindow()">ปิดหน้าต่าง</button>
 </div>
 
-<!-- Header -->
 <div class="hdr">
   <div class="hdr-inner">
     <div class="hdr-icon">🚛</div>
-    <div>
-      <div class="hdr-title">บันทึกงานขนส่ง</div>
-      <div class="hdr-sub">SSB Smart Supply</div>
-    </div>
+    <div><div class="hdr-title">บันทึกงานขนส่ง</div><div class="hdr-sub">SSB Smart Supply</div></div>
   </div>
 </div>
 
-<!-- Driver Card -->
 <div class="drv-card">
   <div class="drv-avatar">🚛</div>
-  <div>
-    <div class="drv-name" id="drv-name">กำลังโหลด...</div>
-    <div class="drv-plate" id="drv-plate">—</div>
-  </div>
-  <span class="drv-status busy" id="drv-status">ติดงาน</span>
+  <div><div class="drv-name" id="drv-name">กำลังโหลด...</div><div class="drv-plate" id="drv-plate">—</div></div>
+  <span class="drv-status busy">ติดงาน</span>
 </div>
 
-<!-- Order Banner -->
 <div class="order-banner" id="order-banner">
   <div class="ob-header">
     <div class="ob-id" id="ob-id">— รอโหลด —</div>
@@ -198,101 +155,51 @@ label.lbl { font-size: 12px; font-weight: 600; color: var(--text-m); display: bl
   </div>
 </div>
 
-<!-- No Order -->
 <div class="no-order hide" id="no-order">
   <div class="ni">📭</div>
-  <p>ยังไม่มีงานที่รับอยู่ในขณะนี้<br>รอรับงานใหม่ได้เลยครับ</p>
+  <p>ยังไม่มีงานที่รับอยู่<br>รอรับงานใหม่ได้เลยครับ</p>
 </div>
 
-<!-- Timeline -->
 <div class="timeline" id="timeline"></div>
 
-<!-- Expense Section -->
-<div class="expense-card hide" id="expense-section">
-  <div class="expense-title">💰 ค่าใช้จ่ายระหว่างเดินทาง</div>
-
-  <div class="field">
-    <label class="lbl">⛽ เติมน้ำมันระหว่างทาง</label>
-    <div class="row2">
-      <div>
-        <label class="lbl">จำนวนลิตร</label>
-        <input class="inp" type="number" id="fuel-liter" placeholder="0">
-      </div>
-      <div>
-        <label class="lbl">ราคา/ลิตร</label>
-        <input class="inp" type="text" id="fuel-price" placeholder="พิมพ์หรือเลือก" list="fuel-prices">
-        <datalist id="fuel-prices">
-          <option value="30.01">
-          <option value="30.02">
-          <option value="30.03">
-          <option value="29.50">
-          <option value="28.00">
-        </datalist>
-      </div>
-    </div>
-    <div class="field mt8">
-      <label class="lbl">รูปบิลน้ำมัน</label>
-      <div class="photo-box" id="box-fuel-photo" onclick="triggerPhoto('inp-fuel-photo', 'box-fuel-photo', 'lbl-fuel-photo')">
-        <input type="file" id="inp-fuel-photo" accept="image/*" capture="environment" onchange="onPhoto(this, 'box-fuel-photo', 'lbl-fuel-photo', 'fuel-photo')">
-        <div class="ph-icon">📷</div>
-        <div class="ph-lbl" id="lbl-fuel-photo">แนบรูปบิลน้ำมัน</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="sec-divider"></div>
-
-  <div class="field">
-    <label class="lbl">🔧 ค่าซ่อมนอก</label>
-    <input class="inp" type="number" id="repair-cost" placeholder="0 บาท">
-    <div class="field mt8">
-      <label class="lbl">หมายเหตุค่าซ่อม</label>
-      <input class="inp" type="text" id="repair-note" placeholder="รายละเอียด">
-    </div>
-    <div class="field mt8">
-      <label class="lbl">รูปใบเสร็จซ่อม</label>
-      <div class="photo-box" id="box-repair-photo" onclick="triggerPhoto('inp-repair-photo', 'box-repair-photo', 'lbl-repair-photo')">
-        <input type="file" id="inp-repair-photo" accept="image/*" capture="environment" onchange="onPhoto(this, 'box-repair-photo', 'lbl-repair-photo', 'repair-photo')">
-        <div class="ph-icon">📷</div>
-        <div class="ph-lbl" id="lbl-repair-photo">แนบรูปใบเสร็จ</div>
-      </div>
-    </div>
-  </div>
-
-  <button class="btn btn-green" onclick="submitExpense()">💾 บันทึกค่าใช้จ่าย</button>
-</div>
-
-<!-- Cancel Button -->
-<div style="margin: 0 12px;" id="cancel-section">
+<div style="margin:0 12px 12px">
   <button class="btn btn-red" onclick="requestCancel()">⚠️ แจ้งขอยกเลิก / เหตุฉุกเฉิน</button>
 </div>
 
 <script>
-const GAS_URL  = 'https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
-const LIFF_ID  = '2010274217-SozYWeE5';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
+const LIFF_ID = '2010274217-SozYWeE5';
+let U={}, order=null, jobType='', hasRamp=false, photos={};
+let fuelRows = []; // เก็บ rows น้ำมันระหว่างทาง
 
-let U = {}, order = null, jobType = '', hasRamp = false;
-let photos = {}; // เก็บ base64 รูปแต่ละจุด
+// สร้าง datalist ราคาน้ำมัน 30.01-50.00
+function buildPriceList() {
+  const dl = document.createElement('datalist');
+  dl.id = 'fuel-prices';
+  for (let p = 3001; p <= 5000; p++) {
+    const opt = document.createElement('option');
+    opt.value = (p / 100).toFixed(2);
+    dl.appendChild(opt);
+  }
+  document.body.appendChild(dl);
+}
 
-// ── Init ──────────────────────────────────────────────────
 async function init() {
+  buildPriceList();
   try {
     await liff.init({ liffId: LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login(); return; }
     const p = await liff.getProfile();
     U.userId = p.userId;
-
     const [uRes, oRes] = await Promise.all([
-      fetch(`${GAS_URL}?action=getUser&userId=${p.userId}`).then(r => r.json()),
-      fetch(`${GAS_URL}?action=getDriverOrder&userId=${p.userId}`).then(r => r.json())
+      fetch(`${GAS_URL}?action=getUser&userId=${p.userId}`).then(r=>r.json()),
+      fetch(`${GAS_URL}?action=getDriverOrder&userId=${p.userId}`).then(r=>r.json())
     ]);
-
-    if (uRes.status === 'ok') {
+    if (uRes.status==='ok') {
       document.getElementById('drv-name').textContent  = uRes.name  || p.displayName;
       document.getElementById('drv-plate').textContent = uRes.plate || '—';
     }
-
-    if (oRes.status === 'ok' && oRes.orders.length > 0) {
+    if (oRes.status==='ok' && oRes.orders.length>0) {
       order   = oRes.orders[0];
       jobType = order['ประเภทงาน'] || 'ปาล์ม';
       hasRamp = !!(order['จุดรับเพิ่ม']);
@@ -301,17 +208,13 @@ async function init() {
     } else {
       document.getElementById('order-banner').classList.add('hide');
       document.getElementById('timeline').classList.add('hide');
-      document.getElementById('expense-section').classList.add('hide');
-      document.getElementById('cancel-section').classList.add('hide');
       document.getElementById('no-order').classList.remove('hide');
     }
   } catch(e) {
-    console.error(e);
-    document.getElementById('drv-name').textContent = '⚠️ โหลดไม่สำเร็จ';
+    document.getElementById('drv-name').textContent='⚠️ โหลดไม่สำเร็จ';
   }
 }
 
-// ── Render Order Banner ───────────────────────────────────
 function renderOrderBanner() {
   document.getElementById('ob-id').textContent     = `📋 ${order['Order ID']}`;
   document.getElementById('ob-garden').textContent = order['ชื่อสวน']       || '—';
@@ -319,449 +222,361 @@ function renderOrderBanner() {
   document.getElementById('ob-time').textContent   = order['เวลา']          || '—';
   document.getElementById('ob-bin').textContent    = `${order['จำนวนกระบะ']} ใบ`;
   document.getElementById('ob-pickup').textContent = order['จุดรับ']        || '—';
-
   const typeEl = document.getElementById('ob-type');
-  if (jobType === 'ปาล์ม' && hasRamp) {
-    typeEl.textContent = '🏭 ปาล์ม+ลาน';
-    typeEl.className   = 'ob-type ramp';
-  } else if (jobType === 'ปาล์ม') {
-    typeEl.textContent = '🌴 ปาล์ม';
-    typeEl.className   = 'ob-type palm';
-  } else {
-    typeEl.textContent = '📦 งานอื่นๆ';
-    typeEl.className   = 'ob-type other';
-  }
-
+  if (jobType==='ปาล์ม' && hasRamp) { typeEl.textContent='🏭 ปาล์ม+ลาน'; typeEl.className='ob-type ramp'; }
+  else if (jobType==='ปาล์ม')       { typeEl.textContent='🌴 ปาล์ม';    typeEl.className='ob-type palm'; }
+  else                               { typeEl.textContent='📦 งานอื่นๆ'; typeEl.className='ob-type other'; }
   if (hasRamp) {
     document.getElementById('ob-ramp-row').classList.remove('hide');
     document.getElementById('ob-ramp').textContent = order['จุดรับเพิ่ม'];
   }
 }
 
-// ── Render Timeline ───────────────────────────────────────
 function renderTimeline() {
-  const status = order['สถานะ'];
-  const tl     = document.getElementById('timeline');
+  const tl = document.getElementById('timeline');
   tl.innerHTML = '';
-
-  const steps = getSteps();
-  steps.forEach((step, i) => {
-    const state = getStepState(step.key, status, i, steps);
-    tl.appendChild(buildStepEl(step, state));
+  getSteps().forEach((step, i, arr) => {
+    const state = getStepState(step.key, order['สถานะ'], i);
+    const wrap  = document.createElement('div');
+    wrap.className = 'tl-item';
+    const dot  = document.createElement('div');
+    dot.className  = `tl-dot ${state}`;
+    dot.textContent = state==='done' ? '✓' : '';
+    const line = document.createElement('div');
+    line.className = 'tl-line';
+    const card = document.createElement('div');
+    card.className = `tl-card ${state}-card`;
+    card.innerHTML = `
+      <div class="tl-head">
+        <span class="tl-step-label">${step.label}</span>
+        <span class="tl-step-time">${state==='done' ? (getStepTime(step.key)||'✅') : state==='active' ? 'กำลังดำเนินการ' : 'รอดำเนินการ'}</span>
+      </div>
+      ${state==='active' ? `<div class="tl-body">${buildForm(step.key)}</div>` : ''}
+    `;
+    wrap.appendChild(dot);
+    wrap.appendChild(line);
+    wrap.appendChild(card);
+    tl.appendChild(wrap);
   });
-
-  // แสดง expense section เมื่อถึงขั้นตอนสุดท้าย
-  if (['เสร็จงาน', 'ถึงลูกค้า', 'เริ่มงานแล้ว', 'รับงานแล้ว'].includes(status)) {
-    document.getElementById('expense-section').classList.remove('hide');
-  }
 }
 
 function getSteps() {
-  if (jobType === 'ปาล์ม' && hasRamp) {
-    return [
-      { key: 'start',   label: '🚀 ออกโรงงาน',       form: 'form-start'   },
-      { key: 'client',  label: '🌴 ถึงลูกค้า',        form: 'form-client'  },
-      { key: 'ramp',    label: '🏭 ถึงลาน',           form: 'form-ramp'    },
-      { key: 'factory', label: '🏁 ถึงโรงงาน',        form: 'form-factory' }
-    ];
-  } else if (jobType === 'ปาล์ม') {
-    return [
-      { key: 'start',   label: '🚀 ออกโรงงาน',  form: 'form-start'   },
-      { key: 'client',  label: '🌴 ถึงลูกค้า',   form: 'form-client'  },
-      { key: 'factory', label: '🏁 ถึงโรงงาน',   form: 'form-factory' }
-    ];
-  } else {
-    return [
-      { key: 'start',   label: '🚀 ออกโรงงาน',  form: 'form-start-other'   },
-      { key: 'client',  label: '📦 ถึงลูกค้า',   form: 'form-client-other'  },
-      { key: 'factory', label: '🏁 ถึงโรงงาน',   form: 'form-factory-other' }
-    ];
-  }
+  if (jobType==='ปาล์ม' && hasRamp) return [
+    {key:'start',   label:'🚀 ออกโรงงาน'},
+    {key:'client',  label:'🌴 ถึงลูกค้า'},
+    {key:'ramp',    label:'🏭 ถึงลาน'},
+    {key:'factory', label:'🏁 ถึงโรงงาน'}
+  ];
+  if (jobType==='ปาล์ม') return [
+    {key:'start',   label:'🚀 ออกโรงงาน'},
+    {key:'client',  label:'🌴 ถึงลูกค้า'},
+    {key:'factory', label:'🏁 ถึงโรงงาน'}
+  ];
+  return [
+    {key:'start',   label:'🚀 ออกโรงงาน'},
+    {key:'client',  label:'📦 ถึงลูกค้า'},
+    {key:'factory', label:'🏁 ถึงโรงงาน'}
+  ];
 }
 
-function getStepState(key, status, idx, steps) {
-  const statusMap = {
-    'รับงานแล้ว':    0,
-    'เริ่มงานแล้ว':  1,
-    'ถึงลูกค้า':     2,
-    'ถึงลาน':        3,
-    'เสร็จงาน':      99
-  };
-  const cur = statusMap[status] ?? 0;
-  if (cur > idx)     return 'done';
-  if (cur === idx)   return 'active';
+function getStepState(key, status, idx) {
+  const map = {'รับงานแล้ว':0,'เริ่มงานแล้ว':1,'ถึงลูกค้า':2,'ถึงลาน':3,'เสร็จงาน':99};
+  const cur = map[status] ?? 0;
+  if (cur > idx) return 'done';
+  if (cur === idx) return 'active';
   return 'pending';
 }
 
-function buildStepEl(step, state) {
-  const wrap = document.createElement('div');
-  wrap.className = 'tl-item';
-
-  const dot  = document.createElement('div');
-  dot.className = `tl-dot ${state}`;
-  dot.textContent = state === 'done' ? '✓' : '';
-
-  const line = document.createElement('div');
-  line.className = 'tl-line';
-
-  const card = document.createElement('div');
-  card.className = `tl-card ${state}-card`;
-  card.innerHTML = `
-    <div class="tl-head">
-      <span class="tl-step-label">${step.label}</span>
-      <span class="tl-step-time" id="time-${step.key}">
-        ${state === 'done' ? getStepTime(step.key) : state === 'active' ? 'กำลังดำเนินการ' : 'รอดำเนินการ'}
-      </span>
-    </div>
-    ${state === 'active' ? `<div class="tl-body">${buildForm(step.key)}</div>` : ''}
-  `;
-
-  wrap.appendChild(dot);
-  wrap.appendChild(line);
-  wrap.appendChild(card);
-  return wrap;
-}
-
 function getStepTime(key) {
-  const map = {
-    start:   order['เวลาเริ่มงาน']   || '',
-    client:  order['เวลาถึงลูกค้า']  || '',
-    factory: order['เวลาเสร็จงาน']   || ''
-  };
-  return map[key] || '✅';
+  return {start:order['เวลาเริ่มงาน'],client:order['เวลาถึงลูกค้า'],factory:order['เวลาเสร็จงาน']}[key] || '';
 }
 
-// ── Build Form ────────────────────────────────────────────
+// ── Build Forms ──────────────────────────────────────────
 function buildForm(key) {
-  if (key === 'start') return formStart();
-  if (key === 'client') return formClient();
-  if (key === 'ramp') return formRamp();
-  if (key === 'factory') return formFactory();
+  if (key==='start')   return formStart();
+  if (key==='client')  return formClient();
+  if (key==='ramp')    return formRamp();
+  if (key==='factory') return formFactory();
   return '';
 }
 
-function formStart() {
-  const hasOther = jobType !== 'ปาล์ม';
+function photoBox(id, label, key) {
   return `
-    <div class="field">
-      <div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
-      <div class="row2">
-        <div>
-          <label class="lbl">เลขไมล์เริ่ม <span class="req">*</span></label>
-          <input class="inp" type="number" id="mile-start" placeholder="0">
-        </div>
-        <div>
-          <label class="lbl">เลขดุมล้อเริ่ม <span class="req">*</span></label>
-          <input class="inp" type="number" id="hub-start" placeholder="0">
-        </div>
-      </div>
+    <label class="photo-box" id="box-${id}" for="inp-${id}">
+      <input type="file" id="inp-${id}" accept="image/*" capture="environment"
+        onchange="onPhoto(this,'box-${id}','lbl-${id}','${key}')">
+      <div class="ph-icon">📷</div>
+      <div class="ph-lbl" id="lbl-${id}">${label}</div>
+    </label>`;
+}
+
+function weightBlock(prefix, label) {
+  return `
+    <div class="sec-lbl">⚖️ ${label}</div>
+    <div class="row2">
+      <div><label class="lbl">รถหนัก (กก.) <span class="req">*</span></label>
+        <input class="inp" type="number" id="w-${prefix}-h" placeholder="0" oninput="calcNet('${prefix}')"></div>
+      <div><label class="lbl">รถเบา (กก.) <span class="req">*</span></label>
+        <input class="inp" type="number" id="w-${prefix}-l" placeholder="0" oninput="calcNet('${prefix}')"></div>
     </div>
-    ${hasOther ? `
+    <div class="net-badge hide" id="net-${prefix}">
+      <div class="net-lbl">สุทธิ</div>
+      <div><span class="net-val" id="nv-${prefix}">0</span> <span class="net-unit">กก.</span></div>
+    </div>`;
+}
+
+function formStart() {
+  const isOther = jobType !== 'ปาล์ม';
+  return `
+    <div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
+    <div class="row2">
+      <div><label class="lbl">เลขไมล์เริ่ม <span class="req">*</span></label>
+        <input class="inp" type="number" id="mile-start" placeholder="0"></div>
+      <div><label class="lbl">เลขดุมล้อเริ่ม <span class="req">*</span></label>
+        <input class="inp" type="number" id="hub-start" placeholder="0"></div>
+    </div>
+    ${isOther ? `
     <div class="field">
       <div class="sec-lbl">🚛 ประเภทรถออก</div>
       <div class="chips" id="truck-chips">
-        <span class="chip" onclick="pickChip(this,'truck-chips')">รถเบา (ไม่ชั่ง)</span>
-        <span class="chip" onclick="pickChip(this,'truck-chips')">รถหนัก (ชั่งด้วย)</span>
+        <span class="chip" onclick="pickChip(this,'truck-chips','truck-type')">🪶 รถเบา (ไม่ชั่ง)</span>
+        <span class="chip" onclick="pickChip(this,'truck-chips','truck-type')">🏋️ รถหนัก (ชั่งด้วย)</span>
       </div>
     </div>
-    <div class="field hide" id="weight-start-other">
-      <div class="sec-lbl">⚖️ น้ำหนักออกโรงงาน</div>
-      <div class="row2">
-        <div>
-          <label class="lbl">รถหนัก (กก.)</label>
-          <input class="inp" type="number" id="w-start-heavy" placeholder="0" oninput="calcNet('start')">
-        </div>
-        <div>
-          <label class="lbl">รถเบา (กก.)</label>
-          <input class="inp" type="number" id="w-start-light" placeholder="0" oninput="calcNet('start')">
-        </div>
-      </div>
-      <div class="net-badge hide" id="net-start">
-        <div class="net-lbl">สุทธิ</div>
-        <div><span class="net-val" id="net-val-start">0</span> <span class="net-unit">กก.</span></div>
-      </div>
+    <div class="hide" id="weight-start-other">
+      ${weightBlock('start','น้ำหนักออกโรงงาน')}
     </div>` : ''}
-    <button class="btn btn-green" onclick="submitStart()">🚀 ยืนยันออกโรงงาน</button>
-  `;
+    <button class="btn btn-green" onclick="submitStart()">🚀 ยืนยันออกโรงงาน</button>`;
 }
 
 function formClient() {
-  const hasOther = jobType !== 'ปาล์ม';
+  const isOther = jobType !== 'ปาล์ม';
   return `
-    <div class="field">
-      <div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
-      <div class="row2">
-        <div>
-          <label class="lbl">เลขไมล์ถึงลูกค้า <span class="req">*</span></label>
-          <input class="inp" type="number" id="mile-client" placeholder="0">
-        </div>
-        <div>
-          <label class="lbl">เลขดุมล้อถึงลูกค้า <span class="req">*</span></label>
-          <input class="inp" type="number" id="hub-client" placeholder="0">
-        </div>
-      </div>
+    <div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
+    <div class="row2">
+      <div><label class="lbl">เลขไมล์ถึงลูกค้า <span class="req">*</span></label>
+        <input class="inp" type="number" id="mile-client" placeholder="0"></div>
+      <div><label class="lbl">เลขดุมล้อถึงลูกค้า <span class="req">*</span></label>
+        <input class="inp" type="number" id="hub-client" placeholder="0"></div>
     </div>
-    ${hasOther ? `
+    ${isOther ? `
     <div class="field">
       <div class="sec-lbl">⚖️ ชั่งที่ลูกค้า</div>
       <div class="chips" id="weigh-client-chips">
-        <span class="chip" onclick="pickChip(this,'weigh-client-chips')">ไม่มีชั่ง</span>
-        <span class="chip" onclick="pickChip(this,'weigh-client-chips')">มีชั่ง</span>
+        <span class="chip" onclick="pickChip(this,'weigh-client-chips','weigh-client')">ไม่มีชั่ง</span>
+        <span class="chip" onclick="pickChip(this,'weigh-client-chips','weigh-client')">มีชั่ง</span>
       </div>
-      <div class="field hide" id="weight-client-other">
-        <div class="row2 mt8">
-          <div>
-            <label class="lbl">รถหนัก (กก.)</label>
-            <input class="inp" type="number" id="w-client-heavy" placeholder="0" oninput="calcNet('client')">
-          </div>
-          <div>
-            <label class="lbl">รถเบา (กก.)</label>
-            <input class="inp" type="number" id="w-client-light" placeholder="0" oninput="calcNet('client')">
-          </div>
-        </div>
-        <div class="net-badge hide" id="net-client">
-          <div class="net-lbl">สุทธิ</div>
-          <div><span class="net-val" id="net-val-client">0</span> <span class="net-unit">กก.</span></div>
-        </div>
-        <div class="field mt8">
-          <label class="lbl">รูปใบชั่งลูกค้า</label>
-          <div class="photo-box" id="box-client-photo" onclick="triggerPhoto('inp-client-photo','box-client-photo','lbl-client-photo')">
-            <input type="file" id="inp-client-photo" accept="image/*" capture="environment" onchange="onPhoto(this,'box-client-photo','lbl-client-photo','client')">
-            <div class="ph-icon">📷</div>
-            <div class="ph-lbl" id="lbl-client-photo">แนบรูปใบชั่ง</div>
-          </div>
-        </div>
+      <div class="hide mt8" id="weight-client-other">
+        ${weightBlock('client','น้ำหนักที่ลูกค้า')}
+        <label class="lbl mt8">รูปใบชั่งลูกค้า</label>
+        ${photoBox('client-photo','แนบรูปใบชั่ง','client')}
       </div>
     </div>` : ''}
-    <button class="btn btn-green" onclick="submitClient()">📍 ยืนยันถึงลูกค้า</button>
-  `;
+    <button class="btn btn-green" onclick="submitClient()">📍 ยืนยันถึงลูกค้า</button>`;
 }
 
 function formRamp() {
   return `
-    <div class="field">
-      <div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
-      <div class="row2">
-        <div>
-          <label class="lbl">เลขไมล์ถึงลาน <span class="req">*</span></label>
-          <input class="inp" type="number" id="mile-ramp" placeholder="0">
-        </div>
-        <div>
-          <label class="lbl">เลขดุมล้อถึงลาน <span class="req">*</span></label>
-          <input class="inp" type="number" id="hub-ramp" placeholder="0">
-        </div>
-      </div>
+    <div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
+    <div class="row2">
+      <div><label class="lbl">เลขไมล์ถึงลาน <span class="req">*</span></label>
+        <input class="inp" type="number" id="mile-ramp" placeholder="0"></div>
+      <div><label class="lbl">เลขดุมล้อถึงลาน <span class="req">*</span></label>
+        <input class="inp" type="number" id="hub-ramp" placeholder="0"></div>
     </div>
-
-    <div class="field">
-      <div class="sec-lbl">⚖️ ใบชั่งลูกค้า</div>
-      <div class="row2">
-        <div>
-          <label class="lbl">รถหนัก (กก.) <span class="req">*</span></label>
-          <input class="inp" type="number" id="w-ramp-client-heavy" placeholder="0" oninput="calcNet('ramp-client')">
-        </div>
-        <div>
-          <label class="lbl">รถเบา (กก.) <span class="req">*</span></label>
-          <input class="inp" type="number" id="w-ramp-client-light" placeholder="0" oninput="calcNet('ramp-client')">
-        </div>
-      </div>
-      <div class="net-badge hide" id="net-ramp-client">
-        <div class="net-lbl">สุทธิลูกค้า</div>
-        <div><span class="net-val" id="net-val-ramp-client">0</span> <span class="net-unit">กก.</span></div>
-      </div>
-      <div class="field mt8">
-        <label class="lbl">รูปใบชั่งลูกค้า <span class="req">*</span></label>
-        <div class="photo-box" id="box-ramp-client" onclick="triggerPhoto('inp-ramp-client','box-ramp-client','lbl-ramp-client')">
-          <input type="file" id="inp-ramp-client" accept="image/*" capture="environment" onchange="onPhoto(this,'box-ramp-client','lbl-ramp-client','ramp-client')">
-          <div class="ph-icon">📷</div>
-          <div class="ph-lbl" id="lbl-ramp-client">แนบรูปใบชั่งลูกค้า</div>
-        </div>
-      </div>
-    </div>
-
+    ${weightBlock('rc','ใบชั่งลูกค้า')}
+    <label class="lbl mt8">รูปใบชั่งลูกค้า <span class="req">*</span></label>
+    ${photoBox('ramp-client','แนบรูปใบชั่งลูกค้า','ramp-client')}
     <div class="sec-divider"></div>
-
-    <div class="field">
-      <div class="sec-lbl">⚖️ ใบชั่งลาน (ถอดหัว-ลากกระบะลาน)</div>
-      <div class="row2">
-        <div>
-          <label class="lbl">รถหนัก (กก.) <span class="req">*</span></label>
-          <input class="inp" type="number" id="w-ramp-heavy" placeholder="0" oninput="calcNet('ramp')">
-        </div>
-        <div>
-          <label class="lbl">รถเบา (กก.) <span class="req">*</span></label>
-          <input class="inp" type="number" id="w-ramp-light" placeholder="0" oninput="calcNet('ramp')">
-        </div>
-      </div>
-      <div class="net-badge hide" id="net-ramp">
-        <div class="net-lbl">สุทธิลาน</div>
-        <div><span class="net-val" id="net-val-ramp">0</span> <span class="net-unit">กก.</span></div>
-      </div>
-      <div class="field mt8">
-        <label class="lbl">รูปใบชั่งลาน <span class="req">*</span></label>
-        <div class="photo-box" id="box-ramp-ramp" onclick="triggerPhoto('inp-ramp-ramp','box-ramp-ramp','lbl-ramp-ramp')">
-          <input type="file" id="inp-ramp-ramp" accept="image/*" capture="environment" onchange="onPhoto(this,'box-ramp-ramp','lbl-ramp-ramp','ramp-ramp')">
-          <div class="ph-icon">📷</div>
-          <div class="ph-lbl" id="lbl-ramp-ramp">แนบรูปใบชั่งลาน</div>
-        </div>
-      </div>
-    </div>
-
-    <button class="btn btn-brown" onclick="submitRamp()">🏭 ยืนยันถึงลาน</button>
-  `;
+    ${weightBlock('rr','ใบชั่งลาน (ถอดหัว-ลากกระบะ)')}
+    <label class="lbl mt8">รูปใบชั่งลาน <span class="req">*</span></label>
+    ${photoBox('ramp-ramp','แนบรูปใบชั่งลาน','ramp-ramp')}
+    <button class="btn btn-brown" onclick="submitRamp()">🏭 ยืนยันถึงลาน</button>`;
 }
 
 function formFactory() {
-  const isRamp = jobType === 'ปาล์ม' && hasRamp;
-  return `
-    <div class="field">
-      <div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
-      <div class="row2">
-        <div>
-          <label class="lbl">เลขไมล์ปลายทาง <span class="req">*</span></label>
-          <input class="inp" type="number" id="mile-factory" placeholder="0">
-        </div>
-        <div>
-          <label class="lbl">เลขดุมล้อปลายทาง <span class="req">*</span></label>
-          <input class="inp" type="number" id="hub-factory" placeholder="0">
-        </div>
-      </div>
-    </div>
-
-    ${isRamp ? `
-    <div class="field">
-      <div class="sec-lbl">⚖️ ใบชั่งลูกค้า (ที่โรงงาน)</div>
-      <div class="row2">
-        <div>
-          <label class="lbl">รถหนัก (กก.) <span class="req">*</span></label>
-          <input class="inp" type="number" id="w-fact-client-heavy" placeholder="0" oninput="calcNet('fact-client')">
-        </div>
-        <div>
-          <label class="lbl">รถเบา (กก.) <span class="req">*</span></label>
-          <input class="inp" type="number" id="w-fact-client-light" placeholder="0" oninput="calcNet('fact-client')">
-        </div>
-      </div>
-      <div class="net-badge hide" id="net-fact-client">
-        <div class="net-lbl">สุทธิลูกค้า</div>
-        <div><span class="net-val" id="net-val-fact-client">0</span> <span class="net-unit">กก.</span></div>
-      </div>
-      <div class="field mt8">
-        <label class="lbl">รูปใบชั่งลูกค้า <span class="req">*</span></label>
-        <div class="photo-box" id="box-fact-client" onclick="triggerPhoto('inp-fact-client','box-fact-client','lbl-fact-client')">
-          <input type="file" id="inp-fact-client" accept="image/*" capture="environment" onchange="onPhoto(this,'box-fact-client','lbl-fact-client','fact-client')">
-          <div class="ph-icon">📷</div>
-          <div class="ph-lbl" id="lbl-fact-client">แนบรูปใบชั่งลูกค้า</div>
-        </div>
-      </div>
-    </div>
+  const isRamp = jobType==='ปาล์ม' && hasRamp;
+  const weightSection = isRamp ? `
+    ${weightBlock('fc','ใบชั่งลูกค้า (ที่โรงงาน)')}
+    <label class="lbl mt8">รูปใบชั่งลูกค้า <span class="req">*</span></label>
+    ${photoBox('fact-client','แนบรูปใบชั่งลูกค้า','fact-client')}
     <div class="sec-divider"></div>
-    <div class="field">
-      <div class="sec-lbl">⚖️ ใบชั่งลาน (ที่โรงงาน)</div>
-      <div class="row2">
-        <div>
-          <label class="lbl">รถหนัก (กก.) <span class="req">*</span></label>
-          <input class="inp" type="number" id="w-fact-ramp-heavy" placeholder="0" oninput="calcNet('fact-ramp')">
-        </div>
-        <div>
-          <label class="lbl">รถเบา (กก.) <span class="req">*</span></label>
-          <input class="inp" type="number" id="w-fact-ramp-light" placeholder="0" oninput="calcNet('fact-ramp')">
-        </div>
-      </div>
-      <div class="net-badge hide" id="net-fact-ramp">
-        <div class="net-lbl">สุทธิลาน</div>
-        <div><span class="net-val" id="net-val-fact-ramp">0</span> <span class="net-unit">กก.</span></div>
-      </div>
-      <div class="field mt8">
-        <label class="lbl">รูปใบชั่งลาน <span class="req">*</span></label>
-        <div class="photo-box" id="box-fact-ramp" onclick="triggerPhoto('inp-fact-ramp','box-fact-ramp','lbl-fact-ramp')">
-          <input type="file" id="inp-fact-ramp" accept="image/*" capture="environment" onchange="onPhoto(this,'box-fact-ramp','lbl-fact-ramp','fact-ramp')">
-          <div class="ph-icon">📷</div>
-          <div class="ph-lbl" id="lbl-fact-ramp">แนบรูปใบชั่งลาน</div>
-        </div>
-      </div>
-    </div>` : `
-    <div class="field">
-      <div class="sec-lbl">⚖️ ชั่งน้ำหนักปลายทาง</div>
-      <div class="row2">
-        <div>
-          <label class="lbl">รถหนัก (กก.) <span class="req">*</span></label>
-          <input class="inp" type="number" id="w-fact-heavy" placeholder="0" oninput="calcNet('fact')">
-        </div>
-        <div>
-          <label class="lbl">รถเบา (กก.) <span class="req">*</span></label>
-          <input class="inp" type="number" id="w-fact-light" placeholder="0" oninput="calcNet('fact')">
-        </div>
-      </div>
-      <div class="net-badge hide" id="net-fact">
-        <div class="net-lbl">สุทธิ</div>
-        <div><span class="net-val" id="net-val-fact">0</span> <span class="net-unit">กก.</span></div>
-      </div>
-      <div class="field mt8">
-        <label class="lbl">รูปใบชั่ง <span class="req">*</span></label>
-        <div class="photo-box" id="box-fact-photo" onclick="triggerPhoto('inp-fact-photo','box-fact-photo','lbl-fact-photo')">
-          <input type="file" id="inp-fact-photo" accept="image/*" capture="environment" onchange="onPhoto(this,'box-fact-photo','lbl-fact-photo','factory')">
-          <div class="ph-icon">📷</div>
-          <div class="ph-lbl" id="lbl-fact-photo">แนบรูปใบชั่ง</div>
-        </div>
-      </div>
-    </div>`}
-
-    <button class="btn btn-green" onclick="submitFactory()">🏁 ยืนยันเสร็จงาน</button>
+    ${weightBlock('fr','ใบชั่งลาน (ที่โรงงาน)')}
+    <label class="lbl mt8">รูปใบชั่งลาน <span class="req">*</span></label>
+    ${photoBox('fact-ramp','แนบรูปใบชั่งลาน','fact-ramp')}
+  ` : `
+    ${weightBlock('ff','ชั่งน้ำหนักปลายทาง')}
+    <label class="lbl mt8">รูปใบชั่ง <span class="req">*</span></label>
+    ${photoBox('fact-photo','แนบรูปใบชั่ง','factory')}
   `;
+
+  return `
+    <div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
+    <div class="row2">
+      <div><label class="lbl">เลขไมล์ปลายทาง <span class="req">*</span></label>
+        <input class="inp" type="number" id="mile-factory" placeholder="0"></div>
+      <div><label class="lbl">เลขดุมล้อปลายทาง <span class="req">*</span></label>
+        <input class="inp" type="number" id="hub-factory" placeholder="0"></div>
+    </div>
+    ${weightSection}
+
+    <!-- ── ค่าใช้จ่าย ── -->
+    <div class="sec-divider"></div>
+    <div class="sec-lbl">💰 ค่าใช้จ่าย</div>
+
+    <!-- เติมน้ำมันโรงงาน (บังคับ) -->
+    <div class="exp-section" style="margin-top:0">
+      <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">⛽ เติมน้ำมันในโรงงาน <span class="req">*</span></div>
+      <div class="row2">
+        <div><label class="lbl">จำนวนลิตร <span class="req">*</span></label>
+          <input class="inp" type="number" id="fuel-factory-liter" placeholder="0" oninput="calcFuelFactory()"></div>
+        <div><label class="lbl">ราคา/ลิตร <span class="req">*</span></label>
+          <input class="inp" type="text" id="fuel-factory-price" placeholder="30.01" list="fuel-prices" oninput="calcFuelFactory()"></div>
+      </div>
+      <div class="net-badge hide" id="fuel-factory-total-badge">
+        <div class="net-lbl">ยอดรวม</div>
+        <div><span class="net-val" id="fuel-factory-total">0</span> <span class="net-unit">บาท</span></div>
+      </div>
+    </div>
+
+    <!-- Chip toggles -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <span class="exp-chip" id="chip-fuel-road" onclick="toggleExp('fuel-road')">⛽ เติมระหว่างทาง</span>
+      <span class="exp-chip" id="chip-toll"      onclick="toggleExp('toll')">🛣️ ค่าทางด่วน</span>
+      <span class="exp-chip" id="chip-repair"    onclick="toggleExp('repair')">🔧 ค่าซ่อมนอก</span>
+    </div>
+
+    <!-- เติมน้ำมันระหว่างทาง -->
+    <div class="hide" id="exp-fuel-road">
+      <div class="exp-section mt8">
+        <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">⛽ เติมน้ำมันระหว่างทาง</div>
+        <div id="fuel-road-rows"></div>
+        <button class="btn-add" onclick="addFuelRow()">+ เพิ่มบิลน้ำมัน</button>
+        <div class="total-badge hide" id="fuel-road-total-badge">รวม: <span id="fuel-road-total">0</span> บาท</div>
+        <label class="lbl mt8">รูปบิลน้ำมัน <span class="req">*</span></label>
+        ${photoBox('fuel-road-photo','แนบรูปบิลน้ำมัน','fuel-road')}
+      </div>
+    </div>
+
+    <!-- ค่าทางด่วน -->
+    <div class="hide" id="exp-toll">
+      <div class="exp-section mt8">
+        <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">🛣️ ค่าทางด่วน</div>
+        <label class="lbl">จำนวนเงิน (บาท) <span class="req">*</span></label>
+        <input class="inp" type="number" id="toll-amount" placeholder="0">
+        <label class="lbl mt8">รูปใบเสร็จ <span class="req">*</span></label>
+        ${photoBox('toll-photo','แนบรูปใบเสร็จ','toll')}
+      </div>
+    </div>
+
+    <!-- ค่าซ่อมนอก -->
+    <div class="hide" id="exp-repair">
+      <div class="exp-section mt8">
+        <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">🔧 ค่าซ่อมนอก</div>
+        <label class="lbl">ราคา (บาท) <span class="req">*</span></label>
+        <input class="inp" type="number" id="repair-cost" placeholder="0">
+        <label class="lbl mt8">หมายเหตุ</label>
+        <input class="inp mt8" type="text" id="repair-note" placeholder="รายละเอียด">
+        <label class="lbl mt8">รูปใบเสร็จ <span class="req">*</span></label>
+        ${photoBox('repair-photo','แนบรูปใบเสร็จ','repair')}
+      </div>
+    </div>
+
+    <button class="btn btn-green" onclick="submitFactory()">🏁 ยืนยันเสร็จงาน</button>`;
 }
 
-// ── Chip Helper ───────────────────────────────────────────
-function pickChip(el, groupId) {
-  document.querySelectorAll(`#${groupId} .chip`).forEach(c => c.classList.remove('on'));
+// ── Chip Toggles ─────────────────────────────────────────
+function pickChip(el, groupId, dataKey) {
+  document.querySelectorAll(`#${groupId} .chip`).forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
-
-  // Logic สำหรับ truck type
-  if (groupId === 'truck-chips') {
+  if (dataKey==='truck-type') {
     const isHeavy = el.textContent.includes('หนัก');
-    const ws = document.getElementById('weight-start-other');
-    if (ws) ws.classList.toggle('hide', !isHeavy);
+    document.getElementById('weight-start-other')?.classList.toggle('hide', !isHeavy);
   }
-
-  // Logic สำหรับ weigh at client
-  if (groupId === 'weigh-client-chips') {
+  if (dataKey==='weigh-client') {
     const hasWeigh = el.textContent.includes('มีชั่ง');
-    const wc = document.getElementById('weight-client-other');
-    if (wc) wc.classList.toggle('hide', !hasWeigh);
+    document.getElementById('weight-client-other')?.classList.toggle('hide', !hasWeigh);
   }
 }
 
-// ── Calc Net ──────────────────────────────────────────────
-function calcNet(key) {
-  const ids = {
-    start:       ['w-start-heavy',       'w-start-light',       'net-start',       'net-val-start'],
-    client:      ['w-client-heavy',       'w-client-light',      'net-client',      'net-val-client'],
-    'ramp-client':['w-ramp-client-heavy', 'w-ramp-client-light', 'net-ramp-client', 'net-val-ramp-client'],
-    ramp:        ['w-ramp-heavy',         'w-ramp-light',        'net-ramp',        'net-val-ramp'],
-    'fact-client':['w-fact-client-heavy', 'w-fact-client-light', 'net-fact-client', 'net-val-fact-client'],
-    'fact-ramp': ['w-fact-ramp-heavy',    'w-fact-ramp-light',   'net-fact-ramp',   'net-val-fact-ramp'],
-    fact:        ['w-fact-heavy',         'w-fact-light',        'net-fact',        'net-val-fact']
-  };
-  const [hId, lId, badgeId, valId] = ids[key] || [];
-  if (!hId) return;
-
-  const h = parseFloat(document.getElementById(hId)?.value) || 0;
-  const l = parseFloat(document.getElementById(lId)?.value) || 0;
-  if (h <= 0 && l <= 0) return;
-
-  const net = Math.abs(h - l);
-  const badge = document.getElementById(badgeId);
-  const valEl = document.getElementById(valId);
-  if (badge && valEl) {
-    badge.classList.remove('hide');
-    valEl.textContent = Math.round(net).toLocaleString();
+function toggleExp(key) {
+  const chip = document.getElementById(`chip-${key}`);
+  const sec  = document.getElementById(`exp-${key}`);
+  const isOn = chip.classList.toggle('on');
+  sec.classList.toggle('hide', !isOn);
+  if (key==='fuel-road' && isOn && document.getElementById('fuel-road-rows').children.length===0) {
+    addFuelRow();
   }
 }
 
-// ── Photo Handler ─────────────────────────────────────────
-function triggerPhoto(inputId, boxId, lblId) {
-  document.getElementById(inputId)?.click();
+// ── Fuel Rows (น้ำมันระหว่างทาง) ─────────────────────────
+let fuelRowCount = 0;
+function addFuelRow() {
+  fuelRowCount++;
+  const id  = fuelRowCount;
+  const div = document.createElement('div');
+  div.className = 'fuel-row';
+  div.id = `fuel-row-${id}`;
+  div.innerHTML = `
+    <div class="fuel-row-header">
+      <span class="fuel-row-title">บิลที่ ${id}</span>
+      ${id>1 ? `<button class="btn-remove" onclick="removeFuelRow(${id})">ลบ</button>` : ''}
+    </div>
+    <div class="row2">
+      <div><label class="lbl">จำนวนลิตร</label>
+        <input class="inp" type="number" id="fl-liter-${id}" placeholder="0" oninput="calcFuelRoad()"></div>
+      <div><label class="lbl">ราคา/ลิตร</label>
+        <input class="inp" type="text" id="fl-price-${id}" placeholder="30.01" list="fuel-prices" oninput="calcFuelRoad()"></div>
+    </div>`;
+  document.getElementById('fuel-road-rows').appendChild(div);
+  calcFuelRoad();
 }
 
+function removeFuelRow(id) {
+  document.getElementById(`fuel-row-${id}`)?.remove();
+  calcFuelRoad();
+}
+
+function calcFuelRoad() {
+  let total = 0;
+  document.querySelectorAll('[id^="fl-liter-"]').forEach(el => {
+    const rowId = el.id.replace('fl-liter-','');
+    const liter = parseFloat(el.value) || 0;
+    const price = parseFloat(document.getElementById(`fl-price-${rowId}`)?.value) || 0;
+    total += liter * price;
+  });
+  const badge = document.getElementById('fuel-road-total-badge');
+  const span  = document.getElementById('fuel-road-total');
+  if (badge && span) {
+    badge.classList.toggle('hide', total===0);
+    span.textContent = total.toFixed(2);
+  }
+}
+
+function calcFuelFactory() {
+  const liter = parseFloat(document.getElementById('fuel-factory-liter')?.value) || 0;
+  const price = parseFloat(document.getElementById('fuel-factory-price')?.value) || 0;
+  const total = liter * price;
+  const badge = document.getElementById('fuel-factory-total-badge');
+  const span  = document.getElementById('fuel-factory-total');
+  if (badge && span) {
+    badge.classList.toggle('hide', total===0);
+    span.textContent = total.toFixed(2);
+  }
+}
+
+// ── Net Weight ────────────────────────────────────────────
+function calcNet(prefix) {
+  const h = parseFloat(document.getElementById(`w-${prefix}-h`)?.value) || 0;
+  const l = parseFloat(document.getElementById(`w-${prefix}-l`)?.value) || 0;
+  if (h<=0 && l<=0) return;
+  const net = Math.abs(h-l);
+  const badge = document.getElementById(`net-${prefix}`);
+  const val   = document.getElementById(`nv-${prefix}`);
+  if (badge && val) { badge.classList.remove('hide'); val.textContent = Math.round(net).toLocaleString(); }
+}
+
+// ── Photo Handler (ใช้ label — ไม่มี bug 2 ครั้งแล้ว) ─────
 function onPhoto(input, boxId, lblId, key) {
   const file = input.files[0];
   if (!file) return;
@@ -776,201 +591,152 @@ function onPhoto(input, boxId, lblId, key) {
   reader.readAsDataURL(file);
 }
 
-// ── Submit Helpers ────────────────────────────────────────
-function getVal(id) { return document.getElementById(id)?.value || ''; }
+// ── Helpers ───────────────────────────────────────────────
+function getVal(id)  { return document.getElementById(id)?.value || ''; }
 function reqVal(id, label) {
   const v = getVal(id);
-  if (!v || v === '0') { alert(`กรุณากรอก ${label}`); return null; }
+  if (!v || parseFloat(v)===0) { alert(`กรุณากรอก ${label}`); return null; }
   return v;
 }
-
 async function postGAS(payload) {
   setLoading(true);
   try {
-    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+    const res  = await fetch(GAS_URL, {method:'POST', body:JSON.stringify(payload)});
     const text = await res.text();
     return JSON.parse(text);
-  } catch(e) {
-    alert('❌ เชื่อมต่อไม่ได้ กรุณาลองใหม่');
-    return null;
-  } finally {
-    setLoading(false);
-  }
+  } catch(e) { alert('❌ เชื่อมต่อไม่ได้ กรุณาลองใหม่'); return null; }
+  finally    { setLoading(false); }
+}
+function setLoading(on) {
+  document.getElementById('overlay').classList.toggle('show', on);
+  if (on) setTimeout(()=>document.getElementById('overlay').classList.remove('show'), 15000);
 }
 
-// ── Submit: เริ่มงาน ──────────────────────────────────────
+// ── Submit: ออกโรงงาน ────────────────────────────────────
 async function submitStart() {
-  const mileStart = reqVal('mile-start', 'เลขไมล์เริ่ม'); if (!mileStart) return;
-  const hubStart  = reqVal('hub-start',  'เลขดุมล้อเริ่ม'); if (!hubStart) return;
-
-  // อัปเดตสถานะ
-  const r = await postGAS({ action: 'driverStartJob', orderId: order['Order ID'], userId: U.userId });
-  if (!r?.success) { alert('❌ ' + (r?.error || 'เกิดข้อผิดพลาด')); return; }
-
-  // บันทึก weight log
-  const fields = { 'เลขไมล์เริ่ม': mileStart, 'เลขดุมล้อเริ่ม': hubStart };
-  const heavy = getVal('w-start-heavy');
-  const light = getVal('w-start-light');
-  if (heavy && light) {
-    fields['น้ำหนักหนักปลายทาง'] = heavy;
-    fields['น้ำหนักเบาปลายทาง']  = light;
-    fields['สุทธิปลายทาง']       = Math.abs(parseFloat(heavy) - parseFloat(light));
-  }
-
-  await postGAS({ action: 'submitWeight', orderId: order['Order ID'], userId: U.userId, jobType, checkPoint: 'เริ่ม', fields });
-
-  order['สถานะ'] = 'เริ่มงานแล้ว';
-  renderTimeline();
-  alert('✅ บันทึกออกโรงงานแล้วครับ');
+  const mileS = reqVal('mile-start','เลขไมล์เริ่ม'); if (!mileS) return;
+  const hubS  = reqVal('hub-start', 'เลขดุมล้อเริ่ม'); if (!hubS) return;
+  const r = await postGAS({action:'driverStartJob', orderId:order['Order ID'], userId:U.userId});
+  if (!r?.success) { alert('❌ '+(r?.error||'เกิดข้อผิดพลาด')); return; }
+  const fields = {'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS};
+  const h = getVal('w-start-h'), l = getVal('w-start-l');
+  if (h && l) { fields['น้ำหนักหนักปลายทาง']=h; fields['น้ำหนักเบาปลายทาง']=l; fields['สุทธิปลายทาง']=Math.abs(parseFloat(h)-parseFloat(l)); }
+  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'เริ่ม',fields});
+  order['สถานะ']='เริ่มงานแล้ว'; renderTimeline(); alert('✅ บันทึกออกโรงงานแล้วครับ');
 }
 
 // ── Submit: ถึงลูกค้า ─────────────────────────────────────
 async function submitClient() {
-  const mileClient = reqVal('mile-client', 'เลขไมล์ถึงลูกค้า'); if (!mileClient) return;
-  const hubClient  = reqVal('hub-client',  'เลขดุมล้อถึงลูกค้า'); if (!hubClient) return;
-
-  const r = await postGAS({ action: 'driverArrived', orderId: order['Order ID'], userId: U.userId });
-  if (!r?.success) { alert('❌ ' + (r?.error || 'เกิดข้อผิดพลาด')); return; }
-
-  const fields = { 'เลขไมล์ลูกค้า': mileClient, 'เลขดุมล้อลูกค้า': hubClient };
-  const heavy = getVal('w-client-heavy');
-  const light = getVal('w-client-light');
-  if (heavy && light) {
-    fields['น้ำหนักหนักลูกค้า'] = heavy;
-    fields['น้ำหนักเบาลูกค้า']  = light;
-    fields['สุทธิลูกค้า']       = Math.abs(parseFloat(heavy) - parseFloat(light));
-    if (photos['client']) fields['รูปลูกค้า'] = photos['client'];
-  }
-
-  await postGAS({ action: 'submitWeight', orderId: order['Order ID'], userId: U.userId, jobType, checkPoint: 'ลูกค้า', fields });
-
-  order['สถานะ'] = 'ถึงลูกค้า';
-  renderTimeline();
-  alert('✅ บันทึกถึงลูกค้าแล้วครับ');
+  const mileC = reqVal('mile-client','เลขไมล์ถึงลูกค้า'); if (!mileC) return;
+  const hubC  = reqVal('hub-client', 'เลขดุมล้อถึงลูกค้า'); if (!hubC) return;
+  const r = await postGAS({action:'driverArrived', orderId:order['Order ID'], userId:U.userId});
+  if (!r?.success) { alert('❌ '+(r?.error||'เกิดข้อผิดพลาด')); return; }
+  const fields = {'เลขไมล์ลูกค้า':mileC,'เลขดุมล้อลูกค้า':hubC};
+  const h = getVal('w-client-h'), l = getVal('w-client-l');
+  if (h && l) { fields['น้ำหนักหนักลูกค้า']=h; fields['น้ำหนักเบาลูกค้า']=l; fields['สุทธิลูกค้า']=Math.abs(parseFloat(h)-parseFloat(l)); if (photos['client']) fields['รูปลูกค้า']=photos['client']; }
+  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลูกค้า',fields});
+  order['สถานะ']='ถึงลูกค้า'; renderTimeline(); alert('✅ บันทึกถึงลูกค้าแล้วครับ');
 }
 
 // ── Submit: ถึงลาน ────────────────────────────────────────
 async function submitRamp() {
-  const mileRamp = reqVal('mile-ramp', 'เลขไมล์ถึงลาน'); if (!mileRamp) return;
-  const hubRamp  = reqVal('hub-ramp',  'เลขดุมล้อถึงลาน'); if (!hubRamp) return;
-
-  const rcH = reqVal('w-ramp-client-heavy', 'น้ำหนักหนักลูกค้า'); if (!rcH) return;
-  const rcL = reqVal('w-ramp-client-light', 'น้ำหนักเบาลูกค้า');  if (!rcL) return;
+  const mileR = reqVal('mile-ramp','เลขไมล์ถึงลาน'); if (!mileR) return;
+  const hubR  = reqVal('hub-ramp', 'เลขดุมล้อถึงลาน'); if (!hubR) return;
+  const rcH = reqVal('w-rc-h','น้ำหนักหนักลูกค้า'); if (!rcH) return;
+  const rcL = reqVal('w-rc-l','น้ำหนักเบาลูกค้า');  if (!rcL) return;
   if (!photos['ramp-client']) { alert('กรุณาแนบรูปใบชั่งลูกค้า'); return; }
-
-  const rrH = reqVal('w-ramp-heavy', 'น้ำหนักหนักลาน'); if (!rrH) return;
-  const rrL = reqVal('w-ramp-light', 'น้ำหนักเบาลาน');  if (!rrL) return;
+  const rrH = reqVal('w-rr-h','น้ำหนักหนักลาน'); if (!rrH) return;
+  const rrL = reqVal('w-rr-l','น้ำหนักเบาลาน');  if (!rrL) return;
   if (!photos['ramp-ramp']) { alert('กรุณาแนบรูปใบชั่งลาน'); return; }
-
   const fields = {
-    'เลขไมล์ลาน':      mileRamp,
-    'เลขดุมล้อลาน':    hubRamp,
-    'น้ำหนักหนักลูกค้า': rcH,
-    'น้ำหนักเบาลูกค้า':  rcL,
-    'สุทธิลูกค้า':       Math.abs(parseFloat(rcH) - parseFloat(rcL)),
-    'น้ำหนักหนักลาน':   rrH,
-    'น้ำหนักเบาลาน':    rrL,
-    'สุทธิลาน':         Math.abs(parseFloat(rrH) - parseFloat(rrL)),
-    'รูปลูกค้า':        photos['ramp-client'] || '',
-    'รูปลาน':           photos['ramp-ramp']   || ''
+    'เลขไมล์ลาน':mileR,'เลขดุมล้อลาน':hubR,
+    'น้ำหนักหนักลูกค้า':rcH,'น้ำหนักเบาลูกค้า':rcL,'สุทธิลูกค้า':Math.abs(parseFloat(rcH)-parseFloat(rcL)),
+    'น้ำหนักหนักลาน':rrH,'น้ำหนักเบาลาน':rrL,'สุทธิลาน':Math.abs(parseFloat(rrH)-parseFloat(rrL)),
+    'รูปลูกค้า':photos['ramp-client']||'','รูปลาน':photos['ramp-ramp']||''
   };
-
-  await postGAS({
-    action: 'submitWeight', orderId: order['Order ID'],
-    userId: U.userId, jobType, checkPoint: 'ลาน',
-    notifyOwner: true, fields
-  });
-
-  order['สถานะ'] = 'ถึงลาน';
-  renderTimeline();
-  alert('✅ บันทึกถึงลานแล้ว และแจ้งเจ้าของสวนแล้วครับ');
+  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลาน',notifyOwner:true,fields});
+  order['สถานะ']='ถึงลาน'; renderTimeline(); alert('✅ บันทึกถึงลานและแจ้งเจ้าของสวนแล้วครับ');
 }
 
 // ── Submit: ถึงโรงงาน ─────────────────────────────────────
 async function submitFactory() {
-  const mileF = reqVal('mile-factory', 'เลขไมล์ปลายทาง'); if (!mileF) return;
-  const hubF  = reqVal('hub-factory',  'เลขดุมล้อปลายทาง'); if (!hubF) return;
+  const mileF = reqVal('mile-factory','เลขไมล์ปลายทาง'); if (!mileF) return;
+  const hubF  = reqVal('hub-factory', 'เลขดุมล้อปลายทาง'); if (!hubF) return;
 
-  const fields = { 'เลขไมล์ปลายทาง': mileF, 'เลขดุมล้อปลายทาง': hubF };
+  // ตรวจน้ำมันโรงงาน
+  const fLiter = reqVal('fuel-factory-liter','จำนวนลิตรน้ำมันโรงงาน'); if (!fLiter) return;
+  const fPrice = reqVal('fuel-factory-price','ราคาน้ำมันโรงงาน'); if (!fPrice) return;
 
-  if (hasRamp) {
-    const fcH = reqVal('w-fact-client-heavy', 'น้ำหนักหนักลูกค้า(โรงงาน)'); if (!fcH) return;
-    const fcL = reqVal('w-fact-client-light', 'น้ำหนักเบาลูกค้า(โรงงาน)');  if (!fcL) return;
-    if (!photos['fact-client']) { alert('กรุณาแนบรูปใบชั่งลูกค้า(โรงงาน)'); return; }
-    const frH = reqVal('w-fact-ramp-heavy', 'น้ำหนักหนักลาน(โรงงาน)'); if (!frH) return;
-    const frL = reqVal('w-fact-ramp-light', 'น้ำหนักเบาลาน(โรงงาน)');  if (!frL) return;
-    if (!photos['fact-ramp']) { alert('กรุณาแนบรูปใบชั่งลาน(โรงงาน)'); return; }
+  const fields = {'เลขไมล์ปลายทาง':mileF,'เลขดุมล้อปลายทาง':hubF};
 
+  // น้ำหนัก
+  if (hasRamp && jobType==='ปาล์ม') {
+    const fcH = reqVal('w-fc-h','น้ำหนักหนักลูกค้า(โรงงาน)'); if (!fcH) return;
+    const fcL = reqVal('w-fc-l','น้ำหนักเบาลูกค้า(โรงงาน)');  if (!fcL) return;
+    if (!photos['fact-client']) { alert('กรุณาแนบรูปใบชั่งลูกค้า'); return; }
+    const frH = reqVal('w-fr-h','น้ำหนักหนักลาน(โรงงาน)'); if (!frH) return;
+    const frL = reqVal('w-fr-l','น้ำหนักเบาลาน(โรงงาน)');  if (!frL) return;
+    if (!photos['fact-ramp']) { alert('กรุณาแนบรูปใบชั่งลาน'); return; }
     Object.assign(fields, {
-      'น้ำหนักหนักปลายทาง': fcH, 'น้ำหนักเบาปลายทาง': fcL,
-      'สุทธิปลายทาง': Math.abs(parseFloat(fcH) - parseFloat(fcL)),
-      'น้ำหนักหนักลาน': frH, 'น้ำหนักเบาลาน': frL,
-      'สุทธิลาน': Math.abs(parseFloat(frH) - parseFloat(frL)),
-      'รูปปลายทาง': photos['fact-client'] || '',
-      'รูปลาน': photos['fact-ramp'] || ''
+      'น้ำหนักหนักปลายทาง':fcH,'น้ำหนักเบาปลายทาง':fcL,'สุทธิปลายทาง':Math.abs(parseFloat(fcH)-parseFloat(fcL)),
+      'น้ำหนักหนักลาน':frH,'น้ำหนักเบาลาน':frL,'สุทธิลาน':Math.abs(parseFloat(frH)-parseFloat(frL)),
+      'รูปปลายทาง':photos['fact-client']||'','รูปลาน':photos['fact-ramp']||''
     });
   } else {
-    const fH = reqVal('w-fact-heavy', 'น้ำหนักหนักปลายทาง'); if (!fH) return;
-    const fL = reqVal('w-fact-light', 'น้ำหนักเบาปลายทาง');  if (!fL) return;
+    const ffH = reqVal('w-ff-h','น้ำหนักหนักปลายทาง'); if (!ffH) return;
+    const ffL = reqVal('w-ff-l','น้ำหนักเบาปลายทาง');  if (!ffL) return;
     if (!photos['factory']) { alert('กรุณาแนบรูปใบชั่ง'); return; }
     Object.assign(fields, {
-      'น้ำหนักหนักปลายทาง': fH, 'น้ำหนักเบาปลายทาง': fL,
-      'สุทธิปลายทาง': Math.abs(parseFloat(fH) - parseFloat(fL)),
-      'รูปปลายทาง': photos['factory'] || ''
+      'น้ำหนักหนักปลายทาง':ffH,'น้ำหนักเบาปลายทาง':ffL,'สุทธิปลายทาง':Math.abs(parseFloat(ffH)-parseFloat(ffL)),
+      'รูปปลายทาง':photos['factory']||''
     });
   }
 
-  // บันทึก weight
-  await postGAS({
-    action: 'submitWeight', orderId: order['Order ID'],
-    userId: U.userId, jobType, checkPoint: 'ปลายทาง',
-    notifyOwner: true, fields
-  });
+  // ค่าใช้จ่าย
+  // น้ำมันโรงงาน
+  const fTotal = (parseFloat(fLiter)||0) * (parseFloat(fPrice)||0);
+  Object.assign(fields, {'ลิตรน้ำมัน(ทาง)':fLiter,'ราคาน้ำมัน(ทาง)':fPrice});
 
-  // เสร็จงาน
-  const r = await postGAS({ action: 'driverComplete', orderId: order['Order ID'], userId: U.userId });
-  if (!r?.success) { alert('❌ ' + (r?.error || 'เกิดข้อผิดพลาด')); return; }
+  // น้ำมันระหว่างทาง
+  if (document.getElementById('chip-fuel-road').classList.contains('on')) {
+    let roadLiter=0, roadTotal=0;
+    document.querySelectorAll('[id^="fl-liter-"]').forEach(el => {
+      const rowId = el.id.replace('fl-liter-','');
+      const l = parseFloat(el.value)||0;
+      const p = parseFloat(document.getElementById(`fl-price-${rowId}`)?.value)||0;
+      roadLiter += l; roadTotal += l*p;
+    });
+    if (photos['fuel-road']) fields['รูปน้ำมัน(ทาง)'] = photos['fuel-road'];
+  }
 
-  document.getElementById('success-msg').innerHTML =
-    `📋 ${order['Order ID']}<br>ส่งข้อมูลให้ Admin และเจ้าของสวนแล้วครับ`;
+  // ทางด่วน
+  if (document.getElementById('chip-toll').classList.contains('on')) {
+    const toll = getVal('toll-amount');
+    if (toll) fields['ค่าทางด่วน'] = toll;
+  }
+
+  // ซ่อมนอก
+  if (document.getElementById('chip-repair').classList.contains('on')) {
+    const rc = getVal('repair-cost'), rn = getVal('repair-note');
+    if (rc) fields['ค่าซ่อมนอก'] = rc;
+    if (rn) fields['หมายเหตุค่าใช้จ่าย'] = rn;
+    if (photos['repair']) fields['รูปค่าซ่อมนอก'] = photos['repair'];
+  }
+
+  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ปลายทาง',notifyOwner:true,fields});
+  const r = await postGAS({action:'driverComplete',orderId:order['Order ID'],userId:U.userId});
+  if (!r?.success) { alert('❌ '+(r?.error||'เกิดข้อผิดพลาด')); return; }
+  document.getElementById('success-msg').innerHTML = `📋 ${order['Order ID']}<br>ส่งข้อมูลให้ Admin และเจ้าของสวนแล้วครับ`;
   document.getElementById('success').classList.add('show');
-}
-
-// ── Submit: ค่าใช้จ่าย ───────────────────────────────────
-async function submitExpense() {
-  const fields = {};
-  const liter = getVal('fuel-liter');
-  const price = getVal('fuel-price');
-  if (liter) { fields['ลิตรน้ำมัน(ทาง)'] = liter; }
-  if (price) { fields['ราคาน้ำมัน(ทาง)'] = price; }
-  if (photos['fuel-photo']) { fields['รูปน้ำมัน(ทาง)'] = photos['fuel-photo']; }
-
-  const repairCost = getVal('repair-cost');
-  const repairNote = getVal('repair-note');
-  if (repairCost) { fields['ค่าซ่อมนอก'] = repairCost; }
-  if (repairNote) { fields['หมายเหตุค่าใช้จ่าย'] = repairNote; }
-  if (photos['repair-photo']) { fields['รูปค่าซ่อมนอก'] = photos['repair-photo']; }
-
-  if (Object.keys(fields).length === 0) { alert('ไม่มีข้อมูลค่าใช้จ่ายที่จะบันทึก'); return; }
-
-  const r = await postGAS({ action: 'submitWeight', orderId: order['Order ID'], userId: U.userId, jobType, checkPoint: 'ค่าใช้จ่าย', fields });
-  if (r?.success) alert('✅ บันทึกค่าใช้จ่ายแล้วครับ');
-  else alert('❌ ' + (r?.error || 'เกิดข้อผิดพลาด'));
 }
 
 // ── Cancel ────────────────────────────────────────────────
 async function requestCancel() {
   const reason = prompt('กรุณาระบุสาเหตุที่ขอยกเลิก:');
-  if (reason === null) return;
-  const r = await postGAS({ action: 'driverCancelRequest', orderId: order['Order ID'], userId: U.userId, reason });
+  if (reason===null) return;
+  const r = await postGAS({action:'driverCancelRequest',orderId:order['Order ID'],userId:U.userId,reason});
   if (r?.success) alert('📤 ส่งคำขอไปยัง Admin แล้วครับ');
-  else alert('❌ ' + (r?.error || 'เกิดข้อผิดพลาด'));
-}
-
-// ── Loading ───────────────────────────────────────────────
-function setLoading(on) {
-  document.getElementById('overlay').classList.toggle('show', on);
-  if (on) setTimeout(() => document.getElementById('overlay').classList.remove('show'), 15000);
+  else alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));
 }
 
 init();
