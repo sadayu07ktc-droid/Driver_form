@@ -92,6 +92,7 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 #success .si{font-size:72px}#success h2{font-size:24px;font-weight:700}
 #success p{font-size:14px;opacity:.9;line-height:1.8}
 .btn-close{margin-top:8px;padding:12px 36px;border-radius:999px;background:rgba(255,255,255,.2);color:#fff;font-size:15px;font-family:'Sarabun',sans-serif;border:2px solid rgba(255,255,255,.4);cursor:pointer}
+/* Dashboard */
 #dashboard{display:none;position:fixed;inset:0;z-index:150;overflow-y:auto;background:rgba(0,0,0,.6)}
 #dashboard.show{display:block}
 .dash-inner{background:var(--white);margin:16px;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.2)}
@@ -124,6 +125,7 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
   <button class="btn-close" onclick="liff.closeWindow()">ปิดหน้าต่าง</button>
 </div>
 
+<!-- Dashboard Popup -->
 <div id="dashboard">
   <div class="dash-inner">
     <div class="dash-header">
@@ -176,17 +178,13 @@ const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjf
 const LIFF_ID='2010274217-SozYWeE5';
 let U={}, order=null, jobType='', hasRamp=false, photos={};
 let fuelRowCounter=0;
-let mileHistory={start:0, client:0, ramp:0};
+// ✅ ข้อ 1: เก็บเลขดุมล้อแทนเลขไมล์สำหรับแสดงผลสรุป
+let hubHistory={start:0, client:0, ramp:0};
 let collectedData={};
 
 function buildPriceList(){
-  const dl=document.createElement('datalist');
-  dl.id='fuel-prices';
-  for(let p=3001;p<=5000;p++){
-    const opt=document.createElement('option');
-    opt.value=(p/100).toFixed(2);
-    dl.appendChild(opt);
-  }
+  const dl=document.createElement('datalist');dl.id='fuel-prices';
+  for(let p=3001;p<=5000;p++){const opt=document.createElement('option');opt.value=(p/100).toFixed(2);dl.appendChild(opt);}
   document.body.appendChild(dl);
 }
 
@@ -253,8 +251,7 @@ function getStepTime(key){
 }
 
 function renderTimeline(){
-  const tl=document.getElementById('timeline');
-  tl.innerHTML='';
+  const tl=document.getElementById('timeline');tl.innerHTML='';
   getSteps().forEach((step,i)=>{
     const state=getStepState(step.key,order['สถานะ'],i);
     const wrap=document.createElement('div');wrap.className='tl-item';
@@ -302,21 +299,21 @@ function buildForm(key){
   return '';
 }
 
-function mileBlock(key,label1,label2,prevLabel){
+// ✅ ข้อ 1: label เปลี่ยนเป็นเลขดุมล้อ, ไม่มี mileBlock แยก — รวมใน hubBlock
+function hubBlock(key,labelMile,labelHub){
   return `<div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
     <div class="row2">
-      <div><label class="lbl">${label1} <span class="req">*</span></label>
-        <input class="inp" type="number" id="mile-${key}" placeholder="0" oninput="validateMile('mile-${key}','${key}')">
-        <div class="err-msg hide" id="err-mile-${key}">⚠️ ต้องไม่น้อยกว่าจุดก่อนหน้า</div></div>
-      <div><label class="lbl">${label2} <span class="req">*</span></label>
-        <input class="inp" type="number" id="hub-${key}" placeholder="0" oninput="validateHub('hub-${key}','${key}')">
+      <div><label class="lbl">${labelMile} <span class="req">*</span></label>
+        <input class="inp" type="number" id="mile-${key}" placeholder="0"></div>
+      <div><label class="lbl">${labelHub} <span class="req">*</span></label>
+        <input class="inp" type="number" id="hub-${key}" placeholder="0">
         <div class="err-msg hide" id="err-hub-${key}">⚠️ ต้องไม่น้อยกว่าจุดก่อนหน้า</div></div>
     </div>`;
 }
 
 function formStart(){
   const isOther=jobType!=='ปาล์ม';
-  return `${mileBlock('start','เลขไมล์เริ่ม','เลขดุมล้อเริ่ม','')}
+  return `${hubBlock('start','เลขไมล์เริ่ม','เลขดุมล้อเริ่ม')}
     ${isOther?`<div class="field">
       <div class="sec-lbl">🚛 ประเภทรถออก</div>
       <div class="chips" id="truck-chips">
@@ -329,12 +326,12 @@ function formStart(){
 
 function formClient(){
   const isOther=jobType!=='ปาล์ม';
-  return `${mileBlock('client','เลขไมล์ถึงลูกค้า','เลขดุมล้อถึงลูกค้า','start')}
+  return `${hubBlock('client','เลขไมล์ถึงลูกค้า','เลขดุมล้อถึงลูกค้า')}
     ${isOther?`<div class="field">
       <div class="sec-lbl">⚖️ ชั่งที่ลูกค้า</div>
       <div class="chips" id="weigh-client-chips">
-        <span class="chip" onclick="pickChip(this,'weigh-client-chips','weigh-client')">ไม่มีชั่ง</span>
-        <span class="chip" onclick="pickChip(this,'weigh-client-chips','weigh-client')">มีชั่ง</span>
+        <span class="chip" onclick="pickWeighChip(this,'ไม่มีชั่ง')">ไม่มีชั่ง</span>
+        <span class="chip" onclick="pickWeighChip(this,'มีชั่ง')">มีชั่ง</span>
       </div>
       <div class="hide mt8" id="weight-client-other">
         ${weightBlock('client','น้ำหนักที่ลูกค้า')}
@@ -345,7 +342,7 @@ function formClient(){
 }
 
 function formRamp(){
-  return `${mileBlock('ramp','เลขไมล์ถึงลาน','เลขดุมล้อถึงลาน','client')}
+  return `${hubBlock('ramp','เลขไมล์ถึงลาน','เลขดุมล้อถึงลาน')}
     ${weightBlock('rc','ใบชั่งลูกค้า')}
     <label class="lbl mt8">รูปใบชั่งลูกค้า <span class="req">*</span></label>
     ${photoBox('ramp-client','แนบรูปใบชั่งลูกค้า','ramp-client')}
@@ -372,7 +369,7 @@ function formFactory(){
     ${photoBox('fact-photo','แนบรูปใบชั่ง','factory')}
   `;
   return `
-    ${mileBlock('factory','เลขไมล์ปลายทาง','เลขดุมล้อปลายทาง',hasRamp?'ramp':'client')}
+    ${hubBlock('factory','เลขไมล์ปลายทาง','เลขดุมล้อปลายทาง')}
     ${weightSec}
     <div class="sec-divider"></div>
     <div class="sec-lbl">💰 ค่าใช้จ่าย</div>
@@ -391,8 +388,8 @@ function formFactory(){
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
       <span class="exp-chip" id="chip-fuel-road" onclick="toggleExp('fuel-road')">⛽ เติมระหว่างทาง</span>
-      <span class="exp-chip" id="chip-toll"      onclick="toggleExp('toll')">🛣️ ค่าทางด่วน</span>
-      <span class="exp-chip" id="chip-repair"    onclick="toggleExp('repair')">🔧 ค่าซ่อมนอก</span>
+      <span class="exp-chip" id="chip-toll" onclick="toggleExp('toll')">🛣️ ค่าทางด่วน</span>
+      <span class="exp-chip" id="chip-repair" onclick="toggleExp('repair')">🔧 ค่าซ่อมนอก</span>
     </div>
     <div class="hide" id="exp-fuel-road">
       <div class="exp-section mt8">
@@ -425,6 +422,7 @@ function formFactory(){
     <button class="btn btn-green" onclick="prepareFactory()">📋 ดูสรุปก่อนส่ง</button>`;
 }
 
+// ── Chip helpers ──────────────────────────────────────────
 function pickChip(el,groupId,dataKey){
   document.querySelectorAll(`#${groupId} .chip`).forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
@@ -432,9 +430,19 @@ function pickChip(el,groupId,dataKey){
     const isHeavy=el.textContent.includes('หนัก');
     document.getElementById('weight-start-other')?.classList.toggle('hide',!isHeavy);
   }
-  if(dataKey==='weigh-client'){
-    const hasWeigh=el.textContent.includes('มีชั่ง');
-    document.getElementById('weight-client-other')?.classList.toggle('hide',!hasWeigh);
+}
+
+// ✅ ข้อ 2: แก้ chip มีชั่ง/ไม่มีชั่ง — toggle ถูกต้อง หุบได้
+function pickWeighChip(el, val){
+  const chips=document.querySelectorAll('#weigh-client-chips .chip');
+  const weightDiv=document.getElementById('weight-client-other');
+  // ถ้ากดซ้ำ chip เดิมที่ on อยู่ → ไม่ทำอะไร
+  chips.forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  if(val==='มีชั่ง'){
+    weightDiv?.classList.remove('hide');
+  } else {
+    weightDiv?.classList.add('hide');
   }
 }
 
@@ -446,14 +454,14 @@ function toggleExp(key){
   if(key==='fuel-road'&&isOn&&document.getElementById('fuel-road-rows').children.length===0) addFuelRow();
 }
 
+// ── Fuel rows ─────────────────────────────────────────────
 function addFuelRow(){
   fuelRowCounter++;
   const id=fuelRowCounter;
-  const div=document.createElement('div');
-  div.className='fuel-row';div.id=`fuel-row-${id}`;
+  const div=document.createElement('div');div.className='fuel-row';div.id=`fuel-row-${id}`;
   div.innerHTML=`
     <div class="fuel-row-header">
-      <span class="fuel-row-title" id="fuel-row-title-${id}">บิลที่ ${getFuelRowNumber(id)+1}</span>
+      <span class="fuel-row-title" id="fuel-row-title-${id}">บิลที่ 1</span>
       <button class="btn-remove" onclick="removeFuelRow(${id})">ลบ</button>
     </div>
     <div class="row2">
@@ -467,20 +475,12 @@ function addFuelRow(){
       ${photoBox(`fuel-road-photo-${id}`,'แนบรูปบิลน้ำมัน',`fuel-road-${id}`)}
     </div>`;
   document.getElementById('fuel-road-rows').appendChild(div);
-  renumberFuelRows();
-  calcFuelRoad();
+  renumberFuelRows();calcFuelRoad();
 }
 
 function removeFuelRow(id){
   document.getElementById(`fuel-row-${id}`)?.remove();
-  renumberFuelRows();
-  calcFuelRoad();
-}
-
-function getFuelRowNumber(id){
-  const rows=document.querySelectorAll('#fuel-road-rows .fuel-row');
-  for(let i=0;i<rows.length;i++) if(rows[i].id===`fuel-row-${id}`) return i;
-  return 0;
+  renumberFuelRows();calcFuelRoad();
 }
 
 function renumberFuelRows(){
@@ -525,30 +525,23 @@ function calcNet(prefix){
   if(badge&&val){badge.classList.remove('hide');val.textContent=Math.round(Math.abs(h-l)).toLocaleString();}
 }
 
-function getPrevMile(key){
-  if(key==='client') return mileHistory.start||0;
-  if(key==='ramp')   return mileHistory.client||0;
-  if(key==='factory') return hasRamp?(mileHistory.ramp||0):(mileHistory.client||0);
+// ✅ ข้อ 1: validate เลขดุมล้อแทนไมล์สำหรับ sequence check
+function getPrevHub(key){
+  if(key==='client') return hubHistory.start||0;
+  if(key==='ramp')   return hubHistory.client||0;
+  if(key==='factory') return hasRamp?(hubHistory.ramp||0):(hubHistory.client||0);
   return 0;
 }
 
-function validateMile(inputId,key){
-  const val=parseFloat(document.getElementById(inputId)?.value)||0;
-  const prev=getPrevMile(key);
-  const errEl=document.getElementById(`err-mile-${key}`);
-  const inp=document.getElementById(inputId);
+function validateHub(key){
+  const val=parseFloat(document.getElementById(`hub-${key}`)?.value)||0;
+  const prev=getPrevHub(key);
+  const errEl=document.getElementById(`err-hub-${key}`);
+  const inp=document.getElementById(`hub-${key}`);
   if(prev>0&&val<prev){
-    inp?.classList.add('err');
-    errEl?.classList.remove('hide');
-    return false;
+    inp?.classList.add('err');errEl?.classList.remove('hide');return false;
   }
-  inp?.classList.remove('err');
-  errEl?.classList.add('hide');
-  return true;
-}
-
-function validateHub(inputId,key){
-  return validateMile(inputId,key);
+  inp?.classList.remove('err');errEl?.classList.add('hide');return true;
 }
 
 function onPhoto(input,boxId,lblId,key){
@@ -557,8 +550,7 @@ function onPhoto(input,boxId,lblId,key){
   reader.onload=e=>{
     photos[key]=e.target.result;
     document.getElementById(boxId)?.classList.add('has-photo');
-    const lbl=document.getElementById(lblId);
-    if(lbl) lbl.textContent='✅ แนบรูปแล้ว';
+    const lbl=document.getElementById(lblId);if(lbl) lbl.textContent='✅ แนบรูปแล้ว';
   };
   reader.readAsDataURL(file);
 }
@@ -570,60 +562,34 @@ function reqVal(id,label){
   return v;
 }
 
-// =====================================================
-// ✅ แก้ไข postGAS — แก้ปัญหา CORS / redirect ของ GAS
-// =====================================================
-async function postGAS(payload) {
+// ✅ แก้ postGAS — CORS fix
+async function postGAS(payload){
   setLoading(true);
-  try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      redirect: 'follow',           // ✅ follow redirect ของ GAS
-      body: JSON.stringify(payload)
-    });
-
-    const text = await res.text();
-
-    // ✅ ครอบ JSON.parse แยก — ป้องกัน GAS คืน HTML error แทน JSON
-    try {
-      return JSON.parse(text);
-    } catch (parseErr) {
-      console.warn('postGAS: parse failed, assuming success. raw:', text.substring(0, 300));
-      // ข้อมูลวิ่งเข้า GS แล้ว (GAS ทำงานสำเร็จ แต่ response โดน CORS)
-      return { success: true };
-    }
-
-  } catch (fetchErr) {
-    console.error('postGAS fetch error:', fetchErr);
-
-    // ✅ Fallback: ยิง no-cors (ไม่รอผล) แล้ว assume success
-    // เพราะข้อมูลส่วนใหญ่วิ่งเข้า GS ได้อยู่แล้ว
-    try {
-      fetch(GAS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify(payload)
-      });
-    } catch (_) {}
-
-    return { success: true, _fromFallback: true };
-  } finally {
-    setLoading(false);
-  }
+  try{
+    const res=await fetch(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
+    const text=await res.text();
+    try{return JSON.parse(text);}
+    catch(e){console.warn('postGAS parse warn:',text.substring(0,200));return{success:true};}
+  }catch(e){
+    console.error('postGAS error:',e);
+    try{fetch(GAS_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(payload)});}catch(_){}
+    return{success:true,_fallback:true};
+  }finally{setLoading(false);}
 }
-// =====================================================
 
 function setLoading(on){
   document.getElementById('overlay').classList.toggle('show',on);
   if(on) setTimeout(()=>document.getElementById('overlay').classList.remove('show'),15000);
 }
 
+// ── Submit functions ──────────────────────────────────────
 async function submitStart(){
   const mileS=reqVal('mile-start','เลขไมล์เริ่ม');if(!mileS) return;
   const hubS=reqVal('hub-start','เลขดุมล้อเริ่ม');if(!hubS) return;
   const r=await postGAS({action:'driverStartJob',orderId:order['Order ID'],userId:U.userId});
   if(!r?.success){alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
-  mileHistory.start=parseFloat(mileS);
+  // ✅ ข้อ 1: เก็บเลขดุมล้อ
+  hubHistory.start=parseFloat(hubS);
   const fields={'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS};
   const h=getVal('w-start-h'),l=getVal('w-start-l');
   if(h&&l){fields['น้ำหนักหนักปลายทาง']=h;fields['น้ำหนักเบาปลายทาง']=l;fields['สุทธิปลายทาง']=Math.abs(parseFloat(h)-parseFloat(l));}
@@ -632,12 +598,12 @@ async function submitStart(){
 }
 
 async function submitClient(){
-  if(!validateMile('mile-client','client')){alert('⚠️ เลขไมล์ต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
+  if(!validateHub('client')){alert('⚠️ เลขดุมล้อต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
   const mileC=reqVal('mile-client','เลขไมล์ถึงลูกค้า');if(!mileC) return;
   const hubC=reqVal('hub-client','เลขดุมล้อถึงลูกค้า');if(!hubC) return;
   const r=await postGAS({action:'driverArrived',orderId:order['Order ID'],userId:U.userId});
   if(!r?.success){alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
-  mileHistory.client=parseFloat(mileC);
+  hubHistory.client=parseFloat(hubC);
   const fields={'เลขไมล์ลูกค้า':mileC,'เลขดุมล้อลูกค้า':hubC};
   const h=getVal('w-client-h'),l=getVal('w-client-l');
   if(h&&l){fields['น้ำหนักหนักลูกค้า']=h;fields['น้ำหนักเบาลูกค้า']=l;fields['สุทธิลูกค้า']=Math.abs(parseFloat(h)-parseFloat(l));if(photos['client']) fields['รูปลูกค้า']=photos['client'];}
@@ -646,7 +612,7 @@ async function submitClient(){
 }
 
 async function submitRamp(){
-  if(!validateMile('mile-ramp','ramp')){alert('⚠️ เลขไมล์ต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
+  if(!validateHub('ramp')){alert('⚠️ เลขดุมล้อต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
   const mileR=reqVal('mile-ramp','เลขไมล์ถึงลาน');if(!mileR) return;
   const hubR=reqVal('hub-ramp','เลขดุมล้อถึงลาน');if(!hubR) return;
   const rcH=reqVal('w-rc-h','น้ำหนักหนักลูกค้า');if(!rcH) return;
@@ -655,7 +621,7 @@ async function submitRamp(){
   const rrH=reqVal('w-rr-h','น้ำหนักหนักลาน');if(!rrH) return;
   const rrL=reqVal('w-rr-l','น้ำหนักเบาลาน');if(!rrL) return;
   if(!photos['ramp-ramp']){alert('กรุณาแนบรูปใบชั่งลาน');return;}
-  mileHistory.ramp=parseFloat(mileR);
+  hubHistory.ramp=parseFloat(hubR);
   const fields={'เลขไมล์ลาน':mileR,'เลขดุมล้อลาน':hubR,
     'น้ำหนักหนักลูกค้า':rcH,'น้ำหนักเบาลูกค้า':rcL,'สุทธิลูกค้า':Math.abs(parseFloat(rcH)-parseFloat(rcL)),
     'น้ำหนักหนักลาน':rrH,'น้ำหนักเบาลาน':rrL,'สุทธิลาน':Math.abs(parseFloat(rrH)-parseFloat(rrL)),
@@ -665,7 +631,7 @@ async function submitRamp(){
 }
 
 function prepareFactory(){
-  if(!validateMile('mile-factory','factory')){alert('⚠️ เลขไมล์ต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
+  if(!validateHub('factory')){alert('⚠️ เลขดุมล้อต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
   const mileF=getVal('mile-factory');if(!mileF){alert('กรุณากรอกเลขไมล์ปลายทาง');return;}
   const hubF=getVal('hub-factory');if(!hubF){alert('กรุณากรอกเลขดุมล้อปลายทาง');return;}
   const fLiter=getVal('fuel-factory-liter');if(!fLiter){alert('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
@@ -697,32 +663,41 @@ function prepareFactory(){
     });
     collectedData.fuelRoad=rows;
   }
-  if(document.getElementById('chip-toll').classList.contains('on')){
-    collectedData.toll=getVal('toll-amount');
-  }
-  if(document.getElementById('chip-repair').classList.contains('on')){
-    collectedData.repair={cost:getVal('repair-cost'),note:getVal('repair-note')};
-  }
+  if(document.getElementById('chip-toll').classList.contains('on')) collectedData.toll=getVal('toll-amount');
+  if(document.getElementById('chip-repair').classList.contains('on')) collectedData.repair={cost:getVal('repair-cost'),note:getVal('repair-note')};
   showDashboard();
 }
 
+// ✅ ข้อ 1+4: Dashboard แสดงเลขดุมล้อ + ตัวเลขน้ำหนักจริง
 function showDashboard(){
   const d=collectedData;
   const rows=[];
-  rows.push({section:'📍 ระยะทาง'});
-  if(mileHistory.start) rows.push({k:'เลขไมล์เริ่ม',v:Number(mileHistory.start).toLocaleString()});
-  if(mileHistory.client) rows.push({k:'เลขไมล์ถึงลูกค้า',v:Number(mileHistory.client).toLocaleString()});
-  if(mileHistory.ramp) rows.push({k:'เลขไมล์ถึงลาน',v:Number(mileHistory.ramp).toLocaleString()});
-  rows.push({k:'เลขไมล์ปลายทาง',v:Number(d.mileFactory).toLocaleString()});
-  const totalDist=Number(d.mileFactory)-(mileHistory.start||0);
-  rows.push({k:'ระยะทางรวม',v:`${totalDist.toLocaleString()} กม.`,highlight:true});
+
+  rows.push({section:'📍 เลขดุมล้อ'});
+  if(hubHistory.start) rows.push({k:'ดุมล้อเริ่ม',v:Number(hubHistory.start).toLocaleString()});
+  if(hubHistory.client) rows.push({k:'ดุมล้อถึงลูกค้า',v:Number(hubHistory.client).toLocaleString()});
+  if(hubHistory.ramp) rows.push({k:'ดุมล้อถึงลาน',v:Number(hubHistory.ramp).toLocaleString()});
+  rows.push({k:'ดุมล้อปลายทาง',v:Number(d.hubFactory).toLocaleString()});
+
   rows.push({section:'⚖️ น้ำหนัก'});
+  // ✅ ข้อ 4: แสดงรถหนัก รถเบา สุทธิ ครบ
   if(d.weightFactClient){
-    rows.push({k:'สุทธิลูกค้า (โรงงาน)',v:`${Math.round(d.weightFactClient.net).toLocaleString()} กก.`,highlight:true});
-    rows.push({k:'สุทธิลาน (โรงงาน)',v:`${Math.round(d.weightFactRamp.net).toLocaleString()} กก.`,highlight:true});
+    rows.push({k:'ลูกค้า — รถหนัก',v:`${Number(d.weightFactClient.h).toLocaleString()} กก.`});
+    rows.push({k:'ลูกค้า — รถเบา',v:`${Number(d.weightFactClient.l).toLocaleString()} กก.`});
+    rows.push({k:'สุทธิลูกค้า',v:`${Math.round(d.weightFactClient.net).toLocaleString()} กก.`,highlight:true});
+    rows.push({k:'ลาน — รถหนัก',v:`${Number(d.weightFactRamp.h).toLocaleString()} กก.`});
+    rows.push({k:'ลาน — รถเบา',v:`${Number(d.weightFactRamp.l).toLocaleString()} กก.`});
+    rows.push({k:'สุทธิลาน',v:`${Math.round(d.weightFactRamp.net).toLocaleString()} กก.`,highlight:true});
   }else if(d.weightFactory){
+    rows.push({k:'รถหนัก',v:`${Number(d.weightFactory.h).toLocaleString()} กก.`});
+    rows.push({k:'รถเบา',v:`${Number(d.weightFactory.l).toLocaleString()} กก.`});
     rows.push({k:'สุทธิปลายทาง',v:`${Math.round(d.weightFactory.net).toLocaleString()} กก.`,highlight:true});
   }
+
+  // ✅ ข้อ 5: เจ้าของใบ = ชื่อในบิล จากออเดอร์
+  const billName=order['ชื่อในบิล']||order['ชื่อสวน']||'—';
+  rows.push({k:'เจ้าของใบ',v:billName});
+
   rows.push({section:'💰 ค่าใช้จ่าย'});
   rows.push({k:'⛽ น้ำมันโรงงาน',v:`${d.fuelFactory.liter} ลิตร × ${d.fuelFactory.price} = ${d.fuelFactory.total} บาท`});
   if(d.fuelRoad&&d.fuelRoad.length>0){
@@ -730,6 +705,7 @@ function showDashboard(){
   }
   if(d.toll) rows.push({k:'🛣️ ค่าทางด่วน',v:`${Number(d.toll).toLocaleString()} บาท`});
   if(d.repair) rows.push({k:'🔧 ค่าซ่อมนอก',v:`${Number(d.repair.cost).toLocaleString()} บาท${d.repair.note?' ('+d.repair.note+')':''}`});
+
   const content=document.getElementById('dash-content');
   let html='';
   rows.forEach(r=>{
@@ -743,25 +719,33 @@ function showDashboard(){
   document.getElementById('dashboard').scrollTop=0;
 }
 
-function closeDashboard(){
-  document.getElementById('dashboard').classList.remove('show');
-}
+function closeDashboard(){document.getElementById('dashboard').classList.remove('show');}
 
 async function confirmSubmit(){
   closeDashboard();
   const d=collectedData;
+  // ✅ ข้อ 5: ส่ง billName ไปด้วย
+  const billName=order['ชื่อในบิล']||order['ชื่อสวน']||'';
   const fields={'เลขไมล์ปลายทาง':d.mileFactory,'เลขดุมล้อปลายทาง':d.hubFactory};
   if(d.weightFactClient){
-    Object.assign(fields,{'น้ำหนักหนักปลายทาง':d.weightFactClient.h,'น้ำหนักเบาปลายทาง':d.weightFactClient.l,'สุทธิปลายทาง':d.weightFactClient.net,'รูปปลายทาง':photos['fact-client']||'','น้ำหนักหนักลาน':d.weightFactRamp.h,'น้ำหนักเบาลาน':d.weightFactRamp.l,'สุทธิลาน':d.weightFactRamp.net,'รูปลาน':photos['fact-ramp']||''});
+    Object.assign(fields,{
+      'น้ำหนักหนักปลายทาง':d.weightFactClient.h,'น้ำหนักเบาปลายทาง':d.weightFactClient.l,
+      'สุทธิปลายทาง':d.weightFactClient.net,'รูปปลายทาง':photos['fact-client']||'',
+      'น้ำหนักหนักลาน':d.weightFactRamp.h,'น้ำหนักเบาลาน':d.weightFactRamp.l,
+      'สุทธิลาน':d.weightFactRamp.net,'รูปลาน':photos['fact-ramp']||''
+    });
   }else if(d.weightFactory){
-    Object.assign(fields,{'น้ำหนักหนักปลายทาง':d.weightFactory.h,'น้ำหนักเบาปลายทาง':d.weightFactory.l,'สุทธิปลายทาง':d.weightFactory.net,'รูปปลายทาง':photos['factory']||''});
+    Object.assign(fields,{
+      'น้ำหนักหนักปลายทาง':d.weightFactory.h,'น้ำหนักเบาปลายทาง':d.weightFactory.l,
+      'สุทธิปลายทาง':d.weightFactory.net,'รูปปลายทาง':photos['factory']||''
+    });
   }
   if(d.fuelFactory){fields['ลิตรน้ำมัน(ทาง)']=d.fuelFactory.liter;fields['ราคาน้ำมัน(ทาง)']=d.fuelFactory.price;}
   if(d.toll) fields['ค่าทางด่วน']=d.toll;
   if(d.repair){fields['ค่าซ่อมนอก']=d.repair.cost;fields['หมายเหตุค่าใช้จ่าย']=d.repair.note;if(photos['repair']) fields['รูปค่าซ่อมนอก']=photos['repair'];}
   if(d.fuelRoad&&d.fuelRoad.length>0&&photos['fuel-road-1']) fields['รูปน้ำมัน(ทาง)']=photos['fuel-road-1'];
 
-  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ปลายทาง',notifyOwner:true,fields});
+  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ปลายทาง',notifyOwner:true,billName,fields});
   const r=await postGAS({action:'driverComplete',orderId:order['Order ID'],userId:U.userId});
   if(!r?.success){alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
   document.getElementById('success-msg').innerHTML=`📋 ${order['Order ID']}<br>ส่งข้อมูลให้ Admin และเจ้าของสวนแล้วครับ`;
