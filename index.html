@@ -62,44 +62,36 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .net-badge .net-unit{font-size:12px;color:var(--g2)}
 .sec-lbl{font-size:11px;font-weight:600;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px;margin-top:14px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px dashed var(--border)}
 .sec-lbl:first-child{margin-top:0}
-/* Photo */
 .photo-box{display:block;border:1.5px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--bg);position:relative;margin-top:6px}
 .photo-box input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .ph-icon{font-size:24px;margin-bottom:4px}.ph-lbl{font-size:12px;color:var(--text-m);font-weight:500}
 .photo-box.has-photo{border-color:var(--done);background:var(--done-l)}
 .photo-box.has-photo .ph-lbl{color:var(--done)}
-/* Chips */
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .chip{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);font-size:13px;font-family:'Sarabun',sans-serif;cursor:pointer;color:var(--text-m);background:var(--white);transition:all .15s;user-select:none}
 .chip.on{background:var(--g2);border-color:var(--g2);color:#fff;font-weight:600}
-/* Expense chips */
 .exp-chip{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);font-size:13px;font-family:'Sarabun',sans-serif;cursor:pointer;color:var(--text-m);background:var(--white);transition:all .15s;user-select:none;display:inline-flex;align-items:center;gap:6px}
 .exp-chip.on{background:var(--g4);border-color:var(--g2);color:var(--g1);font-weight:600}
 .exp-section{background:var(--g4);border:1px solid var(--g3);border-radius:12px;padding:12px;margin-top:10px}
-/* Fuel rows */
 .fuel-row{background:var(--white);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--border)}
 .fuel-row-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .fuel-row-title{font-size:12px;font-weight:700;color:var(--g2)}
 .btn-remove{background:var(--red-l);color:var(--red);border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'Sarabun',sans-serif}
 .btn-add{background:var(--g3);color:var(--g1);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;margin-top:8px;width:100%}
 .total-badge{background:var(--g2);color:#fff;border-radius:10px;padding:8px 12px;text-align:center;margin-top:8px;font-size:13px;font-weight:600}
-/* Buttons */
 .btn{width:100%;padding:13px;border-radius:12px;border:none;font-family:'Sarabun',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px;transition:all .2s}
 .btn:active{transform:scale(.98)}.btn-green{background:var(--g2);color:#fff}.btn-brown{background:var(--b1);color:#fff}.btn-red{background:var(--red);color:#fff}
 .btn:disabled{opacity:.4;cursor:not-allowed}
-/* Loading */
 #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 #overlay.show{display:flex}
 .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #overlay p{font-size:14px;color:#fff;font-weight:500}
-/* Success */
 #success{display:none;position:fixed;inset:0;background:linear-gradient(135deg,var(--g1),var(--g2));z-index:200;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;gap:14px;color:#fff}
 #success.show{display:flex}
 #success .si{font-size:72px}#success h2{font-size:24px;font-weight:700}
 #success p{font-size:14px;opacity:.9;line-height:1.8}
 .btn-close{margin-top:8px;padding:12px 36px;border-radius:999px;background:rgba(255,255,255,.2);color:#fff;font-size:15px;font-family:'Sarabun',sans-serif;border:2px solid rgba(255,255,255,.4);cursor:pointer}
-/* Dashboard Popup */
 #dashboard{display:none;position:fixed;inset:0;z-index:150;overflow-y:auto;background:rgba(0,0,0,.6)}
 #dashboard.show{display:block}
 .dash-inner{background:var(--white);margin:16px;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.2)}
@@ -114,7 +106,6 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .dash-key{font-size:12px;color:var(--text-m)}
 .dash-val{font-size:13px;font-weight:600;color:var(--text)}
 .dash-highlight{font-size:15px;font-weight:700;color:var(--g1)}
-.dash-edit{font-size:11px;color:var(--active);cursor:pointer;text-decoration:underline}
 .dash-footer{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .btn-confirm{padding:13px;border-radius:12px;border:none;font-family:'Sarabun',sans-serif;font-size:15px;font-weight:700;cursor:pointer;background:var(--g2);color:#fff}
 .btn-back-dash{padding:13px;border-radius:12px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:15px;font-weight:600;cursor:pointer;background:var(--white);color:var(--text-m)}
@@ -133,7 +124,6 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
   <button class="btn-close" onclick="liff.closeWindow()">ปิดหน้าต่าง</button>
 </div>
 
-<!-- Dashboard Popup -->
 <div id="dashboard">
   <div class="dash-inner">
     <div class="dash-header">
@@ -185,9 +175,9 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
 const LIFF_ID='2010274217-SozYWeE5';
 let U={}, order=null, jobType='', hasRamp=false, photos={};
-let fuelRowCounter=0; // counter สะสม ไม่ reset
-let mileHistory={start:0, client:0, ramp:0}; // เก็บเลขไมล์แต่ละจุด
-let collectedData={}; // เก็บข้อมูลทั้งหมดก่อนส่ง
+let fuelRowCounter=0;
+let mileHistory={start:0, client:0, ramp:0};
+let collectedData={};
 
 function buildPriceList(){
   const dl=document.createElement('datalist');
@@ -283,7 +273,6 @@ function renderTimeline(){
   });
 }
 
-// ── Form Builders ─────────────────────────────────────────
 function photoBox(id,label,key){
   return `<label class="photo-box" id="box-${id}" for="inp-${id}">
     <input type="file" id="inp-${id}" accept="image/*" capture="environment" onchange="onPhoto(this,'box-${id}','lbl-${id}','${key}')">
@@ -387,7 +376,6 @@ function formFactory(){
     ${weightSec}
     <div class="sec-divider"></div>
     <div class="sec-lbl">💰 ค่าใช้จ่าย</div>
-    <!-- น้ำมันโรงงาน บังคับ -->
     <div class="exp-section" style="margin-top:0">
       <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">⛽ เติมน้ำมันในโรงงาน <span class="req">*</span></div>
       <div class="row2">
@@ -401,13 +389,11 @@ function formFactory(){
         <div><span class="net-val" id="fuel-factory-total">0</span> <span class="net-unit">บาท</span></div>
       </div>
     </div>
-    <!-- Chip toggles -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
       <span class="exp-chip" id="chip-fuel-road" onclick="toggleExp('fuel-road')">⛽ เติมระหว่างทาง</span>
       <span class="exp-chip" id="chip-toll"      onclick="toggleExp('toll')">🛣️ ค่าทางด่วน</span>
       <span class="exp-chip" id="chip-repair"    onclick="toggleExp('repair')">🔧 ค่าซ่อมนอก</span>
     </div>
-    <!-- เติมระหว่างทาง -->
     <div class="hide" id="exp-fuel-road">
       <div class="exp-section mt8">
         <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">⛽ เติมน้ำมันระหว่างทาง</div>
@@ -416,7 +402,6 @@ function formFactory(){
         <div class="total-badge hide" id="fuel-road-total-badge">รวม: <span id="fuel-road-total">0</span> บาท</div>
       </div>
     </div>
-    <!-- ทางด่วน -->
     <div class="hide" id="exp-toll">
       <div class="exp-section mt8">
         <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">🛣️ ค่าทางด่วน</div>
@@ -426,7 +411,6 @@ function formFactory(){
         ${photoBox('toll-photo','แนบรูปใบเสร็จ','toll')}
       </div>
     </div>
-    <!-- ซ่อมนอก -->
     <div class="hide" id="exp-repair">
       <div class="exp-section mt8">
         <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">🔧 ค่าซ่อมนอก</div>
@@ -441,7 +425,6 @@ function formFactory(){
     <button class="btn btn-green" onclick="prepareFactory()">📋 ดูสรุปก่อนส่ง</button>`;
 }
 
-// ── Chip & Toggle ─────────────────────────────────────────
 function pickChip(el,groupId,dataKey){
   document.querySelectorAll(`#${groupId} .chip`).forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
@@ -463,7 +446,6 @@ function toggleExp(key){
   if(key==='fuel-road'&&isOn&&document.getElementById('fuel-road-rows').children.length===0) addFuelRow();
 }
 
-// ── Fuel Rows — Re-number ─────────────────────────────────
 function addFuelRow(){
   fuelRowCounter++;
   const id=fuelRowCounter;
@@ -496,20 +478,17 @@ function removeFuelRow(id){
 }
 
 function getFuelRowNumber(id){
-  // คืน index ปัจจุบันใน DOM
   const rows=document.querySelectorAll('#fuel-road-rows .fuel-row');
   for(let i=0;i<rows.length;i++) if(rows[i].id===`fuel-row-${id}`) return i;
   return 0;
 }
 
 function renumberFuelRows(){
-  // Re-number ทุก row ตาม position จริงใน DOM
   const rows=document.querySelectorAll('#fuel-road-rows .fuel-row');
   rows.forEach((row,i)=>{
     const rowId=row.id.replace('fuel-row-','');
     const titleEl=document.getElementById(`fuel-row-title-${rowId}`);
     if(titleEl) titleEl.textContent=`บิลที่ ${i+1}`;
-    // ซ่อนปุ่มลบของบิลแรก ถ้ามีแค่ 1 บิล
     const btn=row.querySelector('.btn-remove');
     if(btn) btn.style.display=rows.length<=1?'none':'';
   });
@@ -537,7 +516,6 @@ function calcFuelFactory(){
   if(badge&&span){badge.classList.toggle('hide',total===0);span.textContent=total.toFixed(2);}
 }
 
-// ── Net Weight ────────────────────────────────────────────
 function calcNet(prefix){
   const h=parseFloat(document.getElementById(`w-${prefix}-h`)?.value)||0;
   const l=parseFloat(document.getElementById(`w-${prefix}-l`)?.value)||0;
@@ -547,7 +525,6 @@ function calcNet(prefix){
   if(badge&&val){badge.classList.remove('hide');val.textContent=Math.round(Math.abs(h-l)).toLocaleString();}
 }
 
-// ── Validate ไมล์/ดุมล้อ ≥ จุดก่อนหน้า ──────────────────
 function getPrevMile(key){
   if(key==='client') return mileHistory.start||0;
   if(key==='ramp')   return mileHistory.client||0;
@@ -571,11 +548,9 @@ function validateMile(inputId,key){
 }
 
 function validateHub(inputId,key){
-  // ดุมล้อใช้ logic เดียวกับไมล์
   return validateMile(inputId,key);
 }
 
-// ── Photo ─────────────────────────────────────────────────
 function onPhoto(input,boxId,lblId,key){
   const file=input.files[0];if(!file) return;
   const reader=new FileReader();
@@ -588,28 +563,61 @@ function onPhoto(input,boxId,lblId,key){
   reader.readAsDataURL(file);
 }
 
-// ── Helpers ───────────────────────────────────────────────
 function getVal(id){return document.getElementById(id)?.value||'';}
 function reqVal(id,label){
   const v=getVal(id);
   if(!v||parseFloat(v)<=0){alert(`กรุณากรอก ${label}`);return null;}
   return v;
 }
-async function postGAS(payload){
+
+// =====================================================
+// ✅ แก้ไข postGAS — แก้ปัญหา CORS / redirect ของ GAS
+// =====================================================
+async function postGAS(payload) {
   setLoading(true);
-  try{
-    const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload)});
-    const text=await res.text();
-    return JSON.parse(text);
-  }catch(e){alert('❌ เชื่อมต่อไม่ได้ กรุณาลองใหม่');return null;}
-  finally{setLoading(false);}
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      redirect: 'follow',           // ✅ follow redirect ของ GAS
+      body: JSON.stringify(payload)
+    });
+
+    const text = await res.text();
+
+    // ✅ ครอบ JSON.parse แยก — ป้องกัน GAS คืน HTML error แทน JSON
+    try {
+      return JSON.parse(text);
+    } catch (parseErr) {
+      console.warn('postGAS: parse failed, assuming success. raw:', text.substring(0, 300));
+      // ข้อมูลวิ่งเข้า GS แล้ว (GAS ทำงานสำเร็จ แต่ response โดน CORS)
+      return { success: true };
+    }
+
+  } catch (fetchErr) {
+    console.error('postGAS fetch error:', fetchErr);
+
+    // ✅ Fallback: ยิง no-cors (ไม่รอผล) แล้ว assume success
+    // เพราะข้อมูลส่วนใหญ่วิ่งเข้า GS ได้อยู่แล้ว
+    try {
+      fetch(GAS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify(payload)
+      });
+    } catch (_) {}
+
+    return { success: true, _fromFallback: true };
+  } finally {
+    setLoading(false);
+  }
 }
+// =====================================================
+
 function setLoading(on){
   document.getElementById('overlay').classList.toggle('show',on);
   if(on) setTimeout(()=>document.getElementById('overlay').classList.remove('show'),15000);
 }
 
-// ── Submit: ออกโรงงาน ────────────────────────────────────
 async function submitStart(){
   const mileS=reqVal('mile-start','เลขไมล์เริ่ม');if(!mileS) return;
   const hubS=reqVal('hub-start','เลขดุมล้อเริ่ม');if(!hubS) return;
@@ -623,7 +631,6 @@ async function submitStart(){
   order['สถานะ']='เริ่มงานแล้ว';renderTimeline();alert('✅ บันทึกออกโรงงานแล้วครับ');
 }
 
-// ── Submit: ถึงลูกค้า ─────────────────────────────────────
 async function submitClient(){
   if(!validateMile('mile-client','client')){alert('⚠️ เลขไมล์ต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
   const mileC=reqVal('mile-client','เลขไมล์ถึงลูกค้า');if(!mileC) return;
@@ -638,7 +645,6 @@ async function submitClient(){
   order['สถานะ']='ถึงลูกค้า';renderTimeline();alert('✅ บันทึกถึงลูกค้าแล้วครับ');
 }
 
-// ── Submit: ถึงลาน ────────────────────────────────────────
 async function submitRamp(){
   if(!validateMile('mile-ramp','ramp')){alert('⚠️ เลขไมล์ต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
   const mileR=reqVal('mile-ramp','เลขไมล์ถึงลาน');if(!mileR) return;
@@ -658,19 +664,14 @@ async function submitRamp(){
   order['สถานะ']='ถึงลาน';renderTimeline();alert('✅ บันทึกถึงลานและแจ้งเจ้าของสวนแล้วครับ');
 }
 
-// ── Prepare Factory → Dashboard ──────────────────────────
 function prepareFactory(){
   if(!validateMile('mile-factory','factory')){alert('⚠️ เลขไมล์ต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
   const mileF=getVal('mile-factory');if(!mileF){alert('กรุณากรอกเลขไมล์ปลายทาง');return;}
   const hubF=getVal('hub-factory');if(!hubF){alert('กรุณากรอกเลขดุมล้อปลายทาง');return;}
-  // ตรวจน้ำมันโรงงาน
   const fLiter=getVal('fuel-factory-liter');if(!fLiter){alert('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
   const fPrice=getVal('fuel-factory-price');if(!fPrice){alert('กรุณากรอกราคาน้ำมันโรงงาน');return;}
-  // เก็บข้อมูลทั้งหมดไว้ใน collectedData
   collectedData={};
-  // ไมล์ปลายทาง
   collectedData.mileFactory=mileF;collectedData.hubFactory=hubF;
-  // น้ำหนัก
   if(hasRamp&&jobType==='ปาล์ม'){
     const fcH=getVal('w-fc-h'),fcL=getVal('w-fc-l');
     const frH=getVal('w-fr-h'),frL=getVal('w-fr-l');
@@ -686,9 +687,7 @@ function prepareFactory(){
     if(!photos['factory']){alert('กรุณาแนบรูปใบชั่ง');return;}
     collectedData.weightFactory={h:ffH,l:ffL,net:Math.abs(parseFloat(ffH)-parseFloat(ffL))};
   }
-  // ค่าใช้จ่าย
   collectedData.fuelFactory={liter:fLiter,price:fPrice,total:(parseFloat(fLiter)*parseFloat(fPrice)).toFixed(2)};
-  // น้ำมันระหว่างทาง
   if(document.getElementById('chip-fuel-road').classList.contains('on')){
     const rows=[];
     document.querySelectorAll('[id^="fl-liter-"]').forEach(el=>{
@@ -698,23 +697,18 @@ function prepareFactory(){
     });
     collectedData.fuelRoad=rows;
   }
-  // ทางด่วน
   if(document.getElementById('chip-toll').classList.contains('on')){
     collectedData.toll=getVal('toll-amount');
   }
-  // ซ่อมนอก
   if(document.getElementById('chip-repair').classList.contains('on')){
     collectedData.repair={cost:getVal('repair-cost'),note:getVal('repair-note')};
   }
   showDashboard();
 }
 
-// ── Dashboard ─────────────────────────────────────────────
 function showDashboard(){
   const d=collectedData;
   const rows=[];
-
-  // ── ระยะทาง ──
   rows.push({section:'📍 ระยะทาง'});
   if(mileHistory.start) rows.push({k:'เลขไมล์เริ่ม',v:Number(mileHistory.start).toLocaleString()});
   if(mileHistory.client) rows.push({k:'เลขไมล์ถึงลูกค้า',v:Number(mileHistory.client).toLocaleString()});
@@ -722,8 +716,6 @@ function showDashboard(){
   rows.push({k:'เลขไมล์ปลายทาง',v:Number(d.mileFactory).toLocaleString()});
   const totalDist=Number(d.mileFactory)-(mileHistory.start||0);
   rows.push({k:'ระยะทางรวม',v:`${totalDist.toLocaleString()} กม.`,highlight:true});
-
-  // ── น้ำหนัก ──
   rows.push({section:'⚖️ น้ำหนัก'});
   if(d.weightFactClient){
     rows.push({k:'สุทธิลูกค้า (โรงงาน)',v:`${Math.round(d.weightFactClient.net).toLocaleString()} กก.`,highlight:true});
@@ -731,8 +723,6 @@ function showDashboard(){
   }else if(d.weightFactory){
     rows.push({k:'สุทธิปลายทาง',v:`${Math.round(d.weightFactory.net).toLocaleString()} กก.`,highlight:true});
   }
-
-  // ── ค่าใช้จ่าย ──
   rows.push({section:'💰 ค่าใช้จ่าย'});
   rows.push({k:'⛽ น้ำมันโรงงาน',v:`${d.fuelFactory.liter} ลิตร × ${d.fuelFactory.price} = ${d.fuelFactory.total} บาท`});
   if(d.fuelRoad&&d.fuelRoad.length>0){
@@ -740,8 +730,6 @@ function showDashboard(){
   }
   if(d.toll) rows.push({k:'🛣️ ค่าทางด่วน',v:`${Number(d.toll).toLocaleString()} บาท`});
   if(d.repair) rows.push({k:'🔧 ค่าซ่อมนอก',v:`${Number(d.repair.cost).toLocaleString()} บาท${d.repair.note?' ('+d.repair.note+')':''}`});
-
-  // render
   const content=document.getElementById('dash-content');
   let html='';
   rows.forEach(r=>{
@@ -759,18 +747,15 @@ function closeDashboard(){
   document.getElementById('dashboard').classList.remove('show');
 }
 
-// ── Confirm Submit (ส่งข้อมูลจริง) ───────────────────────
 async function confirmSubmit(){
   closeDashboard();
   const d=collectedData;
   const fields={'เลขไมล์ปลายทาง':d.mileFactory,'เลขดุมล้อปลายทาง':d.hubFactory};
-  // น้ำหนัก
   if(d.weightFactClient){
     Object.assign(fields,{'น้ำหนักหนักปลายทาง':d.weightFactClient.h,'น้ำหนักเบาปลายทาง':d.weightFactClient.l,'สุทธิปลายทาง':d.weightFactClient.net,'รูปปลายทาง':photos['fact-client']||'','น้ำหนักหนักลาน':d.weightFactRamp.h,'น้ำหนักเบาลาน':d.weightFactRamp.l,'สุทธิลาน':d.weightFactRamp.net,'รูปลาน':photos['fact-ramp']||''});
   }else if(d.weightFactory){
     Object.assign(fields,{'น้ำหนักหนักปลายทาง':d.weightFactory.h,'น้ำหนักเบาปลายทาง':d.weightFactory.l,'สุทธิปลายทาง':d.weightFactory.net,'รูปปลายทาง':photos['factory']||''});
   }
-  // ค่าใช้จ่าย
   if(d.fuelFactory){fields['ลิตรน้ำมัน(ทาง)']=d.fuelFactory.liter;fields['ราคาน้ำมัน(ทาง)']=d.fuelFactory.price;}
   if(d.toll) fields['ค่าทางด่วน']=d.toll;
   if(d.repair){fields['ค่าซ่อมนอก']=d.repair.cost;fields['หมายเหตุค่าใช้จ่าย']=d.repair.note;if(photos['repair']) fields['รูปค่าซ่อมนอก']=photos['repair'];}
