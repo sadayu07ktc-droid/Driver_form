@@ -7,7 +7,7 @@
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root {
+:root{
   --g1:#2D5A27;--g2:#4A7C3F;--g3:#D6E8D0;--g4:#F0F7EE;
   --b1:#7B4F2E;--b3:#F5E6D0;
   --s1:#1E40AF;--s3:#DBEAFE;
@@ -22,26 +22,20 @@
 body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:60px}
 .hdr{background:linear-gradient(135deg,var(--g1),var(--g2));padding:16px;position:sticky;top:0;z-index:20}
 .hdr-inner{display:flex;align-items:center;gap:10px}
-.hdr-icon{font-size:28px}
-.hdr-title{font-size:16px;font-weight:700;color:#fff}
+.hdr-icon{font-size:28px}.hdr-title{font-size:16px;font-weight:700;color:#fff}
 .hdr-sub{font-size:11px;color:var(--g3);margin-top:2px}
 .drv-card{background:var(--white);margin:12px;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .drv-avatar{width:42px;height:42px;border-radius:50%;background:var(--g3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
-.drv-name{font-size:14px;font-weight:600}
-.drv-plate{font-size:12px;color:var(--text-m);margin-top:2px}
-.drv-status{margin-left:auto;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;flex-shrink:0}
-.drv-status.busy{background:var(--g3);color:var(--g1)}
+.drv-name{font-size:14px;font-weight:600}.drv-plate{font-size:12px;color:var(--text-m);margin-top:2px}
+.drv-status{margin-left:auto;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;flex-shrink:0;background:var(--g3);color:var(--g1)}
 .order-banner{margin:0 12px 12px;background:var(--white);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .ob-header{padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
 .ob-id{font-size:12px;font-weight:700;color:var(--g2)}
 .ob-type{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
-.ob-type.palm{background:var(--g3);color:var(--g1)}
-.ob-type.ramp{background:var(--b3);color:var(--b1)}
-.ob-type.other{background:var(--s3);color:var(--s1)}
+.ob-type.palm{background:var(--g3);color:var(--g1)}.ob-type.ramp{background:var(--b3);color:var(--b1)}.ob-type.other{background:var(--s3);color:var(--s1)}
 .ob-body{padding:0 14px 12px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .ob-item span:first-child{font-size:10px;color:var(--text-l);display:block}
-.ob-item span:last-child{font-size:13px;font-weight:500}
-.ob-full{grid-column:1/-1}
+.ob-item span:last-child{font-size:13px;font-weight:500}.ob-full{grid-column:1/-1}
 .timeline{margin:0 12px}
 .tl-item{position:relative;padding-left:36px;margin-bottom:8px}
 .tl-line{position:absolute;left:13px;top:28px;bottom:-8px;width:2px;background:var(--border)}
@@ -51,19 +45,16 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .tl-dot.active{background:var(--active);color:#fff;box-shadow:0 0 0 4px var(--active-l)}
 .tl-dot.pending{background:var(--pending-l);color:var(--pending);border:2px dashed var(--pending)}
 .tl-card{background:var(--white);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.tl-card.done-card{opacity:.7}
-.tl-card.active-card{border:1.5px solid var(--active)}
-.tl-card.pending-card{opacity:.5}
+.tl-card.done-card{opacity:.7}.tl-card.active-card{border:1.5px solid var(--active)}.tl-card.pending-card{opacity:.5}
 .tl-head{padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
-.tl-step-label{font-size:13px;font-weight:600}
-.tl-step-time{font-size:11px;color:var(--text-l)}
+.tl-step-label{font-size:13px;font-weight:600}.tl-step-time{font-size:11px;color:var(--text-l)}
 .tl-body{padding:12px 14px 14px;border-top:1px solid var(--border)}
-.field{margin-top:12px}
-.field:first-child{margin-top:0}
+.field{margin-top:12px}.field:first-child{margin-top:0}
 label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:5px}
 .req{color:var(--red)}
 .inp{width:100%;font-size:14px;font-family:'Sarabun',sans-serif;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);outline:none;transition:border-color .2s;-webkit-appearance:none}
 .inp:focus{border-color:var(--active);background:var(--white)}
+.inp.err{border-color:var(--red);background:var(--red-l)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .net-badge{background:var(--g4);border:1px solid var(--g3);border-radius:10px;padding:8px 12px;text-align:center;margin-top:8px}
 .net-badge .net-lbl{font-size:10px;color:var(--g2);font-weight:600}
@@ -71,52 +62,67 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .net-badge .net-unit{font-size:12px;color:var(--g2)}
 .sec-lbl{font-size:11px;font-weight:600;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px;margin-top:14px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px dashed var(--border)}
 .sec-lbl:first-child{margin-top:0}
-/* Photo — ใช้ label แทน div แก้ bug คลิก 2 ครั้ง */
+/* Photo */
 .photo-box{display:block;border:1.5px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--bg);position:relative;margin-top:6px}
 .photo-box input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.ph-icon{font-size:24px;margin-bottom:4px}
-.ph-lbl{font-size:12px;color:var(--text-m);font-weight:500}
+.ph-icon{font-size:24px;margin-bottom:4px}.ph-lbl{font-size:12px;color:var(--text-m);font-weight:500}
 .photo-box.has-photo{border-color:var(--done);background:var(--done-l)}
 .photo-box.has-photo .ph-lbl{color:var(--done)}
 /* Chips */
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .chip{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);font-size:13px;font-family:'Sarabun',sans-serif;cursor:pointer;color:var(--text-m);background:var(--white);transition:all .15s;user-select:none}
 .chip.on{background:var(--g2);border-color:var(--g2);color:#fff;font-weight:600}
-.chip.on-r{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
-/* Expense chip toggle */
+/* Expense chips */
 .exp-chip{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);font-size:13px;font-family:'Sarabun',sans-serif;cursor:pointer;color:var(--text-m);background:var(--white);transition:all .15s;user-select:none;display:inline-flex;align-items:center;gap:6px}
 .exp-chip.on{background:var(--g4);border-color:var(--g2);color:var(--g1);font-weight:600}
 .exp-section{background:var(--g4);border:1px solid var(--g3);border-radius:12px;padding:12px;margin-top:10px}
 /* Fuel rows */
 .fuel-row{background:var(--white);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--border)}
 .fuel-row-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.fuel-row-title{font-size:12px;font-weight:600;color:var(--text-m)}
+.fuel-row-title{font-size:12px;font-weight:700;color:var(--g2)}
 .btn-remove{background:var(--red-l);color:var(--red);border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'Sarabun',sans-serif}
 .btn-add{background:var(--g3);color:var(--g1);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;margin-top:8px;width:100%}
 .total-badge{background:var(--g2);color:#fff;border-radius:10px;padding:8px 12px;text-align:center;margin-top:8px;font-size:13px;font-weight:600}
 /* Buttons */
 .btn{width:100%;padding:13px;border-radius:12px;border:none;font-family:'Sarabun',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px;transition:all .2s}
-.btn:active{transform:scale(.98)}
-.btn-green{background:var(--g2);color:#fff}
-.btn-brown{background:var(--b1);color:#fff}
-.btn-red{background:var(--red);color:#fff}
+.btn:active{transform:scale(.98)}.btn-green{background:var(--g2);color:#fff}.btn-brown{background:var(--b1);color:#fff}.btn-red{background:var(--red);color:#fff}
 .btn:disabled{opacity:.4;cursor:not-allowed}
+/* Loading */
 #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 #overlay.show{display:flex}
 .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #overlay p{font-size:14px;color:#fff;font-weight:500}
+/* Success */
 #success{display:none;position:fixed;inset:0;background:linear-gradient(135deg,var(--g1),var(--g2));z-index:200;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;gap:14px;color:#fff}
 #success.show{display:flex}
-#success .si{font-size:72px}
-#success h2{font-size:24px;font-weight:700}
+#success .si{font-size:72px}#success h2{font-size:24px;font-weight:700}
 #success p{font-size:14px;opacity:.9;line-height:1.8}
 .btn-close{margin-top:8px;padding:12px 36px;border-radius:999px;background:rgba(255,255,255,.2);color:#fff;font-size:15px;font-family:'Sarabun',sans-serif;border:2px solid rgba(255,255,255,.4);cursor:pointer}
+/* Dashboard Popup */
+#dashboard{display:none;position:fixed;inset:0;z-index:150;overflow-y:auto;background:rgba(0,0,0,.6)}
+#dashboard.show{display:block}
+.dash-inner{background:var(--white);margin:16px;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.dash-header{background:linear-gradient(135deg,var(--g1),var(--g2));padding:16px;color:#fff}
+.dash-header h2{font-size:17px;font-weight:700}
+.dash-header p{font-size:12px;opacity:.8;margin-top:2px}
+.dash-section{padding:14px 16px;border-bottom:1px solid var(--border)}
+.dash-section:last-child{border-bottom:none}
+.dash-section-title{font-size:11px;font-weight:700;color:var(--g2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.dash-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed var(--border)}
+.dash-row:last-child{border-bottom:none}
+.dash-key{font-size:12px;color:var(--text-m)}
+.dash-val{font-size:13px;font-weight:600;color:var(--text)}
+.dash-highlight{font-size:15px;font-weight:700;color:var(--g1)}
+.dash-edit{font-size:11px;color:var(--active);cursor:pointer;text-decoration:underline}
+.dash-footer{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-confirm{padding:13px;border-radius:12px;border:none;font-family:'Sarabun',sans-serif;font-size:15px;font-weight:700;cursor:pointer;background:var(--g2);color:#fff}
+.btn-back-dash{padding:13px;border-radius:12px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:15px;font-weight:600;cursor:pointer;background:var(--white);color:var(--text-m)}
 .no-order{text-align:center;padding:48px 24px;color:var(--text-m)}
 .no-order .ni{font-size:48px;margin-bottom:12px}
 .sec-divider{height:1px;background:var(--border);margin:14px 0}
-.hide{display:none!important}
-.mt8{margin-top:8px}
+.hide{display:none!important}.mt8{margin-top:8px}
+.err-msg{font-size:11px;color:var(--red);margin-top:4px}
 </style>
 </head>
 <body>
@@ -127,19 +133,32 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
   <button class="btn-close" onclick="liff.closeWindow()">ปิดหน้าต่าง</button>
 </div>
 
+<!-- Dashboard Popup -->
+<div id="dashboard">
+  <div class="dash-inner">
+    <div class="dash-header">
+      <h2>📋 สรุปก่อนส่งข้อมูล</h2>
+      <p>ตรวจสอบให้ครบ กดแก้ไขได้ก่อนยืนยัน</p>
+    </div>
+    <div id="dash-content"></div>
+    <div class="dash-footer">
+      <button class="btn-back-dash" onclick="closeDashboard()">← แก้ไข</button>
+      <button class="btn-confirm" onclick="confirmSubmit()">✅ ยืนยันส่ง</button>
+    </div>
+  </div>
+</div>
+
 <div class="hdr">
   <div class="hdr-inner">
     <div class="hdr-icon">🚛</div>
     <div><div class="hdr-title">บันทึกงานขนส่ง</div><div class="hdr-sub">SSB Smart Supply</div></div>
   </div>
 </div>
-
 <div class="drv-card">
   <div class="drv-avatar">🚛</div>
   <div><div class="drv-name" id="drv-name">กำลังโหลด...</div><div class="drv-plate" id="drv-plate">—</div></div>
-  <span class="drv-status busy">ติดงาน</span>
+  <span class="drv-status">ติดงาน</span>
 </div>
-
 <div class="order-banner" id="order-banner">
   <div class="ob-header">
     <div class="ob-id" id="ob-id">— รอโหลด —</div>
@@ -154,165 +173,126 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
     <div class="ob-item ob-full hide" id="ob-ramp-row"><span>แวะลาน</span><span id="ob-ramp">—</span></div>
   </div>
 </div>
-
 <div class="no-order hide" id="no-order">
-  <div class="ni">📭</div>
-  <p>ยังไม่มีงานที่รับอยู่<br>รอรับงานใหม่ได้เลยครับ</p>
+  <div class="ni">📭</div><p>ยังไม่มีงานที่รับอยู่<br>รอรับงานใหม่ได้เลยครับ</p>
 </div>
-
 <div class="timeline" id="timeline"></div>
-
 <div style="margin:0 12px 12px">
   <button class="btn btn-red" onclick="requestCancel()">⚠️ แจ้งขอยกเลิก / เหตุฉุกเฉิน</button>
 </div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
-const LIFF_ID = '2010274217-SozYWeE5';
+const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
+const LIFF_ID='2010274217-SozYWeE5';
 let U={}, order=null, jobType='', hasRamp=false, photos={};
-let fuelRows = []; // เก็บ rows น้ำมันระหว่างทาง
+let fuelRowCounter=0; // counter สะสม ไม่ reset
+let mileHistory={start:0, client:0, ramp:0}; // เก็บเลขไมล์แต่ละจุด
+let collectedData={}; // เก็บข้อมูลทั้งหมดก่อนส่ง
 
-// สร้าง datalist ราคาน้ำมัน 30.01-50.00
-function buildPriceList() {
-  const dl = document.createElement('datalist');
-  dl.id = 'fuel-prices';
-  for (let p = 3001; p <= 5000; p++) {
-    const opt = document.createElement('option');
-    opt.value = (p / 100).toFixed(2);
+function buildPriceList(){
+  const dl=document.createElement('datalist');
+  dl.id='fuel-prices';
+  for(let p=3001;p<=5000;p++){
+    const opt=document.createElement('option');
+    opt.value=(p/100).toFixed(2);
     dl.appendChild(opt);
   }
   document.body.appendChild(dl);
 }
 
-async function init() {
+async function init(){
   buildPriceList();
-  try {
-    await liff.init({ liffId: LIFF_ID });
-    if (!liff.isLoggedIn()) { liff.login(); return; }
-    const p = await liff.getProfile();
-    U.userId = p.userId;
-    const [uRes, oRes] = await Promise.all([
+  try{
+    await liff.init({liffId:LIFF_ID});
+    if(!liff.isLoggedIn()){liff.login();return;}
+    const p=await liff.getProfile();
+    U.userId=p.userId;
+    const[uRes,oRes]=await Promise.all([
       fetch(`${GAS_URL}?action=getUser&userId=${p.userId}`).then(r=>r.json()),
       fetch(`${GAS_URL}?action=getDriverOrder&userId=${p.userId}`).then(r=>r.json())
     ]);
-    if (uRes.status==='ok') {
-      document.getElementById('drv-name').textContent  = uRes.name  || p.displayName;
-      document.getElementById('drv-plate').textContent = uRes.plate || '—';
+    if(uRes.status==='ok'){
+      document.getElementById('drv-name').textContent=uRes.name||p.displayName;
+      document.getElementById('drv-plate').textContent=uRes.plate||'—';
     }
-    if (oRes.status==='ok' && oRes.orders.length>0) {
-      order   = oRes.orders[0];
-      jobType = order['ประเภทงาน'] || 'ปาล์ม';
-      hasRamp = !!(order['จุดรับเพิ่ม']);
-      renderOrderBanner();
-      renderTimeline();
-    } else {
+    if(oRes.status==='ok'&&oRes.orders.length>0){
+      order=oRes.orders[0];
+      jobType=order['ประเภทงาน']||'ปาล์ม';
+      hasRamp=!!(order['จุดรับเพิ่ม']);
+      renderOrderBanner();renderTimeline();
+    }else{
       document.getElementById('order-banner').classList.add('hide');
-      document.getElementById('timeline').classList.add('hide');
       document.getElementById('no-order').classList.remove('hide');
     }
-  } catch(e) {
-    document.getElementById('drv-name').textContent='⚠️ โหลดไม่สำเร็จ';
-  }
+  }catch(e){document.getElementById('drv-name').textContent='⚠️ โหลดไม่สำเร็จ';}
 }
 
-function renderOrderBanner() {
-  document.getElementById('ob-id').textContent     = `📋 ${order['Order ID']}`;
-  document.getElementById('ob-garden').textContent = order['ชื่อสวน']       || '—';
-  document.getElementById('ob-date').textContent   = order['วันที่ต้องการ'] || '—';
-  document.getElementById('ob-time').textContent   = order['เวลา']          || '—';
-  document.getElementById('ob-bin').textContent    = `${order['จำนวนกระบะ']} ใบ`;
-  document.getElementById('ob-pickup').textContent = order['จุดรับ']        || '—';
-  const typeEl = document.getElementById('ob-type');
-  if (jobType==='ปาล์ม' && hasRamp) { typeEl.textContent='🏭 ปาล์ม+ลาน'; typeEl.className='ob-type ramp'; }
-  else if (jobType==='ปาล์ม')       { typeEl.textContent='🌴 ปาล์ม';    typeEl.className='ob-type palm'; }
-  else                               { typeEl.textContent='📦 งานอื่นๆ'; typeEl.className='ob-type other'; }
-  if (hasRamp) {
+function renderOrderBanner(){
+  document.getElementById('ob-id').textContent=`📋 ${order['Order ID']}`;
+  document.getElementById('ob-garden').textContent=order['ชื่อสวน']||'—';
+  document.getElementById('ob-date').textContent=order['วันที่ต้องการ']||'—';
+  document.getElementById('ob-time').textContent=order['เวลา']||'—';
+  document.getElementById('ob-bin').textContent=`${order['จำนวนกระบะ']} ใบ`;
+  document.getElementById('ob-pickup').textContent=order['จุดรับ']||'—';
+  const typeEl=document.getElementById('ob-type');
+  if(jobType==='ปาล์ม'&&hasRamp){typeEl.textContent='🏭 ปาล์ม+ลาน';typeEl.className='ob-type ramp';}
+  else if(jobType==='ปาล์ม'){typeEl.textContent='🌴 ปาล์ม';typeEl.className='ob-type palm';}
+  else{typeEl.textContent='📦 งานอื่นๆ';typeEl.className='ob-type other';}
+  if(hasRamp){
     document.getElementById('ob-ramp-row').classList.remove('hide');
-    document.getElementById('ob-ramp').textContent = order['จุดรับเพิ่ม'];
+    document.getElementById('ob-ramp').textContent=order['จุดรับเพิ่ม'];
   }
 }
 
-function renderTimeline() {
-  const tl = document.getElementById('timeline');
-  tl.innerHTML = '';
-  getSteps().forEach((step, i, arr) => {
-    const state = getStepState(step.key, order['สถานะ'], i);
-    const wrap  = document.createElement('div');
-    wrap.className = 'tl-item';
-    const dot  = document.createElement('div');
-    dot.className  = `tl-dot ${state}`;
-    dot.textContent = state==='done' ? '✓' : '';
-    const line = document.createElement('div');
-    line.className = 'tl-line';
-    const card = document.createElement('div');
-    card.className = `tl-card ${state}-card`;
-    card.innerHTML = `
+function getSteps(){
+  if(jobType==='ปาล์ม'&&hasRamp) return [{key:'start',label:'🚀 ออกโรงงาน'},{key:'client',label:'🌴 ถึงลูกค้า'},{key:'ramp',label:'🏭 ถึงลาน'},{key:'factory',label:'🏁 ถึงโรงงาน'}];
+  if(jobType==='ปาล์ม') return [{key:'start',label:'🚀 ออกโรงงาน'},{key:'client',label:'🌴 ถึงลูกค้า'},{key:'factory',label:'🏁 ถึงโรงงาน'}];
+  return [{key:'start',label:'🚀 ออกโรงงาน'},{key:'client',label:'📦 ถึงลูกค้า'},{key:'factory',label:'🏁 ถึงโรงงาน'}];
+}
+
+function getStepState(key,status,idx){
+  const map={'รับงานแล้ว':0,'เริ่มงานแล้ว':1,'ถึงลูกค้า':2,'ถึงลาน':3,'เสร็จงาน':99};
+  const cur=map[status]??0;
+  if(cur>idx) return 'done';
+  if(cur===idx) return 'active';
+  return 'pending';
+}
+
+function getStepTime(key){
+  return {start:order['เวลาเริ่มงาน'],client:order['เวลาถึงลูกค้า'],factory:order['เวลาเสร็จงาน']}[key]||'';
+}
+
+function renderTimeline(){
+  const tl=document.getElementById('timeline');
+  tl.innerHTML='';
+  getSteps().forEach((step,i)=>{
+    const state=getStepState(step.key,order['สถานะ'],i);
+    const wrap=document.createElement('div');wrap.className='tl-item';
+    const dot=document.createElement('div');dot.className=`tl-dot ${state}`;dot.textContent=state==='done'?'✓':'';
+    const line=document.createElement('div');line.className='tl-line';
+    const card=document.createElement('div');card.className=`tl-card ${state}-card`;
+    card.innerHTML=`
       <div class="tl-head">
         <span class="tl-step-label">${step.label}</span>
-        <span class="tl-step-time">${state==='done' ? (getStepTime(step.key)||'✅') : state==='active' ? 'กำลังดำเนินการ' : 'รอดำเนินการ'}</span>
+        <span class="tl-step-time">${state==='done'?(getStepTime(step.key)||'✅'):state==='active'?'กำลังดำเนินการ':'รอดำเนินการ'}</span>
       </div>
-      ${state==='active' ? `<div class="tl-body">${buildForm(step.key)}</div>` : ''}
+      ${state==='active'?`<div class="tl-body">${buildForm(step.key)}</div>`:''}
     `;
-    wrap.appendChild(dot);
-    wrap.appendChild(line);
-    wrap.appendChild(card);
+    wrap.appendChild(dot);wrap.appendChild(line);wrap.appendChild(card);
     tl.appendChild(wrap);
   });
 }
 
-function getSteps() {
-  if (jobType==='ปาล์ม' && hasRamp) return [
-    {key:'start',   label:'🚀 ออกโรงงาน'},
-    {key:'client',  label:'🌴 ถึงลูกค้า'},
-    {key:'ramp',    label:'🏭 ถึงลาน'},
-    {key:'factory', label:'🏁 ถึงโรงงาน'}
-  ];
-  if (jobType==='ปาล์ม') return [
-    {key:'start',   label:'🚀 ออกโรงงาน'},
-    {key:'client',  label:'🌴 ถึงลูกค้า'},
-    {key:'factory', label:'🏁 ถึงโรงงาน'}
-  ];
-  return [
-    {key:'start',   label:'🚀 ออกโรงงาน'},
-    {key:'client',  label:'📦 ถึงลูกค้า'},
-    {key:'factory', label:'🏁 ถึงโรงงาน'}
-  ];
+// ── Form Builders ─────────────────────────────────────────
+function photoBox(id,label,key){
+  return `<label class="photo-box" id="box-${id}" for="inp-${id}">
+    <input type="file" id="inp-${id}" accept="image/*" capture="environment" onchange="onPhoto(this,'box-${id}','lbl-${id}','${key}')">
+    <div class="ph-icon">📷</div><div class="ph-lbl" id="lbl-${id}">${label}</div>
+  </label>`;
 }
 
-function getStepState(key, status, idx) {
-  const map = {'รับงานแล้ว':0,'เริ่มงานแล้ว':1,'ถึงลูกค้า':2,'ถึงลาน':3,'เสร็จงาน':99};
-  const cur = map[status] ?? 0;
-  if (cur > idx) return 'done';
-  if (cur === idx) return 'active';
-  return 'pending';
-}
-
-function getStepTime(key) {
-  return {start:order['เวลาเริ่มงาน'],client:order['เวลาถึงลูกค้า'],factory:order['เวลาเสร็จงาน']}[key] || '';
-}
-
-// ── Build Forms ──────────────────────────────────────────
-function buildForm(key) {
-  if (key==='start')   return formStart();
-  if (key==='client')  return formClient();
-  if (key==='ramp')    return formRamp();
-  if (key==='factory') return formFactory();
-  return '';
-}
-
-function photoBox(id, label, key) {
-  return `
-    <label class="photo-box" id="box-${id}" for="inp-${id}">
-      <input type="file" id="inp-${id}" accept="image/*" capture="environment"
-        onchange="onPhoto(this,'box-${id}','lbl-${id}','${key}')">
-      <div class="ph-icon">📷</div>
-      <div class="ph-lbl" id="lbl-${id}">${label}</div>
-    </label>`;
-}
-
-function weightBlock(prefix, label) {
-  return `
-    <div class="sec-lbl">⚖️ ${label}</div>
+function weightBlock(prefix,label){
+  return `<div class="sec-lbl">⚖️ ${label}</div>
     <div class="row2">
       <div><label class="lbl">รถหนัก (กก.) <span class="req">*</span></label>
         <input class="inp" type="number" id="w-${prefix}-h" placeholder="0" oninput="calcNet('${prefix}')"></div>
@@ -325,42 +305,43 @@ function weightBlock(prefix, label) {
     </div>`;
 }
 
-function formStart() {
-  const isOther = jobType !== 'ปาล์ม';
-  return `
-    <div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
+function buildForm(key){
+  if(key==='start') return formStart();
+  if(key==='client') return formClient();
+  if(key==='ramp') return formRamp();
+  if(key==='factory') return formFactory();
+  return '';
+}
+
+function mileBlock(key,label1,label2,prevLabel){
+  return `<div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
     <div class="row2">
-      <div><label class="lbl">เลขไมล์เริ่ม <span class="req">*</span></label>
-        <input class="inp" type="number" id="mile-start" placeholder="0"></div>
-      <div><label class="lbl">เลขดุมล้อเริ่ม <span class="req">*</span></label>
-        <input class="inp" type="number" id="hub-start" placeholder="0"></div>
-    </div>
-    ${isOther ? `
-    <div class="field">
+      <div><label class="lbl">${label1} <span class="req">*</span></label>
+        <input class="inp" type="number" id="mile-${key}" placeholder="0" oninput="validateMile('mile-${key}','${key}')">
+        <div class="err-msg hide" id="err-mile-${key}">⚠️ ต้องไม่น้อยกว่าจุดก่อนหน้า</div></div>
+      <div><label class="lbl">${label2} <span class="req">*</span></label>
+        <input class="inp" type="number" id="hub-${key}" placeholder="0" oninput="validateHub('hub-${key}','${key}')">
+        <div class="err-msg hide" id="err-hub-${key}">⚠️ ต้องไม่น้อยกว่าจุดก่อนหน้า</div></div>
+    </div>`;
+}
+
+function formStart(){
+  const isOther=jobType!=='ปาล์ม';
+  return `${mileBlock('start','เลขไมล์เริ่ม','เลขดุมล้อเริ่ม','')}
+    ${isOther?`<div class="field">
       <div class="sec-lbl">🚛 ประเภทรถออก</div>
       <div class="chips" id="truck-chips">
-        <span class="chip" onclick="pickChip(this,'truck-chips','truck-type')">🪶 รถเบา (ไม่ชั่ง)</span>
+        <span class="chip" onclick="pickChip(this,'truck-chips','truck-type')">🪶 รถเบา</span>
         <span class="chip" onclick="pickChip(this,'truck-chips','truck-type')">🏋️ รถหนัก (ชั่งด้วย)</span>
-      </div>
-    </div>
-    <div class="hide" id="weight-start-other">
-      ${weightBlock('start','น้ำหนักออกโรงงาน')}
-    </div>` : ''}
+      </div></div>
+      <div class="hide" id="weight-start-other">${weightBlock('start','น้ำหนักออกโรงงาน')}</div>`:''}
     <button class="btn btn-green" onclick="submitStart()">🚀 ยืนยันออกโรงงาน</button>`;
 }
 
-function formClient() {
-  const isOther = jobType !== 'ปาล์ม';
-  return `
-    <div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
-    <div class="row2">
-      <div><label class="lbl">เลขไมล์ถึงลูกค้า <span class="req">*</span></label>
-        <input class="inp" type="number" id="mile-client" placeholder="0"></div>
-      <div><label class="lbl">เลขดุมล้อถึงลูกค้า <span class="req">*</span></label>
-        <input class="inp" type="number" id="hub-client" placeholder="0"></div>
-    </div>
-    ${isOther ? `
-    <div class="field">
+function formClient(){
+  const isOther=jobType!=='ปาล์ม';
+  return `${mileBlock('client','เลขไมล์ถึงลูกค้า','เลขดุมล้อถึงลูกค้า','start')}
+    ${isOther?`<div class="field">
       <div class="sec-lbl">⚖️ ชั่งที่ลูกค้า</div>
       <div class="chips" id="weigh-client-chips">
         <span class="chip" onclick="pickChip(this,'weigh-client-chips','weigh-client')">ไม่มีชั่ง</span>
@@ -370,20 +351,12 @@ function formClient() {
         ${weightBlock('client','น้ำหนักที่ลูกค้า')}
         <label class="lbl mt8">รูปใบชั่งลูกค้า</label>
         ${photoBox('client-photo','แนบรูปใบชั่ง','client')}
-      </div>
-    </div>` : ''}
+      </div></div>`:''}
     <button class="btn btn-green" onclick="submitClient()">📍 ยืนยันถึงลูกค้า</button>`;
 }
 
-function formRamp() {
-  return `
-    <div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
-    <div class="row2">
-      <div><label class="lbl">เลขไมล์ถึงลาน <span class="req">*</span></label>
-        <input class="inp" type="number" id="mile-ramp" placeholder="0"></div>
-      <div><label class="lbl">เลขดุมล้อถึงลาน <span class="req">*</span></label>
-        <input class="inp" type="number" id="hub-ramp" placeholder="0"></div>
-    </div>
+function formRamp(){
+  return `${mileBlock('ramp','เลขไมล์ถึงลาน','เลขดุมล้อถึงลาน','client')}
     ${weightBlock('rc','ใบชั่งลูกค้า')}
     <label class="lbl mt8">รูปใบชั่งลูกค้า <span class="req">*</span></label>
     ${photoBox('ramp-client','แนบรูปใบชั่งลูกค้า','ramp-client')}
@@ -394,9 +367,9 @@ function formRamp() {
     <button class="btn btn-brown" onclick="submitRamp()">🏭 ยืนยันถึงลาน</button>`;
 }
 
-function formFactory() {
-  const isRamp = jobType==='ปาล์ม' && hasRamp;
-  const weightSection = isRamp ? `
+function formFactory(){
+  const isRamp=jobType==='ปาล์ม'&&hasRamp;
+  const weightSec=isRamp?`
     ${weightBlock('fc','ใบชั่งลูกค้า (ที่โรงงาน)')}
     <label class="lbl mt8">รูปใบชั่งลูกค้า <span class="req">*</span></label>
     ${photoBox('fact-client','แนบรูปใบชั่งลูกค้า','fact-client')}
@@ -404,27 +377,17 @@ function formFactory() {
     ${weightBlock('fr','ใบชั่งลาน (ที่โรงงาน)')}
     <label class="lbl mt8">รูปใบชั่งลาน <span class="req">*</span></label>
     ${photoBox('fact-ramp','แนบรูปใบชั่งลาน','fact-ramp')}
-  ` : `
+  `:`
     ${weightBlock('ff','ชั่งน้ำหนักปลายทาง')}
     <label class="lbl mt8">รูปใบชั่ง <span class="req">*</span></label>
     ${photoBox('fact-photo','แนบรูปใบชั่ง','factory')}
   `;
-
   return `
-    <div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
-    <div class="row2">
-      <div><label class="lbl">เลขไมล์ปลายทาง <span class="req">*</span></label>
-        <input class="inp" type="number" id="mile-factory" placeholder="0"></div>
-      <div><label class="lbl">เลขดุมล้อปลายทาง <span class="req">*</span></label>
-        <input class="inp" type="number" id="hub-factory" placeholder="0"></div>
-    </div>
-    ${weightSection}
-
-    <!-- ── ค่าใช้จ่าย ── -->
+    ${mileBlock('factory','เลขไมล์ปลายทาง','เลขดุมล้อปลายทาง',hasRamp?'ramp':'client')}
+    ${weightSec}
     <div class="sec-divider"></div>
     <div class="sec-lbl">💰 ค่าใช้จ่าย</div>
-
-    <!-- เติมน้ำมันโรงงาน (บังคับ) -->
+    <!-- น้ำมันโรงงาน บังคับ -->
     <div class="exp-section" style="margin-top:0">
       <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">⛽ เติมน้ำมันในโรงงาน <span class="req">*</span></div>
       <div class="row2">
@@ -438,27 +401,22 @@ function formFactory() {
         <div><span class="net-val" id="fuel-factory-total">0</span> <span class="net-unit">บาท</span></div>
       </div>
     </div>
-
     <!-- Chip toggles -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
       <span class="exp-chip" id="chip-fuel-road" onclick="toggleExp('fuel-road')">⛽ เติมระหว่างทาง</span>
       <span class="exp-chip" id="chip-toll"      onclick="toggleExp('toll')">🛣️ ค่าทางด่วน</span>
       <span class="exp-chip" id="chip-repair"    onclick="toggleExp('repair')">🔧 ค่าซ่อมนอก</span>
     </div>
-
-    <!-- เติมน้ำมันระหว่างทาง -->
+    <!-- เติมระหว่างทาง -->
     <div class="hide" id="exp-fuel-road">
       <div class="exp-section mt8">
         <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">⛽ เติมน้ำมันระหว่างทาง</div>
         <div id="fuel-road-rows"></div>
         <button class="btn-add" onclick="addFuelRow()">+ เพิ่มบิลน้ำมัน</button>
         <div class="total-badge hide" id="fuel-road-total-badge">รวม: <span id="fuel-road-total">0</span> บาท</div>
-        <label class="lbl mt8">รูปบิลน้ำมัน <span class="req">*</span></label>
-        ${photoBox('fuel-road-photo','แนบรูปบิลน้ำมัน','fuel-road')}
       </div>
     </div>
-
-    <!-- ค่าทางด่วน -->
+    <!-- ทางด่วน -->
     <div class="hide" id="exp-toll">
       <div class="exp-section mt8">
         <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">🛣️ ค่าทางด่วน</div>
@@ -468,8 +426,7 @@ function formFactory() {
         ${photoBox('toll-photo','แนบรูปใบเสร็จ','toll')}
       </div>
     </div>
-
-    <!-- ค่าซ่อมนอก -->
+    <!-- ซ่อมนอก -->
     <div class="hide" id="exp-repair">
       <div class="exp-section mt8">
         <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">🔧 ค่าซ่อมนอก</div>
@@ -481,261 +438,356 @@ function formFactory() {
         ${photoBox('repair-photo','แนบรูปใบเสร็จ','repair')}
       </div>
     </div>
-
-    <button class="btn btn-green" onclick="submitFactory()">🏁 ยืนยันเสร็จงาน</button>`;
+    <button class="btn btn-green" onclick="prepareFactory()">📋 ดูสรุปก่อนส่ง</button>`;
 }
 
-// ── Chip Toggles ─────────────────────────────────────────
-function pickChip(el, groupId, dataKey) {
+// ── Chip & Toggle ─────────────────────────────────────────
+function pickChip(el,groupId,dataKey){
   document.querySelectorAll(`#${groupId} .chip`).forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
-  if (dataKey==='truck-type') {
-    const isHeavy = el.textContent.includes('หนัก');
-    document.getElementById('weight-start-other')?.classList.toggle('hide', !isHeavy);
+  if(dataKey==='truck-type'){
+    const isHeavy=el.textContent.includes('หนัก');
+    document.getElementById('weight-start-other')?.classList.toggle('hide',!isHeavy);
   }
-  if (dataKey==='weigh-client') {
-    const hasWeigh = el.textContent.includes('มีชั่ง');
-    document.getElementById('weight-client-other')?.classList.toggle('hide', !hasWeigh);
-  }
-}
-
-function toggleExp(key) {
-  const chip = document.getElementById(`chip-${key}`);
-  const sec  = document.getElementById(`exp-${key}`);
-  const isOn = chip.classList.toggle('on');
-  sec.classList.toggle('hide', !isOn);
-  if (key==='fuel-road' && isOn && document.getElementById('fuel-road-rows').children.length===0) {
-    addFuelRow();
+  if(dataKey==='weigh-client'){
+    const hasWeigh=el.textContent.includes('มีชั่ง');
+    document.getElementById('weight-client-other')?.classList.toggle('hide',!hasWeigh);
   }
 }
 
-// ── Fuel Rows (น้ำมันระหว่างทาง) ─────────────────────────
-let fuelRowCount = 0;
-function addFuelRow() {
-  fuelRowCount++;
-  const id  = fuelRowCount;
-  const div = document.createElement('div');
-  div.className = 'fuel-row';
-  div.id = `fuel-row-${id}`;
-  div.innerHTML = `
+function toggleExp(key){
+  const chip=document.getElementById(`chip-${key}`);
+  const sec=document.getElementById(`exp-${key}`);
+  const isOn=chip.classList.toggle('on');
+  sec.classList.toggle('hide',!isOn);
+  if(key==='fuel-road'&&isOn&&document.getElementById('fuel-road-rows').children.length===0) addFuelRow();
+}
+
+// ── Fuel Rows — Re-number ─────────────────────────────────
+function addFuelRow(){
+  fuelRowCounter++;
+  const id=fuelRowCounter;
+  const div=document.createElement('div');
+  div.className='fuel-row';div.id=`fuel-row-${id}`;
+  div.innerHTML=`
     <div class="fuel-row-header">
-      <span class="fuel-row-title">บิลที่ ${id}</span>
-      ${id>1 ? `<button class="btn-remove" onclick="removeFuelRow(${id})">ลบ</button>` : ''}
+      <span class="fuel-row-title" id="fuel-row-title-${id}">บิลที่ ${getFuelRowNumber(id)+1}</span>
+      <button class="btn-remove" onclick="removeFuelRow(${id})">ลบ</button>
     </div>
     <div class="row2">
       <div><label class="lbl">จำนวนลิตร</label>
         <input class="inp" type="number" id="fl-liter-${id}" placeholder="0" oninput="calcFuelRoad()"></div>
       <div><label class="lbl">ราคา/ลิตร</label>
         <input class="inp" type="text" id="fl-price-${id}" placeholder="30.01" list="fuel-prices" oninput="calcFuelRoad()"></div>
+    </div>
+    <div class="mt8">
+      <label class="lbl">รูปบิลน้ำมัน</label>
+      ${photoBox(`fuel-road-photo-${id}`,'แนบรูปบิลน้ำมัน',`fuel-road-${id}`)}
     </div>`;
   document.getElementById('fuel-road-rows').appendChild(div);
+  renumberFuelRows();
   calcFuelRoad();
 }
 
-function removeFuelRow(id) {
+function removeFuelRow(id){
   document.getElementById(`fuel-row-${id}`)?.remove();
+  renumberFuelRows();
   calcFuelRoad();
 }
 
-function calcFuelRoad() {
-  let total = 0;
-  document.querySelectorAll('[id^="fl-liter-"]').forEach(el => {
-    const rowId = el.id.replace('fl-liter-','');
-    const liter = parseFloat(el.value) || 0;
-    const price = parseFloat(document.getElementById(`fl-price-${rowId}`)?.value) || 0;
-    total += liter * price;
-  });
-  const badge = document.getElementById('fuel-road-total-badge');
-  const span  = document.getElementById('fuel-road-total');
-  if (badge && span) {
-    badge.classList.toggle('hide', total===0);
-    span.textContent = total.toFixed(2);
-  }
+function getFuelRowNumber(id){
+  // คืน index ปัจจุบันใน DOM
+  const rows=document.querySelectorAll('#fuel-road-rows .fuel-row');
+  for(let i=0;i<rows.length;i++) if(rows[i].id===`fuel-row-${id}`) return i;
+  return 0;
 }
 
-function calcFuelFactory() {
-  const liter = parseFloat(document.getElementById('fuel-factory-liter')?.value) || 0;
-  const price = parseFloat(document.getElementById('fuel-factory-price')?.value) || 0;
-  const total = liter * price;
-  const badge = document.getElementById('fuel-factory-total-badge');
-  const span  = document.getElementById('fuel-factory-total');
-  if (badge && span) {
-    badge.classList.toggle('hide', total===0);
-    span.textContent = total.toFixed(2);
-  }
+function renumberFuelRows(){
+  // Re-number ทุก row ตาม position จริงใน DOM
+  const rows=document.querySelectorAll('#fuel-road-rows .fuel-row');
+  rows.forEach((row,i)=>{
+    const rowId=row.id.replace('fuel-row-','');
+    const titleEl=document.getElementById(`fuel-row-title-${rowId}`);
+    if(titleEl) titleEl.textContent=`บิลที่ ${i+1}`;
+    // ซ่อนปุ่มลบของบิลแรก ถ้ามีแค่ 1 บิล
+    const btn=row.querySelector('.btn-remove');
+    if(btn) btn.style.display=rows.length<=1?'none':'';
+  });
+}
+
+function calcFuelRoad(){
+  let total=0;
+  document.querySelectorAll('[id^="fl-liter-"]').forEach(el=>{
+    const rowId=el.id.replace('fl-liter-','');
+    const l=parseFloat(el.value)||0;
+    const p=parseFloat(document.getElementById(`fl-price-${rowId}`)?.value)||0;
+    total+=l*p;
+  });
+  const badge=document.getElementById('fuel-road-total-badge');
+  const span=document.getElementById('fuel-road-total');
+  if(badge&&span){badge.classList.toggle('hide',total===0);span.textContent=total.toFixed(2);}
+}
+
+function calcFuelFactory(){
+  const l=parseFloat(document.getElementById('fuel-factory-liter')?.value)||0;
+  const p=parseFloat(document.getElementById('fuel-factory-price')?.value)||0;
+  const total=l*p;
+  const badge=document.getElementById('fuel-factory-total-badge');
+  const span=document.getElementById('fuel-factory-total');
+  if(badge&&span){badge.classList.toggle('hide',total===0);span.textContent=total.toFixed(2);}
 }
 
 // ── Net Weight ────────────────────────────────────────────
-function calcNet(prefix) {
-  const h = parseFloat(document.getElementById(`w-${prefix}-h`)?.value) || 0;
-  const l = parseFloat(document.getElementById(`w-${prefix}-l`)?.value) || 0;
-  if (h<=0 && l<=0) return;
-  const net = Math.abs(h-l);
-  const badge = document.getElementById(`net-${prefix}`);
-  const val   = document.getElementById(`nv-${prefix}`);
-  if (badge && val) { badge.classList.remove('hide'); val.textContent = Math.round(net).toLocaleString(); }
+function calcNet(prefix){
+  const h=parseFloat(document.getElementById(`w-${prefix}-h`)?.value)||0;
+  const l=parseFloat(document.getElementById(`w-${prefix}-l`)?.value)||0;
+  if(h<=0&&l<=0) return;
+  const badge=document.getElementById(`net-${prefix}`);
+  const val=document.getElementById(`nv-${prefix}`);
+  if(badge&&val){badge.classList.remove('hide');val.textContent=Math.round(Math.abs(h-l)).toLocaleString();}
 }
 
-// ── Photo Handler (ใช้ label — ไม่มี bug 2 ครั้งแล้ว) ─────
-function onPhoto(input, boxId, lblId, key) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    photos[key] = e.target.result;
-    const box = document.getElementById(boxId);
-    const lbl = document.getElementById(lblId);
-    if (box) box.classList.add('has-photo');
-    if (lbl) lbl.textContent = '✅ แนบรูปแล้ว';
+// ── Validate ไมล์/ดุมล้อ ≥ จุดก่อนหน้า ──────────────────
+function getPrevMile(key){
+  if(key==='client') return mileHistory.start||0;
+  if(key==='ramp')   return mileHistory.client||0;
+  if(key==='factory') return hasRamp?(mileHistory.ramp||0):(mileHistory.client||0);
+  return 0;
+}
+
+function validateMile(inputId,key){
+  const val=parseFloat(document.getElementById(inputId)?.value)||0;
+  const prev=getPrevMile(key);
+  const errEl=document.getElementById(`err-mile-${key}`);
+  const inp=document.getElementById(inputId);
+  if(prev>0&&val<prev){
+    inp?.classList.add('err');
+    errEl?.classList.remove('hide');
+    return false;
+  }
+  inp?.classList.remove('err');
+  errEl?.classList.add('hide');
+  return true;
+}
+
+function validateHub(inputId,key){
+  // ดุมล้อใช้ logic เดียวกับไมล์
+  return validateMile(inputId,key);
+}
+
+// ── Photo ─────────────────────────────────────────────────
+function onPhoto(input,boxId,lblId,key){
+  const file=input.files[0];if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    photos[key]=e.target.result;
+    document.getElementById(boxId)?.classList.add('has-photo');
+    const lbl=document.getElementById(lblId);
+    if(lbl) lbl.textContent='✅ แนบรูปแล้ว';
   };
   reader.readAsDataURL(file);
 }
 
 // ── Helpers ───────────────────────────────────────────────
-function getVal(id)  { return document.getElementById(id)?.value || ''; }
-function reqVal(id, label) {
-  const v = getVal(id);
-  if (!v || parseFloat(v)===0) { alert(`กรุณากรอก ${label}`); return null; }
+function getVal(id){return document.getElementById(id)?.value||'';}
+function reqVal(id,label){
+  const v=getVal(id);
+  if(!v||parseFloat(v)<=0){alert(`กรุณากรอก ${label}`);return null;}
   return v;
 }
-async function postGAS(payload) {
+async function postGAS(payload){
   setLoading(true);
-  try {
-    const res  = await fetch(GAS_URL, {method:'POST', body:JSON.stringify(payload)});
-    const text = await res.text();
+  try{
+    const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload)});
+    const text=await res.text();
     return JSON.parse(text);
-  } catch(e) { alert('❌ เชื่อมต่อไม่ได้ กรุณาลองใหม่'); return null; }
-  finally    { setLoading(false); }
+  }catch(e){alert('❌ เชื่อมต่อไม่ได้ กรุณาลองใหม่');return null;}
+  finally{setLoading(false);}
 }
-function setLoading(on) {
-  document.getElementById('overlay').classList.toggle('show', on);
-  if (on) setTimeout(()=>document.getElementById('overlay').classList.remove('show'), 15000);
+function setLoading(on){
+  document.getElementById('overlay').classList.toggle('show',on);
+  if(on) setTimeout(()=>document.getElementById('overlay').classList.remove('show'),15000);
 }
 
 // ── Submit: ออกโรงงาน ────────────────────────────────────
-async function submitStart() {
-  const mileS = reqVal('mile-start','เลขไมล์เริ่ม'); if (!mileS) return;
-  const hubS  = reqVal('hub-start', 'เลขดุมล้อเริ่ม'); if (!hubS) return;
-  const r = await postGAS({action:'driverStartJob', orderId:order['Order ID'], userId:U.userId});
-  if (!r?.success) { alert('❌ '+(r?.error||'เกิดข้อผิดพลาด')); return; }
-  const fields = {'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS};
-  const h = getVal('w-start-h'), l = getVal('w-start-l');
-  if (h && l) { fields['น้ำหนักหนักปลายทาง']=h; fields['น้ำหนักเบาปลายทาง']=l; fields['สุทธิปลายทาง']=Math.abs(parseFloat(h)-parseFloat(l)); }
+async function submitStart(){
+  const mileS=reqVal('mile-start','เลขไมล์เริ่ม');if(!mileS) return;
+  const hubS=reqVal('hub-start','เลขดุมล้อเริ่ม');if(!hubS) return;
+  const r=await postGAS({action:'driverStartJob',orderId:order['Order ID'],userId:U.userId});
+  if(!r?.success){alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
+  mileHistory.start=parseFloat(mileS);
+  const fields={'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS};
+  const h=getVal('w-start-h'),l=getVal('w-start-l');
+  if(h&&l){fields['น้ำหนักหนักปลายทาง']=h;fields['น้ำหนักเบาปลายทาง']=l;fields['สุทธิปลายทาง']=Math.abs(parseFloat(h)-parseFloat(l));}
   await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'เริ่ม',fields});
-  order['สถานะ']='เริ่มงานแล้ว'; renderTimeline(); alert('✅ บันทึกออกโรงงานแล้วครับ');
+  order['สถานะ']='เริ่มงานแล้ว';renderTimeline();alert('✅ บันทึกออกโรงงานแล้วครับ');
 }
 
 // ── Submit: ถึงลูกค้า ─────────────────────────────────────
-async function submitClient() {
-  const mileC = reqVal('mile-client','เลขไมล์ถึงลูกค้า'); if (!mileC) return;
-  const hubC  = reqVal('hub-client', 'เลขดุมล้อถึงลูกค้า'); if (!hubC) return;
-  const r = await postGAS({action:'driverArrived', orderId:order['Order ID'], userId:U.userId});
-  if (!r?.success) { alert('❌ '+(r?.error||'เกิดข้อผิดพลาด')); return; }
-  const fields = {'เลขไมล์ลูกค้า':mileC,'เลขดุมล้อลูกค้า':hubC};
-  const h = getVal('w-client-h'), l = getVal('w-client-l');
-  if (h && l) { fields['น้ำหนักหนักลูกค้า']=h; fields['น้ำหนักเบาลูกค้า']=l; fields['สุทธิลูกค้า']=Math.abs(parseFloat(h)-parseFloat(l)); if (photos['client']) fields['รูปลูกค้า']=photos['client']; }
+async function submitClient(){
+  if(!validateMile('mile-client','client')){alert('⚠️ เลขไมล์ต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
+  const mileC=reqVal('mile-client','เลขไมล์ถึงลูกค้า');if(!mileC) return;
+  const hubC=reqVal('hub-client','เลขดุมล้อถึงลูกค้า');if(!hubC) return;
+  const r=await postGAS({action:'driverArrived',orderId:order['Order ID'],userId:U.userId});
+  if(!r?.success){alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
+  mileHistory.client=parseFloat(mileC);
+  const fields={'เลขไมล์ลูกค้า':mileC,'เลขดุมล้อลูกค้า':hubC};
+  const h=getVal('w-client-h'),l=getVal('w-client-l');
+  if(h&&l){fields['น้ำหนักหนักลูกค้า']=h;fields['น้ำหนักเบาลูกค้า']=l;fields['สุทธิลูกค้า']=Math.abs(parseFloat(h)-parseFloat(l));if(photos['client']) fields['รูปลูกค้า']=photos['client'];}
   await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลูกค้า',fields});
-  order['สถานะ']='ถึงลูกค้า'; renderTimeline(); alert('✅ บันทึกถึงลูกค้าแล้วครับ');
+  order['สถานะ']='ถึงลูกค้า';renderTimeline();alert('✅ บันทึกถึงลูกค้าแล้วครับ');
 }
 
 // ── Submit: ถึงลาน ────────────────────────────────────────
-async function submitRamp() {
-  const mileR = reqVal('mile-ramp','เลขไมล์ถึงลาน'); if (!mileR) return;
-  const hubR  = reqVal('hub-ramp', 'เลขดุมล้อถึงลาน'); if (!hubR) return;
-  const rcH = reqVal('w-rc-h','น้ำหนักหนักลูกค้า'); if (!rcH) return;
-  const rcL = reqVal('w-rc-l','น้ำหนักเบาลูกค้า');  if (!rcL) return;
-  if (!photos['ramp-client']) { alert('กรุณาแนบรูปใบชั่งลูกค้า'); return; }
-  const rrH = reqVal('w-rr-h','น้ำหนักหนักลาน'); if (!rrH) return;
-  const rrL = reqVal('w-rr-l','น้ำหนักเบาลาน');  if (!rrL) return;
-  if (!photos['ramp-ramp']) { alert('กรุณาแนบรูปใบชั่งลาน'); return; }
-  const fields = {
-    'เลขไมล์ลาน':mileR,'เลขดุมล้อลาน':hubR,
+async function submitRamp(){
+  if(!validateMile('mile-ramp','ramp')){alert('⚠️ เลขไมล์ต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
+  const mileR=reqVal('mile-ramp','เลขไมล์ถึงลาน');if(!mileR) return;
+  const hubR=reqVal('hub-ramp','เลขดุมล้อถึงลาน');if(!hubR) return;
+  const rcH=reqVal('w-rc-h','น้ำหนักหนักลูกค้า');if(!rcH) return;
+  const rcL=reqVal('w-rc-l','น้ำหนักเบาลูกค้า');if(!rcL) return;
+  if(!photos['ramp-client']){alert('กรุณาแนบรูปใบชั่งลูกค้า');return;}
+  const rrH=reqVal('w-rr-h','น้ำหนักหนักลาน');if(!rrH) return;
+  const rrL=reqVal('w-rr-l','น้ำหนักเบาลาน');if(!rrL) return;
+  if(!photos['ramp-ramp']){alert('กรุณาแนบรูปใบชั่งลาน');return;}
+  mileHistory.ramp=parseFloat(mileR);
+  const fields={'เลขไมล์ลาน':mileR,'เลขดุมล้อลาน':hubR,
     'น้ำหนักหนักลูกค้า':rcH,'น้ำหนักเบาลูกค้า':rcL,'สุทธิลูกค้า':Math.abs(parseFloat(rcH)-parseFloat(rcL)),
     'น้ำหนักหนักลาน':rrH,'น้ำหนักเบาลาน':rrL,'สุทธิลาน':Math.abs(parseFloat(rrH)-parseFloat(rrL)),
-    'รูปลูกค้า':photos['ramp-client']||'','รูปลาน':photos['ramp-ramp']||''
-  };
+    'รูปลูกค้า':photos['ramp-client']||'','รูปลาน':photos['ramp-ramp']||''};
   await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลาน',notifyOwner:true,fields});
-  order['สถานะ']='ถึงลาน'; renderTimeline(); alert('✅ บันทึกถึงลานและแจ้งเจ้าของสวนแล้วครับ');
+  order['สถานะ']='ถึงลาน';renderTimeline();alert('✅ บันทึกถึงลานและแจ้งเจ้าของสวนแล้วครับ');
 }
 
-// ── Submit: ถึงโรงงาน ─────────────────────────────────────
-async function submitFactory() {
-  const mileF = reqVal('mile-factory','เลขไมล์ปลายทาง'); if (!mileF) return;
-  const hubF  = reqVal('hub-factory', 'เลขดุมล้อปลายทาง'); if (!hubF) return;
-
+// ── Prepare Factory → Dashboard ──────────────────────────
+function prepareFactory(){
+  if(!validateMile('mile-factory','factory')){alert('⚠️ เลขไมล์ต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
+  const mileF=getVal('mile-factory');if(!mileF){alert('กรุณากรอกเลขไมล์ปลายทาง');return;}
+  const hubF=getVal('hub-factory');if(!hubF){alert('กรุณากรอกเลขดุมล้อปลายทาง');return;}
   // ตรวจน้ำมันโรงงาน
-  const fLiter = reqVal('fuel-factory-liter','จำนวนลิตรน้ำมันโรงงาน'); if (!fLiter) return;
-  const fPrice = reqVal('fuel-factory-price','ราคาน้ำมันโรงงาน'); if (!fPrice) return;
-
-  const fields = {'เลขไมล์ปลายทาง':mileF,'เลขดุมล้อปลายทาง':hubF};
-
+  const fLiter=getVal('fuel-factory-liter');if(!fLiter){alert('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
+  const fPrice=getVal('fuel-factory-price');if(!fPrice){alert('กรุณากรอกราคาน้ำมันโรงงาน');return;}
+  // เก็บข้อมูลทั้งหมดไว้ใน collectedData
+  collectedData={};
+  // ไมล์ปลายทาง
+  collectedData.mileFactory=mileF;collectedData.hubFactory=hubF;
   // น้ำหนัก
-  if (hasRamp && jobType==='ปาล์ม') {
-    const fcH = reqVal('w-fc-h','น้ำหนักหนักลูกค้า(โรงงาน)'); if (!fcH) return;
-    const fcL = reqVal('w-fc-l','น้ำหนักเบาลูกค้า(โรงงาน)');  if (!fcL) return;
-    if (!photos['fact-client']) { alert('กรุณาแนบรูปใบชั่งลูกค้า'); return; }
-    const frH = reqVal('w-fr-h','น้ำหนักหนักลาน(โรงงาน)'); if (!frH) return;
-    const frL = reqVal('w-fr-l','น้ำหนักเบาลาน(โรงงาน)');  if (!frL) return;
-    if (!photos['fact-ramp']) { alert('กรุณาแนบรูปใบชั่งลาน'); return; }
-    Object.assign(fields, {
-      'น้ำหนักหนักปลายทาง':fcH,'น้ำหนักเบาปลายทาง':fcL,'สุทธิปลายทาง':Math.abs(parseFloat(fcH)-parseFloat(fcL)),
-      'น้ำหนักหนักลาน':frH,'น้ำหนักเบาลาน':frL,'สุทธิลาน':Math.abs(parseFloat(frH)-parseFloat(frL)),
-      'รูปปลายทาง':photos['fact-client']||'','รูปลาน':photos['fact-ramp']||''
-    });
-  } else {
-    const ffH = reqVal('w-ff-h','น้ำหนักหนักปลายทาง'); if (!ffH) return;
-    const ffL = reqVal('w-ff-l','น้ำหนักเบาปลายทาง');  if (!ffL) return;
-    if (!photos['factory']) { alert('กรุณาแนบรูปใบชั่ง'); return; }
-    Object.assign(fields, {
-      'น้ำหนักหนักปลายทาง':ffH,'น้ำหนักเบาปลายทาง':ffL,'สุทธิปลายทาง':Math.abs(parseFloat(ffH)-parseFloat(ffL)),
-      'รูปปลายทาง':photos['factory']||''
-    });
+  if(hasRamp&&jobType==='ปาล์ม'){
+    const fcH=getVal('w-fc-h'),fcL=getVal('w-fc-l');
+    const frH=getVal('w-fr-h'),frL=getVal('w-fr-l');
+    if(!fcH||!fcL){alert('กรุณากรอกน้ำหนักลูกค้า(โรงงาน)');return;}
+    if(!photos['fact-client']){alert('กรุณาแนบรูปใบชั่งลูกค้า');return;}
+    if(!frH||!frL){alert('กรุณากรอกน้ำหนักลาน(โรงงาน)');return;}
+    if(!photos['fact-ramp']){alert('กรุณาแนบรูปใบชั่งลาน');return;}
+    collectedData.weightFactClient={h:fcH,l:fcL,net:Math.abs(parseFloat(fcH)-parseFloat(fcL))};
+    collectedData.weightFactRamp={h:frH,l:frL,net:Math.abs(parseFloat(frH)-parseFloat(frL))};
+  }else{
+    const ffH=getVal('w-ff-h'),ffL=getVal('w-ff-l');
+    if(!ffH||!ffL){alert('กรุณากรอกน้ำหนักปลายทาง');return;}
+    if(!photos['factory']){alert('กรุณาแนบรูปใบชั่ง');return;}
+    collectedData.weightFactory={h:ffH,l:ffL,net:Math.abs(parseFloat(ffH)-parseFloat(ffL))};
   }
-
   // ค่าใช้จ่าย
-  // น้ำมันโรงงาน
-  const fTotal = (parseFloat(fLiter)||0) * (parseFloat(fPrice)||0);
-  Object.assign(fields, {'ลิตรน้ำมัน(ทาง)':fLiter,'ราคาน้ำมัน(ทาง)':fPrice});
-
+  collectedData.fuelFactory={liter:fLiter,price:fPrice,total:(parseFloat(fLiter)*parseFloat(fPrice)).toFixed(2)};
   // น้ำมันระหว่างทาง
-  if (document.getElementById('chip-fuel-road').classList.contains('on')) {
-    let roadLiter=0, roadTotal=0;
-    document.querySelectorAll('[id^="fl-liter-"]').forEach(el => {
-      const rowId = el.id.replace('fl-liter-','');
-      const l = parseFloat(el.value)||0;
-      const p = parseFloat(document.getElementById(`fl-price-${rowId}`)?.value)||0;
-      roadLiter += l; roadTotal += l*p;
+  if(document.getElementById('chip-fuel-road').classList.contains('on')){
+    const rows=[];
+    document.querySelectorAll('[id^="fl-liter-"]').forEach(el=>{
+      const rowId=el.id.replace('fl-liter-','');
+      const l=parseFloat(el.value)||0,p=parseFloat(document.getElementById(`fl-price-${rowId}`)?.value)||0;
+      if(l>0) rows.push({liter:l,price:p,total:(l*p).toFixed(2),photo:photos[`fuel-road-${rowId}`]});
     });
-    if (photos['fuel-road']) fields['รูปน้ำมัน(ทาง)'] = photos['fuel-road'];
+    collectedData.fuelRoad=rows;
   }
-
   // ทางด่วน
-  if (document.getElementById('chip-toll').classList.contains('on')) {
-    const toll = getVal('toll-amount');
-    if (toll) fields['ค่าทางด่วน'] = toll;
+  if(document.getElementById('chip-toll').classList.contains('on')){
+    collectedData.toll=getVal('toll-amount');
+  }
+  // ซ่อมนอก
+  if(document.getElementById('chip-repair').classList.contains('on')){
+    collectedData.repair={cost:getVal('repair-cost'),note:getVal('repair-note')};
+  }
+  showDashboard();
+}
+
+// ── Dashboard ─────────────────────────────────────────────
+function showDashboard(){
+  const d=collectedData;
+  const rows=[];
+
+  // ── ระยะทาง ──
+  rows.push({section:'📍 ระยะทาง'});
+  if(mileHistory.start) rows.push({k:'เลขไมล์เริ่ม',v:Number(mileHistory.start).toLocaleString()});
+  if(mileHistory.client) rows.push({k:'เลขไมล์ถึงลูกค้า',v:Number(mileHistory.client).toLocaleString()});
+  if(mileHistory.ramp) rows.push({k:'เลขไมล์ถึงลาน',v:Number(mileHistory.ramp).toLocaleString()});
+  rows.push({k:'เลขไมล์ปลายทาง',v:Number(d.mileFactory).toLocaleString()});
+  const totalDist=Number(d.mileFactory)-(mileHistory.start||0);
+  rows.push({k:'ระยะทางรวม',v:`${totalDist.toLocaleString()} กม.`,highlight:true});
+
+  // ── น้ำหนัก ──
+  rows.push({section:'⚖️ น้ำหนัก'});
+  if(d.weightFactClient){
+    rows.push({k:'สุทธิลูกค้า (โรงงาน)',v:`${Math.round(d.weightFactClient.net).toLocaleString()} กก.`,highlight:true});
+    rows.push({k:'สุทธิลาน (โรงงาน)',v:`${Math.round(d.weightFactRamp.net).toLocaleString()} กก.`,highlight:true});
+  }else if(d.weightFactory){
+    rows.push({k:'สุทธิปลายทาง',v:`${Math.round(d.weightFactory.net).toLocaleString()} กก.`,highlight:true});
   }
 
-  // ซ่อมนอก
-  if (document.getElementById('chip-repair').classList.contains('on')) {
-    const rc = getVal('repair-cost'), rn = getVal('repair-note');
-    if (rc) fields['ค่าซ่อมนอก'] = rc;
-    if (rn) fields['หมายเหตุค่าใช้จ่าย'] = rn;
-    if (photos['repair']) fields['รูปค่าซ่อมนอก'] = photos['repair'];
+  // ── ค่าใช้จ่าย ──
+  rows.push({section:'💰 ค่าใช้จ่าย'});
+  rows.push({k:'⛽ น้ำมันโรงงาน',v:`${d.fuelFactory.liter} ลิตร × ${d.fuelFactory.price} = ${d.fuelFactory.total} บาท`});
+  if(d.fuelRoad&&d.fuelRoad.length>0){
+    d.fuelRoad.forEach((row,i)=>{rows.push({k:`⛽ น้ำมันทาง บิล${i+1}`,v:`${row.liter} ลิตร × ${row.price} = ${row.total} บาท`});});
   }
+  if(d.toll) rows.push({k:'🛣️ ค่าทางด่วน',v:`${Number(d.toll).toLocaleString()} บาท`});
+  if(d.repair) rows.push({k:'🔧 ค่าซ่อมนอก',v:`${Number(d.repair.cost).toLocaleString()} บาท${d.repair.note?' ('+d.repair.note+')':''}`});
+
+  // render
+  const content=document.getElementById('dash-content');
+  let html='';
+  rows.forEach(r=>{
+    if(r.section) html+=`<div class="dash-section"><div class="dash-section-title">${r.section}</div>`;
+    else if(r.highlight) html+=`<div class="dash-row"><span class="dash-key">${r.k}</span><span class="dash-highlight">${r.v}</span></div>`;
+    else html+=`<div class="dash-row"><span class="dash-key">${r.k}</span><span class="dash-val">${r.v}</span></div>`;
+  });
+  html+='</div>';
+  content.innerHTML=html;
+  document.getElementById('dashboard').classList.add('show');
+  document.getElementById('dashboard').scrollTop=0;
+}
+
+function closeDashboard(){
+  document.getElementById('dashboard').classList.remove('show');
+}
+
+// ── Confirm Submit (ส่งข้อมูลจริง) ───────────────────────
+async function confirmSubmit(){
+  closeDashboard();
+  const d=collectedData;
+  const fields={'เลขไมล์ปลายทาง':d.mileFactory,'เลขดุมล้อปลายทาง':d.hubFactory};
+  // น้ำหนัก
+  if(d.weightFactClient){
+    Object.assign(fields,{'น้ำหนักหนักปลายทาง':d.weightFactClient.h,'น้ำหนักเบาปลายทาง':d.weightFactClient.l,'สุทธิปลายทาง':d.weightFactClient.net,'รูปปลายทาง':photos['fact-client']||'','น้ำหนักหนักลาน':d.weightFactRamp.h,'น้ำหนักเบาลาน':d.weightFactRamp.l,'สุทธิลาน':d.weightFactRamp.net,'รูปลาน':photos['fact-ramp']||''});
+  }else if(d.weightFactory){
+    Object.assign(fields,{'น้ำหนักหนักปลายทาง':d.weightFactory.h,'น้ำหนักเบาปลายทาง':d.weightFactory.l,'สุทธิปลายทาง':d.weightFactory.net,'รูปปลายทาง':photos['factory']||''});
+  }
+  // ค่าใช้จ่าย
+  if(d.fuelFactory){fields['ลิตรน้ำมัน(ทาง)']=d.fuelFactory.liter;fields['ราคาน้ำมัน(ทาง)']=d.fuelFactory.price;}
+  if(d.toll) fields['ค่าทางด่วน']=d.toll;
+  if(d.repair){fields['ค่าซ่อมนอก']=d.repair.cost;fields['หมายเหตุค่าใช้จ่าย']=d.repair.note;if(photos['repair']) fields['รูปค่าซ่อมนอก']=photos['repair'];}
+  if(d.fuelRoad&&d.fuelRoad.length>0&&photos['fuel-road-1']) fields['รูปน้ำมัน(ทาง)']=photos['fuel-road-1'];
 
   await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ปลายทาง',notifyOwner:true,fields});
-  const r = await postGAS({action:'driverComplete',orderId:order['Order ID'],userId:U.userId});
-  if (!r?.success) { alert('❌ '+(r?.error||'เกิดข้อผิดพลาด')); return; }
-  document.getElementById('success-msg').innerHTML = `📋 ${order['Order ID']}<br>ส่งข้อมูลให้ Admin และเจ้าของสวนแล้วครับ`;
+  const r=await postGAS({action:'driverComplete',orderId:order['Order ID'],userId:U.userId});
+  if(!r?.success){alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
+  document.getElementById('success-msg').innerHTML=`📋 ${order['Order ID']}<br>ส่งข้อมูลให้ Admin และเจ้าของสวนแล้วครับ`;
   document.getElementById('success').classList.add('show');
 }
 
-// ── Cancel ────────────────────────────────────────────────
-async function requestCancel() {
-  const reason = prompt('กรุณาระบุสาเหตุที่ขอยกเลิก:');
-  if (reason===null) return;
-  const r = await postGAS({action:'driverCancelRequest',orderId:order['Order ID'],userId:U.userId,reason});
-  if (r?.success) alert('📤 ส่งคำขอไปยัง Admin แล้วครับ');
+async function requestCancel(){
+  const reason=prompt('กรุณาระบุสาเหตุที่ขอยกเลิก:');
+  if(reason===null) return;
+  const r=await postGAS({action:'driverCancelRequest',orderId:order['Order ID'],userId:U.userId,reason});
+  if(r?.success) alert('📤 ส่งคำขอไปยัง Admin แล้วครับ');
   else alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));
 }
 
