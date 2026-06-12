@@ -689,22 +689,22 @@ function showDashboard(){
   // คำนวณระยะแต่ละช่วง
   if (hubStart && hubClient) {
     const dist = hubClient - hubStart;
-    rows.push({ k: '📏 เริ่ม → ลูกค้า', v: `${dist.toLocaleString()} หน่วย`, highlight: true });
+    rows.push({ k: '📏 เริ่ม → ลูกค้า', v: `${dist.toLocaleString()} กม.`, highlight: true });
   }
   if (hubClient && hubRamp) {
     const dist = hubRamp - hubClient;
-    rows.push({ k: '📏 ลูกค้า → ลาน', v: `${dist.toLocaleString()} หน่วย`, highlight: true });
+    rows.push({ k: '📏 ลูกค้า → ลาน', v: `${dist.toLocaleString()} กม.`, highlight: true });
   }
   if (hubRamp && hubFactory) {
     const dist = hubFactory - hubRamp;
-    rows.push({ k: '📏 ลาน → ปลายทาง', v: `${dist.toLocaleString()} หน่วย`, highlight: true });
+    rows.push({ k: '📏 ลาน → ปลายทาง', v: `${dist.toLocaleString()} กม.`, highlight: true });
   } else if (!hubRamp && hubClient && hubFactory) {
     const dist = hubFactory - hubClient;
-    rows.push({ k: '📏 ลูกค้า → ปลายทาง', v: `${dist.toLocaleString()} หน่วย`, highlight: true });
+    rows.push({ k: '📏 ลูกค้า → ปลายทาง', v: `${dist.toLocaleString()} กม.`, highlight: true });
   }
   if (hubStart && hubFactory) {
     const total = hubFactory - hubStart;
-    rows.push({ k: '📏 รวมทั้งสาย', v: `${total.toLocaleString()} หน่วย`, highlight: true });
+    rows.push({ k: '📏 รวมทั้งสาย', v: `${total.toLocaleString()} กม.`, highlight: true });
   }
  
   // ── น้ำหนัก ───────────────────────────────────────────
