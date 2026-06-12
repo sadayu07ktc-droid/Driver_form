@@ -670,53 +670,92 @@ function prepareFactory(){
 
 // ✅ ข้อ 1+4: Dashboard แสดงเลขดุมล้อ + ตัวเลขน้ำหนักจริง
 function showDashboard(){
-  const d=collectedData;
-  const rows=[];
-
-  rows.push({section:'📍 เลขดุมล้อ'});
-  if(hubHistory.start) rows.push({k:'ดุมล้อเริ่ม',v:Number(hubHistory.start).toLocaleString()});
-  if(hubHistory.client) rows.push({k:'ดุมล้อถึงลูกค้า',v:Number(hubHistory.client).toLocaleString()});
-  if(hubHistory.ramp) rows.push({k:'ดุมล้อถึงลาน',v:Number(hubHistory.ramp).toLocaleString()});
-  rows.push({k:'ดุมล้อปลายทาง',v:Number(d.hubFactory).toLocaleString()});
-
-  rows.push({section:'⚖️ น้ำหนัก'});
-  // ✅ ข้อ 4: แสดงรถหนัก รถเบา สุทธิ ครบ
-  if(d.weightFactClient){
-    rows.push({k:'ลูกค้า — รถหนัก',v:`${Number(d.weightFactClient.h).toLocaleString()} กก.`});
-    rows.push({k:'ลูกค้า — รถเบา',v:`${Number(d.weightFactClient.l).toLocaleString()} กก.`});
-    rows.push({k:'สุทธิลูกค้า',v:`${Math.round(d.weightFactClient.net).toLocaleString()} กก.`,highlight:true});
-    rows.push({k:'ลาน — รถหนัก',v:`${Number(d.weightFactRamp.h).toLocaleString()} กก.`});
-    rows.push({k:'ลาน — รถเบา',v:`${Number(d.weightFactRamp.l).toLocaleString()} กก.`});
-    rows.push({k:'สุทธิลาน',v:`${Math.round(d.weightFactRamp.net).toLocaleString()} กก.`,highlight:true});
-  }else if(d.weightFactory){
-    rows.push({k:'รถหนัก',v:`${Number(d.weightFactory.h).toLocaleString()} กก.`});
-    rows.push({k:'รถเบา',v:`${Number(d.weightFactory.l).toLocaleString()} กก.`});
-    rows.push({k:'สุทธิปลายทาง',v:`${Math.round(d.weightFactory.net).toLocaleString()} กก.`,highlight:true});
+  const d = collectedData;
+  const rows = [];
+ 
+  // ── ระยะทางจากดุมล้อ ──────────────────────────────────
+  rows.push({ section: '🛣️ ระยะทาง (จากดุมล้อ)' });
+ 
+  const hubStart   = hubHistory.start   || 0;
+  const hubClient  = hubHistory.client  || 0;
+  const hubRamp    = hubHistory.ramp    || 0;
+  const hubFactory = parseFloat(d.hubFactory) || 0;
+ 
+  if (hubStart)   rows.push({ k: 'ดุมล้อเริ่ม',       v: Number(hubStart).toLocaleString() });
+  if (hubClient)  rows.push({ k: 'ดุมล้อถึงลูกค้า',   v: Number(hubClient).toLocaleString() });
+  if (hubRamp)    rows.push({ k: 'ดุมล้อถึงลาน',      v: Number(hubRamp).toLocaleString() });
+  if (hubFactory) rows.push({ k: 'ดุมล้อปลายทาง',    v: Number(hubFactory).toLocaleString() });
+ 
+  // คำนวณระยะแต่ละช่วง
+  if (hubStart && hubClient) {
+    const dist = hubClient - hubStart;
+    rows.push({ k: '📏 เริ่ม → ลูกค้า', v: `${dist.toLocaleString()} หน่วย`, highlight: true });
   }
-
-  // ✅ ข้อ 5: เจ้าของใบ = ชื่อในบิล จากออเดอร์
-  const billName=order['ชื่อในบิล']||order['ชื่อสวน']||'—';
-  rows.push({k:'เจ้าของใบ',v:billName});
-
-  rows.push({section:'💰 ค่าใช้จ่าย'});
-  rows.push({k:'⛽ น้ำมันโรงงาน',v:`${d.fuelFactory.liter} ลิตร × ${d.fuelFactory.price} = ${d.fuelFactory.total} บาท`});
-  if(d.fuelRoad&&d.fuelRoad.length>0){
-    d.fuelRoad.forEach((row,i)=>{rows.push({k:`⛽ น้ำมันทาง บิล${i+1}`,v:`${row.liter} ลิตร × ${row.price} = ${row.total} บาท`});});
+  if (hubClient && hubRamp) {
+    const dist = hubRamp - hubClient;
+    rows.push({ k: '📏 ลูกค้า → ลาน', v: `${dist.toLocaleString()} หน่วย`, highlight: true });
   }
-  if(d.toll) rows.push({k:'🛣️ ค่าทางด่วน',v:`${Number(d.toll).toLocaleString()} บาท`});
-  if(d.repair) rows.push({k:'🔧 ค่าซ่อมนอก',v:`${Number(d.repair.cost).toLocaleString()} บาท${d.repair.note?' ('+d.repair.note+')':''}`});
-
-  const content=document.getElementById('dash-content');
-  let html='';
-  rows.forEach(r=>{
-    if(r.section) html+=`<div class="dash-section"><div class="dash-section-title">${r.section}</div>`;
-    else if(r.highlight) html+=`<div class="dash-row"><span class="dash-key">${r.k}</span><span class="dash-highlight">${r.v}</span></div>`;
-    else html+=`<div class="dash-row"><span class="dash-key">${r.k}</span><span class="dash-val">${r.v}</span></div>`;
+  if (hubRamp && hubFactory) {
+    const dist = hubFactory - hubRamp;
+    rows.push({ k: '📏 ลาน → ปลายทาง', v: `${dist.toLocaleString()} หน่วย`, highlight: true });
+  } else if (!hubRamp && hubClient && hubFactory) {
+    const dist = hubFactory - hubClient;
+    rows.push({ k: '📏 ลูกค้า → ปลายทาง', v: `${dist.toLocaleString()} หน่วย`, highlight: true });
+  }
+  if (hubStart && hubFactory) {
+    const total = hubFactory - hubStart;
+    rows.push({ k: '📏 รวมทั้งสาย', v: `${total.toLocaleString()} หน่วย`, highlight: true });
+  }
+ 
+  // ── น้ำหนัก ───────────────────────────────────────────
+  rows.push({ section: '⚖️ น้ำหนัก' });
+  if (d.weightFactClient) {
+    rows.push({ k: 'ลูกค้า — รถหนัก',  v: `${Number(d.weightFactClient.h).toLocaleString()} กก.` });
+    rows.push({ k: 'ลูกค้า — รถเบา',   v: `${Number(d.weightFactClient.l).toLocaleString()} กก.` });
+    rows.push({ k: 'สุทธิลูกค้า',      v: `${Math.round(d.weightFactClient.net).toLocaleString()} กก.`, highlight: true });
+    rows.push({ k: 'ลาน — รถหนัก',     v: `${Number(d.weightFactRamp.h).toLocaleString()} กก.` });
+    rows.push({ k: 'ลาน — รถเบา',      v: `${Number(d.weightFactRamp.l).toLocaleString()} กก.` });
+    rows.push({ k: 'สุทธิลาน',         v: `${Math.round(d.weightFactRamp.net).toLocaleString()} กก.`, highlight: true });
+  } else if (d.weightFactory) {
+    rows.push({ k: 'รถหนัก',          v: `${Number(d.weightFactory.h).toLocaleString()} กก.` });
+    rows.push({ k: 'รถเบา',           v: `${Number(d.weightFactory.l).toLocaleString()} กก.` });
+    rows.push({ k: 'สุทธิปลายทาง',   v: `${Math.round(d.weightFactory.net).toLocaleString()} กก.`, highlight: true });
+  }
+ 
+  const billName = order['ชื่อในบิล'] || order['ชื่อสวน'] || '—';
+  rows.push({ k: 'เจ้าของใบ', v: billName });
+ 
+  // ── ค่าใช้จ่าย ─────────────────────────────────────────
+  rows.push({ section: '💰 ค่าใช้จ่าย' });
+  rows.push({ k: '⛽ น้ำมันโรงงาน', v: `${d.fuelFactory.liter} ลิตร × ${d.fuelFactory.price} = ${d.fuelFactory.total} บาท` });
+  if (d.fuelRoad && d.fuelRoad.length > 0) {
+    d.fuelRoad.forEach((row, i) => {
+      rows.push({ k: `⛽ น้ำมันทาง บิล${i+1}`, v: `${row.liter} ลิตร × ${row.price} = ${row.total} บาท` });
+    });
+  }
+  if (d.toll)   rows.push({ k: '🛣️ ค่าทางด่วน', v: `${Number(d.toll).toLocaleString()} บาท` });
+  if (d.repair) rows.push({ k: '🔧 ค่าซ่อมนอก', v: `${Number(d.repair.cost).toLocaleString()} บาท${d.repair.note?' ('+d.repair.note+')':''}` });
+ 
+  // ── render ─────────────────────────────────────────────
+  const content = document.getElementById('dash-content');
+  let html = '';
+  let sectionOpen = false;
+  rows.forEach(r => {
+    if (r.section) {
+      if (sectionOpen) html += '</div>';
+      html += `<div class="dash-section"><div class="dash-section-title">${r.section}</div>`;
+      sectionOpen = true;
+    } else if (r.highlight) {
+      html += `<div class="dash-row"><span class="dash-key">${r.k}</span><span class="dash-highlight">${r.v}</span></div>`;
+    } else {
+      html += `<div class="dash-row"><span class="dash-key">${r.k}</span><span class="dash-val">${r.v}</span></div>`;
+    }
   });
-  html+='</div>';
-  content.innerHTML=html;
+  if (sectionOpen) html += '</div>';
+  content.innerHTML = html;
+ 
   document.getElementById('dashboard').classList.add('show');
-  document.getElementById('dashboard').scrollTop=0;
+  document.getElementById('dashboard').scrollTop = 0;
 }
 
 function closeDashboard(){document.getElementById('dashboard').classList.remove('show');}
