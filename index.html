@@ -313,8 +313,13 @@ function hubBlock(key,labelMile,labelHub){
 }
 
 function formStart(){
-  return `${ocrMileHubBlock('start','รูปเลขไมล์เริ่ม','รูปเลขดุมล้อเริ่ม')}
-    <button class="btn btn-green" onclick="submitStart()">🚀 ยืนยันออกโรงงาน</button>`;
+  return `
+    ${ocrMileHubBlock('start','รูปเลขไมล์เริ่ม','รูปเลขดุมล้อเริ่ม')}
+
+    <button class="btn btn-green" onclick="submitStart()">
+      🚀 ยืนยันออกโรงงาน
+    </button>
+  `;
 }
 
 function formClient(){
@@ -638,9 +643,23 @@ function ocrPhotoBox(id, label, key, type) {
 }
 
 function ocrMileHubBlock(key, mileLabel, hubLabel) {
-  return `<div class="sec-lbl">📍 ถ่ายรูปเลขไมล์ + ดุมล้อ</div>
-    ${ocrPhotoBox(key + '-mile', mileLabel, 'mile-' + key, 'ไมล์')}
-    ${ocrPhotoBox(key + '-hub', hubLabel, 'hub-' + key, 'ดุมล้อ')}`;
+  return `
+    <div class="sec-lbl">📍 ถ่ายรูปไมล์ + ดุมล้อ</div>
+
+    ${ocrPhotoBox(
+      key + '-mile',
+      mileLabel,
+      'mile-' + key,
+      'ไมล์'
+    )}
+
+    ${ocrPhotoBox(
+      key + '-hub',
+      hubLabel,
+      'hub-' + key,
+      'ดุมล้อ'
+    )}
+  `;
 }
 
 
