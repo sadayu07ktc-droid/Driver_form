@@ -569,7 +569,6 @@ async function onOcrPhoto(input, boxId, lblId, key, type) {
     const res = await postGAS({
       action: 'ocrImage',
       userId: U.userId,
-      orderId: order['Order ID'],
       imageType: type,
       imageBase64: base64
     });
