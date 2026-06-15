@@ -623,44 +623,47 @@ function getOcrValue(key) {
 
   return '';
 }
-
+  
 function ocrPhotoBox(id, label, key, type) {
-  return `<div class="field">
-    <label class="lbl">${label} <span class="req">*</span></label>
-    <label class="photo-box" id="box-${id}" for="inp-${id}">
-      <input type="file" id="inp-${id}" accept="image/*" capture="environment"
-        onchange="onOcrPhoto(this,'box-${id}','lbl-${id}','${key}','${type}')">
-      <div class="ph-icon">📷</div>
-      <div class="ph-lbl" id="lbl-${id}">แตะเพื่อถ่ายรูป</div>
-    </label>
+  return `
+    <div class="field">
+      <label class="lbl">${label} <span class="req">*</span></label>
 
-    <div class="net-badge hide" id="ocr-${key}">
-      <div class="net-lbl">ค่าที่ OCR อ่านได้</div>
-      <div><span class="net-val" id="ocr-val-${key}">—</span></div>
-      <input class="inp mt8" id="ocr-edit-${key}" placeholder="แก้ไขตัวเลขได้ถ้า OCR ผิด">
+      <label class="photo-box" id="box-${id}" for="inp-${id}">
+        <input type="file"
+               id="inp-${id}"
+               accept="image/*"
+               capture="environment"
+               onchange="onOcrPhoto(this,'box-${id}','lbl-${id}','${key}','${type}')">
+
+        <div class="ph-icon">📷</div>
+        <div class="ph-lbl" id="lbl-${id}">แตะเพื่อถ่ายรูป</div>
+      </label>
+
+      <div class="net-badge hide" id="ocr-${key}">
+        <div class="net-lbl">ค่าที่ OCR อ่านได้</div>
+        <div>
+          <span class="net-val" id="ocr-val-${key}">—</span>
+        </div>
+        <input class="inp mt8"
+               id="ocr-edit-${key}"
+               placeholder="แก้ไขตัวเลขได้ถ้า OCR ผิด">
+      </div>
     </div>
-  </div>`;
+  `;
 }
 
 function ocrMileHubBlock(key, mileLabel, hubLabel) {
   return `
     <div class="sec-lbl">📍 ถ่ายรูปไมล์ + ดุมล้อ</div>
 
-    ${ocrPhotoBox(
-      key + '-mile',
-      mileLabel,
-      'mile-' + key,
-      'ไมล์'
-    )}
+    ${ocrPhotoBox(key + '-mile', mileLabel, 'mile-' + key, 'ไมล์')}
 
-    ${ocrPhotoBox(
-      key + '-hub',
-      hubLabel,
-      'hub-' + key,
-      'ดุมล้อ'
-    )}
+    ${ocrPhotoBox(key + '-hub', hubLabel, 'hub-' + key, 'ดุมล้อ')}
   `;
 }
+
+
 
 
 function getVal(id){return document.getElementById(id)?.value||'';}
