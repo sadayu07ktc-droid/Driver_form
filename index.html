@@ -181,7 +181,8 @@ let fuelRowCounter=0;
 // ✅ ข้อ 1: เก็บเลขดุมล้อแทนเลขไมล์สำหรับแสดงผลสรุป
 let hubHistory={start:0, client:0, ramp:0};
 let collectedData={};
-
+let ocrData = {};
+  
 function buildPriceList(){
   const dl=document.createElement('datalist');dl.id='fuel-prices';
   for(let p=3001;p<=5000;p++){const opt=document.createElement('option');opt.value=(p/100).toFixed(2);dl.appendChild(opt);}
@@ -312,15 +313,7 @@ function hubBlock(key,labelMile,labelHub){
 }
 
 function formStart(){
-  const isOther=jobType!=='ปาล์ม';
-  return `${hubBlock('start','เลขไมล์เริ่ม','เลขดุมล้อเริ่ม')}
-    ${isOther?`<div class="field">
-      <div class="sec-lbl">🚛 ประเภทรถออก</div>
-      <div class="chips" id="truck-chips">
-        <span class="chip" onclick="pickChip(this,'truck-chips','truck-type')">🪶 รถเบา</span>
-        <span class="chip" onclick="pickChip(this,'truck-chips','truck-type')">🏋️ รถหนัก (ชั่งด้วย)</span>
-      </div></div>
-      <div class="hide" id="weight-start-other">${weightBlock('start','น้ำหนักออกโรงงาน')}</div>`:''}
+  return `${ocrMileHubBlock('start','รูปเลขไมล์เริ่ม','รูปเลขดุมล้อเริ่ม')}
     <button class="btn btn-green" onclick="submitStart()">🚀 ยืนยันออกโรงงาน</button>`;
 }
 
@@ -555,6 +548,102 @@ function onPhoto(input,boxId,lblId,key){
   reader.readAsDataURL(file);
 }
 
+async function onOcrPhoto(input, boxId, lblId, key, type) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = async function(e) {
+    const base64 = e.target.result;
+
+    photos[key] = base64;
+    document.getElementById(boxId)?.classList.add('has-photo');
+    document.getElementById(lblId).textContent = '⏳ กำลังอ่าน OCR...';
+
+    const res = await postGAS({
+      action: 'ocrImage',
+      userId: U.userId,
+      orderId: order['Order ID'],
+      imageType: type,
+      imageBase64: base64
+    });
+
+    if (!res || !res.success) {
+      document.getElementById(lblId).textContent = '⚠️ OCR ไม่สำเร็จ';
+      alert('OCR ไม่สำเร็จ: ' + (res?.error || 'ไม่ทราบสาเหตุ'));
+      return;
+    }
+
+    let displayValue = '';
+
+    if (type === 'ใบชั่ง') {
+      displayValue =
+        'หนัก: ' + (res.gross || '-') +
+        ' / เบา: ' + (res.tare || '-') +
+        ' / สุทธิ: ' + (res.net || '-');
+
+      ocrData[key] = {
+        gross: res.gross || '',
+        tare: res.tare || '',
+        net: res.net || '',
+        fileUrl: res.fileUrl || ''
+      };
+    } else {
+      displayValue = res.value || '';
+      ocrData[key] = {
+        value: res.value || '',
+        fileUrl: res.fileUrl || ''
+      };
+    }
+
+    document.getElementById(lblId).textContent = '✅ อ่าน OCR แล้ว';
+    document.getElementById('ocr-' + key)?.classList.remove('hide');
+    document.getElementById('ocr-val-' + key).textContent = displayValue;
+
+    const edit = document.getElementById('ocr-edit-' + key);
+    if (edit && type !== 'ใบชั่ง') edit.value = res.value || '';
+  };
+
+  reader.readAsDataURL(file);
+}
+
+function getOcrValue(key) {
+  const edit = document.getElementById('ocr-edit-' + key);
+  if (edit && edit.value) return edit.value;
+
+  if (ocrData[key] && typeof ocrData[key] === 'object') {
+    return ocrData[key].value || '';
+  }
+
+  return '';
+}
+
+function ocrPhotoBox(id, label, key, type) {
+  return `<div class="field">
+    <label class="lbl">${label} <span class="req">*</span></label>
+    <label class="photo-box" id="box-${id}" for="inp-${id}">
+      <input type="file" id="inp-${id}" accept="image/*" capture="environment"
+        onchange="onOcrPhoto(this,'box-${id}','lbl-${id}','${key}','${type}')">
+      <div class="ph-icon">📷</div>
+      <div class="ph-lbl" id="lbl-${id}">แตะเพื่อถ่ายรูป</div>
+    </label>
+
+    <div class="net-badge hide" id="ocr-${key}">
+      <div class="net-lbl">ค่าที่ OCR อ่านได้</div>
+      <div><span class="net-val" id="ocr-val-${key}">—</span></div>
+      <input class="inp mt8" id="ocr-edit-${key}" placeholder="แก้ไขตัวเลขได้ถ้า OCR ผิด">
+    </div>
+  </div>`;
+}
+
+function ocrMileHubBlock(key, mileLabel, hubLabel) {
+  return `<div class="sec-lbl">📍 ถ่ายรูปเลขไมล์ + ดุมล้อ</div>
+    ${ocrPhotoBox(key + '-mile', mileLabel, 'mile-' + key, 'ไมล์')}
+    ${ocrPhotoBox(key + '-hub', hubLabel, 'hub-' + key, 'ดุมล้อ')}`;
+}
+
+
 function getVal(id){return document.getElementById(id)?.value||'';}
 function reqVal(id,label){
   const v=getVal(id);
@@ -584,17 +673,49 @@ function setLoading(on){
 
 // ── Submit functions ──────────────────────────────────────
 async function submitStart(){
-  const mileS=reqVal('mile-start','เลขไมล์เริ่ม');if(!mileS) return;
-  const hubS=reqVal('hub-start','เลขดุมล้อเริ่ม');if(!hubS) return;
-  const r=await postGAS({action:'driverStartJob',orderId:order['Order ID'],userId:U.userId});
-  if(!r?.success){alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
-  // ✅ ข้อ 1: เก็บเลขดุมล้อ
-  hubHistory.start=parseFloat(hubS);
-  const fields={'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS};
-  const h=getVal('w-start-h'),l=getVal('w-start-l');
-  if(h&&l){fields['น้ำหนักหนักปลายทาง']=h;fields['น้ำหนักเบาปลายทาง']=l;fields['สุทธิปลายทาง']=Math.abs(parseFloat(h)-parseFloat(l));}
-  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'เริ่ม',fields});
-  order['สถานะ']='เริ่มงานแล้ว';renderTimeline();alert('✅ บันทึกออกโรงงานแล้วครับ');
+  const mileS = getOcrValue('mile-start');
+  const hubS = getOcrValue('hub-start');
+
+  if(!mileS){
+    alert('กรุณาถ่ายรูปเลขไมล์เริ่ม และตรวจสอบค่า OCR');
+    return;
+  }
+
+  if(!hubS){
+    alert('กรุณาถ่ายรูปเลขดุมล้อเริ่ม และตรวจสอบค่า OCR');
+    return;
+  }
+
+  const r = await postGAS({
+    action:'driverStartJob',
+    orderId:order['Order ID'],
+    userId:U.userId
+  });
+
+  if(!r?.success){
+    alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));
+    return;
+  }
+
+  hubHistory.start = parseFloat(hubS) || 0;
+
+  const fields = {
+    'เลขไมล์เริ่ม': mileS,
+    'เลขดุมล้อเริ่ม': hubS
+  };
+
+  await postGAS({
+    action:'submitWeight',
+    orderId:order['Order ID'],
+    userId:U.userId,
+    jobType,
+    checkPoint:'เริ่ม',
+    fields
+  });
+
+  order['สถานะ']='เริ่มงานแล้ว';
+  renderTimeline();
+  alert('✅ บันทึกออกโรงงานแล้วครับ');
 }
 
 async function submitClient(){
