@@ -554,6 +554,7 @@ function onPhoto(input,boxId,lblId,key){
 }
 
 async function onOcrPhoto(input, boxId, lblId, key, type) {
+  alert('เรียก onOcrPhoto แล้ว: ' + key + ' / ' + type);
   const file = input.files[0];
   if (!file) return;
 
