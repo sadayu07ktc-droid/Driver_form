@@ -353,23 +353,27 @@ function formStart(){
   `;
 }
   
-function formRampDrop(){
+function formRamp(){
   return `
-    ${ocrMileHubBlock('rampDrop','รูปเลขไมล์ถึงลานวางกระบะ','รูปเลขดุมล้อถึงลานวางกระบะ')}
+    ${ocrMileHubBlock('ramp','รูปเลขไมล์ออกจากลานขากลับ','รูปเลขดุมล้อออกจากลานขากลับ')}
+
+    <div class="sec-lbl">⚖️ ใบชั่งลานเท</div>
+    ${ocrPhotoBox('ramp-weight','รูปใบชั่งลานเท','weight-ramp','ใบชั่ง')}
 
     <div class="net-badge">
       <div class="net-lbl">หมายเหตุ</div>
       <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
-        จุดนี้วางกระบะที่ลานเทเท่านั้น<br>
-        ไม่ต้องถ่ายใบชั่ง เพราะจะรู้สุทธิตอนขากลับ
+        จุดนี้คือกลับมาลานเพื่อรับกระบะพร้อมผลปาล์ม<br>
+        ระบบจะ OCR น้ำหนักหนัก / เบา / สุทธิ จากใบชั่งลานเท
       </div>
     </div>
 
-    <button class="btn btn-brown" onclick="submitRampDrop()">
-      📍 ยืนยันถึงลานวางกระบะ
+    <button class="btn btn-brown" onclick="submitRamp()">
+      🏭 ยืนยันออกจากลานขากลับ
     </button>
   `;
 }
+  
 function formClient(){
   return `
     ${ocrMileHubBlock(
@@ -794,29 +798,43 @@ async function submitStart(){
   renderTimeline();
   alert('✅ บันทึกออกโรงงานแล้วครับ');
 }
-async function submitRampDrop(){
-  const mileR = getOcrValue('mile-rampDrop');
-  const hubR = getOcrValue('hub-rampDrop');
+async function submitRamp(){
+  const mileR = getOcrValue('mile-ramp');
+  const hubR = getOcrValue('hub-ramp');
 
   if(!mileR){
-    alert('กรุณาถ่ายรูปเลขไมล์ถึงลานวางกระบะ');
+    alert('กรุณาถ่ายเลขไมล์ออกจากลานขากลับ');
     return;
   }
 
   if(!hubR){
-    alert('กรุณาถ่ายรูปเลขดุมล้อถึงลานวางกระบะ');
+    alert('กรุณาถ่ายเลขดุมล้อออกจากลานขากลับ');
     return;
   }
 
-  const prevHub = hubHistory.start || 0;
+  const prevHub = hubHistory.client || 0;
+
   if(prevHub > 0 && parseFloat(hubR) < prevHub){
-    alert('⚠️ เลขดุมล้อถึงลาน ต้องไม่น้อยกว่าเลขดุมล้อเริ่ม');
+    alert('⚠️ เลขดุมล้อลานขากลับ ต้องไม่น้อยกว่าเลขดุมล้อจุดลูกค้า');
+    return;
+  }
+
+  const weightRamp = ocrData['weight-ramp'];
+
+  if(!weightRamp || !weightRamp.gross || !weightRamp.tare || !weightRamp.net){
+    alert('กรุณาถ่ายใบชั่งลานเท และตรวจสอบค่า OCR');
     return;
   }
 
   const fields = {
     'เลขไมล์ลาน': mileR,
-    'เลขดุมล้อลาน': hubR
+    'เลขดุมล้อลาน': hubR,
+
+    'น้ำหนักหนักลาน': weightRamp.gross,
+    'น้ำหนักเบาลาน': weightRamp.tare,
+    'สุทธิลาน': weightRamp.net,
+
+    'รูปลาน': photos['weight-ramp'] || ''
   };
 
   await postGAS({
@@ -824,16 +842,16 @@ async function submitRampDrop(){
     orderId:order['Order ID'],
     userId:U.userId,
     jobType,
-    checkPoint:'ลานวางกระบะ',
+    checkPoint:'ลานขากลับ',
     fields
   });
 
   hubHistory.ramp = parseFloat(hubR) || 0;
 
-  order['สถานะ']='ถึงลานวางกระบะ';
+  order['สถานะ']='ถึงลานขากลับ';
   renderTimeline();
 
-  alert('✅ บันทึกถึงลานวางกระบะแล้วครับ');
+  alert('✅ บันทึกออกจากลานขากลับเรียบร้อย');
 }
   
 async function submitClient(){
