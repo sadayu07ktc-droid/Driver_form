@@ -566,12 +566,14 @@ async function onOcrPhoto(input, boxId, lblId, key, type) {
     document.getElementById(boxId)?.classList.add('has-photo');
     document.getElementById(lblId).textContent = '⏳ กำลังอ่าน OCR...';
 
-  const res = await postGAS({
-    action: 'ocrImage',
-    userId: U.userId,
-    imageType: type,
-    imageBase64: base64
-  });
+    const res = await postGAS({
+      action: 'ocrImage',
+      userId: U.userId,
+      orderId: order['Order ID'],
+      imageKey: key,
+      imageType: type,
+      imageBase64: base64
+    });
 
     if (!res || !res.success) {
       document.getElementById(lblId).textContent = '⚠️ OCR ไม่สำเร็จ';
