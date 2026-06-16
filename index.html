@@ -353,23 +353,20 @@ function formStart(){
   `;
 }
   
-function formRamp(){
+function formRampDrop(){
   return `
-    ${ocrMileHubBlock('ramp','รูปเลขไมล์ออกจากลานขากลับ','รูปเลขดุมล้อออกจากลานขากลับ')}
-
-    <div class="sec-lbl">⚖️ ใบชั่งลานเท</div>
-    ${ocrPhotoBox('ramp-weight','รูปใบชั่งลานเท','weight-ramp','ใบชั่ง')}
+    ${ocrMileHubBlock('rampDrop','รูปเลขไมล์ถึงลานวางกระบะ','รูปเลขดุมล้อถึงลานวางกระบะ')}
 
     <div class="net-badge">
       <div class="net-lbl">หมายเหตุ</div>
       <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
-        จุดนี้คือกลับมาลานเพื่อรับกระบะพร้อมผลปาล์ม<br>
-        ระบบจะ OCR น้ำหนักหนัก / เบา / สุทธิ จากใบชั่งลานเท
+        จุดนี้วางกระบะที่ลานเทเท่านั้น<br>
+        ไม่ต้องถ่ายใบชั่ง เพราะจะรู้สุทธิตอนขากลับ
       </div>
     </div>
 
-    <button class="btn btn-brown" onclick="submitRamp()">
-      🏭 ยืนยันออกจากลานขากลับ
+    <button class="btn btn-brown" onclick="submitRampDrop()">
+      📍 ยืนยันถึงลานวางกระบะ
     </button>
   `;
 }
@@ -396,19 +393,26 @@ function formClient(){
     </button>
   `;
 }
-
 function formRamp(){
-  return `${hubBlock('ramp','เลขไมล์ถึงลาน','เลขดุมล้อถึงลาน')}
-    ${weightBlock('rc','ใบชั่งลูกค้า')}
-    <label class="lbl mt8">รูปใบชั่งลูกค้า <span class="req">*</span></label>
-    ${photoBox('ramp-client','แนบรูปใบชั่งลูกค้า','ramp-client')}
-    <div class="sec-divider"></div>
-    ${weightBlock('rr','ใบชั่งลาน (ถอดหัว-ลากกระบะ)')}
-    <label class="lbl mt8">รูปใบชั่งลาน <span class="req">*</span></label>
-    ${photoBox('ramp-ramp','แนบรูปใบชั่งลาน','ramp-ramp')}
-    <button class="btn btn-brown" onclick="submitRamp()">🏭 ยืนยันถึงลาน</button>`;
-}
+  return `
+    ${ocrMileHubBlock('ramp','รูปเลขไมล์ถึงลานขากลับ','รูปเลขดุมล้อถึงลานขากลับ')}
 
+    <div class="sec-lbl">⚖️ ใบชั่งลานเท</div>
+    ${ocrPhotoBox('ramp-weight','รูปใบชั่งลานเท','weight-ramp','ใบชั่ง')}
+
+    <div class="net-badge">
+      <div class="net-lbl">หมายเหตุ</div>
+      <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
+        จุดนี้คือกลับถึงลานเพื่อรับกระบะพร้อมผลปาล์ม<br>
+        ระบบจะ OCR น้ำหนักหนัก / เบา / สุทธิ จากใบชั่งลานเท
+      </div>
+    </div>
+
+    <button class="btn btn-brown" onclick="submitRamp()">
+      🏭 ยืนยันกลับถึงลานขากลับ
+    </button>
+  `;
+}
 function formFactory(){
   const isRamp=jobType==='ปาล์ม'&&hasRamp;
   const weightSec=isRamp?`
@@ -798,6 +802,122 @@ async function submitStart(){
   renderTimeline();
   alert('✅ บันทึกออกโรงงานแล้วครับ');
 }
+
+async function submitRampDrop(){
+
+  const mileR =
+    getOcrValue('mile-rampDrop');
+
+  const hubR =
+    getOcrValue('hub-rampDrop');
+
+  if(!mileR){
+    alert('กรุณาถ่ายรูปเลขไมล์ถึงลานวางกระบะ');
+    return;
+  }
+
+  if(!hubR){
+    alert('กรุณาถ่ายรูปเลขดุมล้อถึงลานวางกระบะ');
+    return;
+  }
+
+  const prevHub =
+    hubHistory.start || 0;
+
+  if(
+    prevHub > 0 &&
+    parseFloat(hubR) < prevHub
+  ){
+    alert(
+      '⚠️ เลขดุมล้อถึงลาน ต้องไม่น้อยกว่าเลขดุมล้อเริ่ม'
+    );
+    return;
+  }
+
+  const fields = {
+    'เลขไมล์ลาน': mileR,
+    'เลขดุมล้อลาน': hubR
+  };
+
+  const r = await postGAS({
+    action:'submitWeight',
+    orderId:order['Order ID'],
+    userId:U.userId,
+    jobType,
+    checkPoint:'ลานวางกระบะ',
+    fields
+  });
+
+  if(!r?.success){
+    alert('❌ บันทึกข้อมูลไม่สำเร็จ');
+    return;
+  }
+
+  hubHistory.rampDrop =
+    parseFloat(hubR) || 0;
+
+  order['สถานะ'] =
+    'ถึงลานวางกระบะ';
+
+  renderTimeline();
+
+  alert('✅ บันทึกถึงลานวางกระบะเรียบร้อย');
+}  
+
+  
+async function submitClient(){
+  const mileClient = getOcrValue('mile-client');
+  const hubClient = getOcrValue('hub-client');
+
+  if(!mileClient){
+    alert('กรุณาถ่ายเลขไมล์ออกจากลูกค้า');
+    return;
+  }
+
+  if(!hubClient){
+    alert('กรุณาถ่ายเลขดุมล้อออกจากลูกค้า');
+    return;
+  }
+
+  const prevHub = hubHistory.ramp || 0;
+
+  if(prevHub > 0 && parseFloat(hubClient) < prevHub){
+    alert('⚠️ เลขดุมล้อลูกค้า ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า');
+    return;
+  }
+
+  const r = await postGAS({
+    action:'driverArrived',
+    orderId:order['Order ID'],
+    userId:U.userId
+  });
+
+  if(!r?.success){
+    alert('❌ '+(r?.error||'อัปเดตสถานะลูกค้าไม่สำเร็จ'));
+    return;
+  }
+
+  const fields = {
+    'เลขไมล์ลูกค้า': mileClient,
+    'เลขดุมล้อลูกค้า': hubClient
+  };
+
+  await postGAS({
+    action:'submitWeight',
+    orderId:order['Order ID'],
+    userId:U.userId,
+    jobType,
+    checkPoint:'ลูกค้า',
+    fields
+  });
+
+  hubHistory.client = parseFloat(hubClient) || 0;
+
+  order['สถานะ']='ถึงลูกค้า';
+  renderTimeline();
+
+  alert('✅ บันทึกออกจากลูกค้าเรียบร้อย');
+}
 async function submitRamp(){
   const mileR = getOcrValue('mile-ramp');
   const hubR = getOcrValue('hub-ramp');
@@ -853,80 +973,6 @@ async function submitRamp(){
 
   alert('✅ บันทึกออกจากลานขากลับเรียบร้อย');
 }
-  
-async function submitClient(){
-  const mileClient = getOcrValue('mile-client');
-  const hubClient = getOcrValue('hub-client');
-
-  if(!mileClient){
-    alert('กรุณาถ่ายเลขไมล์ออกจากลูกค้า');
-    return;
-  }
-
-  if(!hubClient){
-    alert('กรุณาถ่ายเลขดุมล้อออกจากลูกค้า');
-    return;
-  }
-
-  const prevHub = hubHistory.ramp || 0;
-
-  if(prevHub > 0 && parseFloat(hubClient) < prevHub){
-    alert('⚠️ เลขดุมล้อลูกค้า ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า');
-    return;
-  }
-
-  const r = await postGAS({
-    action:'driverArrived',
-    orderId:order['Order ID'],
-    userId:U.userId
-  });
-
-  if(!r?.success){
-    alert('❌ '+(r?.error||'อัปเดตสถานะลูกค้าไม่สำเร็จ'));
-    return;
-  }
-
-  const fields = {
-    'เลขไมล์ลูกค้า': mileClient,
-    'เลขดุมล้อลูกค้า': hubClient
-  };
-
-  await postGAS({
-    action:'submitWeight',
-    orderId:order['Order ID'],
-    userId:U.userId,
-    jobType,
-    checkPoint:'ลูกค้า',
-    fields
-  });
-
-  hubHistory.client = parseFloat(hubClient) || 0;
-
-  order['สถานะ']='ถึงลูกค้า';
-  renderTimeline();
-
-  alert('✅ บันทึกออกจากลูกค้าเรียบร้อย');
-}
-
-async function submitRamp(){
-  if(!validateHub('ramp')){alert('⚠️ เลขดุมล้อต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
-  const mileR=reqVal('mile-ramp','เลขไมล์ถึงลาน');if(!mileR) return;
-  const hubR=reqVal('hub-ramp','เลขดุมล้อถึงลาน');if(!hubR) return;
-  const rcH=reqVal('w-rc-h','น้ำหนักหนักลูกค้า');if(!rcH) return;
-  const rcL=reqVal('w-rc-l','น้ำหนักเบาลูกค้า');if(!rcL) return;
-  if(!photos['ramp-client']){alert('กรุณาแนบรูปใบชั่งลูกค้า');return;}
-  const rrH=reqVal('w-rr-h','น้ำหนักหนักลาน');if(!rrH) return;
-  const rrL=reqVal('w-rr-l','น้ำหนักเบาลาน');if(!rrL) return;
-  if(!photos['ramp-ramp']){alert('กรุณาแนบรูปใบชั่งลาน');return;}
-  hubHistory.ramp=parseFloat(hubR);
-  const fields={'เลขไมล์ลาน':mileR,'เลขดุมล้อลาน':hubR,
-    'น้ำหนักหนักลูกค้า':rcH,'น้ำหนักเบาลูกค้า':rcL,'สุทธิลูกค้า':Math.abs(parseFloat(rcH)-parseFloat(rcL)),
-    'น้ำหนักหนักลาน':rrH,'น้ำหนักเบาลาน':rrL,'สุทธิลาน':Math.abs(parseFloat(rrH)-parseFloat(rrL)),
-    'รูปลูกค้า':photos['ramp-client']||'','รูปลาน':photos['ramp-ramp']||''};
-  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลาน',notifyOwner:true,fields});
-  order['สถานะ']='ถึงลาน';renderTimeline();alert('✅ บันทึกถึงลานและแจ้งเจ้าของสวนแล้วครับ');
-}
-
 function prepareFactory(){
   if(!validateHub('factory')){alert('⚠️ เลขดุมล้อต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
   const mileF=getVal('mile-factory');if(!mileF){alert('กรุณากรอกเลขไมล์ปลายทาง');return;}
