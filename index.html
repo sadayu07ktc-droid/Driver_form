@@ -260,8 +260,16 @@ function getSteps(){
 }
 
 function getStepState(key,status,idx){
-  const map={'รับงานแล้ว':0,'เริ่มงานแล้ว':1,'ถึงลูกค้า':2,'ถึงลาน':3,'เสร็จงาน':99};
+  const map={
+    'รับงานแล้ว':0,
+    'เริ่มงานแล้ว':1,
+    'ถึงลานวางกระบะ':2,
+    'ถึงลูกค้า':3,
+    'ถึงลาน':4,
+    'เสร็จงาน':99
+  };
   const cur=map[status]??0;
+  
   if(cur>idx) return 'done';
   if(cur===idx) return 'active';
   return 'pending';
