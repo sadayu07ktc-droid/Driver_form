@@ -268,8 +268,9 @@ function getStepState(key,status,idx){
     'ถึงลาน':4,
     'เสร็จงาน':99
   };
+
   const cur=map[status]??0;
-  
+
   if(cur>idx) return 'done';
   if(cur===idx) return 'active';
   return 'pending';
@@ -835,33 +836,34 @@ async function submitRampDrop(){
 }
   
 async function submitClient(){
-
-  const mileClient =
-    getOcrValue('mile-client');
-
-  const hubClient =
-    getOcrValue('hub-client');
+  const mileClient = getOcrValue('mile-client');
+  const hubClient = getOcrValue('hub-client');
 
   if(!mileClient){
-    alert('กรุณาถ่ายเลขไมล์');
+    alert('กรุณาถ่ายเลขไมล์ออกจากลูกค้า');
     return;
   }
 
   if(!hubClient){
-    alert('กรุณาถ่ายเลขดุมล้อ');
+    alert('กรุณาถ่ายเลขดุมล้อออกจากลูกค้า');
     return;
   }
 
-  const prevHub =
-    hubHistory.ramp || 0;
+  const prevHub = hubHistory.ramp || 0;
 
-  if(
-    prevHub > 0 &&
-    parseFloat(hubClient) < prevHub
-  ){
-    alert(
-      'เลขดุมล้อลูกค้า ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า'
-    );
+  if(prevHub > 0 && parseFloat(hubClient) < prevHub){
+    alert('⚠️ เลขดุมล้อลูกค้า ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า');
+    return;
+  }
+
+  const r = await postGAS({
+    action:'driverArrived',
+    orderId:order['Order ID'],
+    userId:U.userId
+  });
+
+  if(!r?.success){
+    alert('❌ '+(r?.error||'อัปเดตสถานะลูกค้าไม่สำเร็จ'));
     return;
   }
 
@@ -879,11 +881,9 @@ async function submitClient(){
     fields
   });
 
-  hubHistory.client =
-    parseFloat(hubClient) || 0;
+  hubHistory.client = parseFloat(hubClient) || 0;
 
   order['สถานะ']='ถึงลูกค้า';
-
   renderTimeline();
 
   alert('✅ บันทึกออกจากลูกค้าเรียบร้อย');
