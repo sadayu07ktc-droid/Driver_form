@@ -414,72 +414,47 @@ function formRamp(){
   `;
 }
 function formFactory(){
-  const isRamp=jobType==='ปาล์ม'&&hasRamp;
-  const weightSec=isRamp?`
-    ${weightBlock('fc','ใบชั่งลูกค้า (ที่โรงงาน)')}
-    <label class="lbl mt8">รูปใบชั่งลูกค้า <span class="req">*</span></label>
-    ${photoBox('fact-client','แนบรูปใบชั่งลูกค้า','fact-client')}
-    <div class="sec-divider"></div>
-    ${weightBlock('fr','ใบชั่งลาน (ที่โรงงาน)')}
-    <label class="lbl mt8">รูปใบชั่งลาน <span class="req">*</span></label>
-    ${photoBox('fact-ramp','แนบรูปใบชั่งลาน','fact-ramp')}
-  `:`
-    ${weightBlock('ff','ชั่งน้ำหนักปลายทาง')}
-    <label class="lbl mt8">รูปใบชั่ง <span class="req">*</span></label>
-    ${photoBox('fact-photo','แนบรูปใบชั่ง','factory')}
-  `;
   return `
-    ${hubBlock('factory','เลขไมล์ปลายทาง','เลขดุมล้อปลายทาง')}
-    ${weightSec}
+    <div class="sec-lbl">⚖️ ใบชั่งลูกค้า (ที่โรงงาน)</div>
+    ${ocrPhotoBox('factory-client-weight','รูปใบชั่งลูกค้า','weight-factory-client','ใบชั่ง')}
+
     <div class="sec-divider"></div>
-    <div class="sec-lbl">💰 ค่าใช้จ่าย</div>
+
+    <div class="sec-lbl">⚖️ ใบชั่งลานเท (ที่โรงงาน)</div>
+    ${ocrPhotoBox('factory-ramp-weight','รูปใบชั่งลานเท','weight-factory-ramp','ใบชั่ง')}
+
+    <div class="sec-divider"></div>
+
+    ${ocrMileHubBlock('factory','รูปเลขไมล์หลังชั่งเสร็จ','รูปเลขดุมล้อหลังชั่งเสร็จ')}
+
+    <div class="sec-divider"></div>
+
+    <div class="sec-lbl">⛽ เติมน้ำมันที่โรงงาน</div>
     <div class="exp-section" style="margin-top:0">
-      <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">⛽ เติมน้ำมันในโรงงาน <span class="req">*</span></div>
       <div class="row2">
-        <div><label class="lbl">จำนวนลิตร <span class="req">*</span></label>
-          <input class="inp" type="number" id="fuel-factory-liter" placeholder="0" oninput="calcFuelFactory()"></div>
-        <div><label class="lbl">ราคา/ลิตร <span class="req">*</span></label>
-          <input class="inp" type="text" id="fuel-factory-price" placeholder="30.01" list="fuel-prices" oninput="calcFuelFactory()"></div>
+        <div>
+          <label class="lbl">จำนวนลิตร <span class="req">*</span></label>
+          <input class="inp" type="number" id="fuel-factory-liter" placeholder="0" oninput="calcFuelFactory()">
+        </div>
+        <div>
+          <label class="lbl">ราคา/ลิตร <span class="req">*</span></label>
+          <input class="inp" type="text" id="fuel-factory-price" placeholder="30.01" list="fuel-prices" oninput="calcFuelFactory()">
+        </div>
       </div>
+
+      <label class="lbl mt8">รูปใบเติมน้ำมัน</label>
+      ${photoBox('fuel-factory-photo','แนบรูปใบเติมน้ำมัน','fuel-factory')}
+
       <div class="net-badge hide" id="fuel-factory-total-badge">
-        <div class="net-lbl">ยอดรวม</div>
+        <div class="net-lbl">ยอดรวมน้ำมันโรงงาน</div>
         <div><span class="net-val" id="fuel-factory-total">0</span> <span class="net-unit">บาท</span></div>
       </div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-      <span class="exp-chip" id="chip-fuel-road" onclick="toggleExp('fuel-road')">⛽ เติมระหว่างทาง</span>
-      <span class="exp-chip" id="chip-toll" onclick="toggleExp('toll')">🛣️ ค่าทางด่วน</span>
-      <span class="exp-chip" id="chip-repair" onclick="toggleExp('repair')">🔧 ค่าซ่อมนอก</span>
-    </div>
-    <div class="hide" id="exp-fuel-road">
-      <div class="exp-section mt8">
-        <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">⛽ เติมน้ำมันระหว่างทาง</div>
-        <div id="fuel-road-rows"></div>
-        <button class="btn-add" onclick="addFuelRow()">+ เพิ่มบิลน้ำมัน</button>
-        <div class="total-badge hide" id="fuel-road-total-badge">รวม: <span id="fuel-road-total">0</span> บาท</div>
-      </div>
-    </div>
-    <div class="hide" id="exp-toll">
-      <div class="exp-section mt8">
-        <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">🛣️ ค่าทางด่วน</div>
-        <label class="lbl">จำนวนเงิน (บาท) <span class="req">*</span></label>
-        <input class="inp" type="number" id="toll-amount" placeholder="0">
-        <label class="lbl mt8">รูปใบเสร็จ <span class="req">*</span></label>
-        ${photoBox('toll-photo','แนบรูปใบเสร็จ','toll')}
-      </div>
-    </div>
-    <div class="hide" id="exp-repair">
-      <div class="exp-section mt8">
-        <div style="font-size:12px;font-weight:600;color:var(--g1);margin-bottom:8px">🔧 ค่าซ่อมนอก</div>
-        <label class="lbl">ราคา (บาท) <span class="req">*</span></label>
-        <input class="inp" type="number" id="repair-cost" placeholder="0">
-        <label class="lbl mt8">หมายเหตุ</label>
-        <input class="inp mt8" type="text" id="repair-note" placeholder="รายละเอียด">
-        <label class="lbl mt8">รูปใบเสร็จ <span class="req">*</span></label>
-        ${photoBox('repair-photo','แนบรูปใบเสร็จ','repair')}
-      </div>
-    </div>
-    <button class="btn btn-green" onclick="prepareFactory()">📋 ดูสรุปก่อนส่ง</button>`;
+
+    <button class="btn btn-green" onclick="prepareFactory()">
+      📋 ดูสรุปก่อนส่ง
+    </button>
+  `;
 }
 
 // ── Chip helpers ──────────────────────────────────────────
@@ -974,40 +949,74 @@ async function submitRamp(){
   alert('✅ บันทึกออกจากลานขากลับเรียบร้อย');
 }
 function prepareFactory(){
-  if(!validateHub('factory')){alert('⚠️ เลขดุมล้อต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
-  const mileF=getVal('mile-factory');if(!mileF){alert('กรุณากรอกเลขไมล์ปลายทาง');return;}
-  const hubF=getVal('hub-factory');if(!hubF){alert('กรุณากรอกเลขดุมล้อปลายทาง');return;}
-  const fLiter=getVal('fuel-factory-liter');if(!fLiter){alert('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
-  const fPrice=getVal('fuel-factory-price');if(!fPrice){alert('กรุณากรอกราคาน้ำมันโรงงาน');return;}
-  collectedData={};
-  collectedData.mileFactory=mileF;collectedData.hubFactory=hubF;
-  if(hasRamp&&jobType==='ปาล์ม'){
-    const fcH=getVal('w-fc-h'),fcL=getVal('w-fc-l');
-    const frH=getVal('w-fr-h'),frL=getVal('w-fr-l');
-    if(!fcH||!fcL){alert('กรุณากรอกน้ำหนักลูกค้า(โรงงาน)');return;}
-    if(!photos['fact-client']){alert('กรุณาแนบรูปใบชั่งลูกค้า');return;}
-    if(!frH||!frL){alert('กรุณากรอกน้ำหนักลาน(โรงงาน)');return;}
-    if(!photos['fact-ramp']){alert('กรุณาแนบรูปใบชั่งลาน');return;}
-    collectedData.weightFactClient={h:fcH,l:fcL,net:Math.abs(parseFloat(fcH)-parseFloat(fcL))};
-    collectedData.weightFactRamp={h:frH,l:frL,net:Math.abs(parseFloat(frH)-parseFloat(frL))};
-  }else{
-    const ffH=getVal('w-ff-h'),ffL=getVal('w-ff-l');
-    if(!ffH||!ffL){alert('กรุณากรอกน้ำหนักปลายทาง');return;}
-    if(!photos['factory']){alert('กรุณาแนบรูปใบชั่ง');return;}
-    collectedData.weightFactory={h:ffH,l:ffL,net:Math.abs(parseFloat(ffH)-parseFloat(ffL))};
+  const mileF = getOcrValue('mile-factory');
+  const hubF = getOcrValue('hub-factory');
+
+  if(!mileF){
+    alert('กรุณาถ่ายเลขไมล์หลังชั่งเสร็จ');
+    return;
   }
-  collectedData.fuelFactory={liter:fLiter,price:fPrice,total:(parseFloat(fLiter)*parseFloat(fPrice)).toFixed(2)};
-  if(document.getElementById('chip-fuel-road').classList.contains('on')){
-    const rows=[];
-    document.querySelectorAll('[id^="fl-liter-"]').forEach(el=>{
-      const rowId=el.id.replace('fl-liter-','');
-      const l=parseFloat(el.value)||0,p=parseFloat(document.getElementById(`fl-price-${rowId}`)?.value)||0;
-      if(l>0) rows.push({liter:l,price:p,total:(l*p).toFixed(2),photo:photos[`fuel-road-${rowId}`]});
-    });
-    collectedData.fuelRoad=rows;
+
+  if(!hubF){
+    alert('กรุณาถ่ายเลขดุมล้อหลังชั่งเสร็จ');
+    return;
   }
-  if(document.getElementById('chip-toll').classList.contains('on')) collectedData.toll=getVal('toll-amount');
-  if(document.getElementById('chip-repair').classList.contains('on')) collectedData.repair={cost:getVal('repair-cost'),note:getVal('repair-note')};
+
+  const prevHub = hubHistory.ramp || 0;
+  if(prevHub > 0 && parseFloat(hubF) < prevHub){
+    alert('⚠️ เลขดุมล้อโรงงาน ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า');
+    return;
+  }
+
+  const wClient = ocrData['weight-factory-client'];
+  if(!wClient || !wClient.gross || !wClient.tare || !wClient.net){
+    alert('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');
+    return;
+  }
+
+  const wRamp = ocrData['weight-factory-ramp'];
+  if(!wRamp || !wRamp.gross || !wRamp.tare || !wRamp.net){
+    alert('กรุณาถ่ายใบชั่งลานเทที่โรงงาน');
+    return;
+  }
+
+  const fLiter = getVal('fuel-factory-liter');
+  const fPrice = getVal('fuel-factory-price');
+
+  if(!fLiter){
+    alert('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');
+    return;
+  }
+
+  if(!fPrice){
+    alert('กรุณากรอกราคาน้ำมันโรงงาน');
+    return;
+  }
+
+  collectedData = {};
+  collectedData.mileFactory = mileF;
+  collectedData.hubFactory = hubF;
+
+  collectedData.weightFactClient = {
+    h: wClient.gross,
+    l: wClient.tare,
+    net: wClient.net,
+    pricePerKg: wClient.pricePerKg || '',
+    totalAmount: wClient.totalAmount || ''
+  };
+
+  collectedData.weightFactRamp = {
+    h: wRamp.gross,
+    l: wRamp.tare,
+    net: wRamp.net
+  };
+
+  collectedData.fuelFactory = {
+    liter: fLiter,
+    price: fPrice,
+    total: (parseFloat(fLiter) * parseFloat(fPrice)).toFixed(2)
+  };
+
   showDashboard();
 }
 
