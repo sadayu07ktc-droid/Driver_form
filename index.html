@@ -234,9 +234,29 @@ function renderOrderBanner(){
 }
 
 function getSteps(){
-  if(jobType==='ปาล์ม'&&hasRamp) return [{key:'start',label:'🚀 ออกโรงงาน'},{key:'client',label:'🌴 ถึงลูกค้า'},{key:'ramp',label:'🏭 ถึงลาน'},{key:'factory',label:'🏁 ถึงโรงงาน'}];
-  if(jobType==='ปาล์ม') return [{key:'start',label:'🚀 ออกโรงงาน'},{key:'client',label:'🌴 ถึงลูกค้า'},{key:'factory',label:'🏁 ถึงโรงงาน'}];
-  return [{key:'start',label:'🚀 ออกโรงงาน'},{key:'client',label:'📦 ถึงลูกค้า'},{key:'factory',label:'🏁 ถึงโรงงาน'}];
+  if(jobType==='ปาล์ม'&&hasRamp) {
+    return [
+      {key:'start',label:'🚀 ออกโรงงาน'},
+      {key:'rampDrop',label:'📍 ถึงลานวางกระบะ'},
+      {key:'client',label:'🌴 ถึงลูกค้า'},
+      {key:'ramp',label:'🏭 กลับถึงลาน'},
+      {key:'factory',label:'🏁 ถึงโรงงาน'}
+    ];
+  }
+
+  if(jobType==='ปาล์ม') {
+    return [
+      {key:'start',label:'🚀 ออกโรงงาน'},
+      {key:'client',label:'🌴 ถึงลูกค้า'},
+      {key:'factory',label:'🏁 ถึงโรงงาน'}
+    ];
+  }
+
+  return [
+    {key:'start',label:'🚀 ออกโรงงาน'},
+    {key:'client',label:'📦 ถึงลูกค้า'},
+    {key:'factory',label:'🏁 ถึงโรงงาน'}
+  ];
 }
 
 function getStepState(key,status,idx){
@@ -294,6 +314,7 @@ function weightBlock(prefix,label){
 
 function buildForm(key){
   if(key==='start') return formStart();
+  if(key==='rampDrop') return formRampDrop();
   if(key==='client') return formClient();
   if(key==='ramp') return formRamp();
   if(key==='factory') return formFactory();
@@ -321,7 +342,24 @@ function formStart(){
     </button>
   `;
 }
+  
+function formRampDrop(){
+  return `
+    ${ocrMileHubBlock('rampDrop','รูปเลขไมล์ถึงลานวางกระบะ','รูปเลขดุมล้อถึงลานวางกระบะ')}
 
+    <div class="net-badge">
+      <div class="net-lbl">หมายเหตุ</div>
+      <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
+        จุดนี้วางกระบะที่ลานเทเท่านั้น<br>
+        ไม่ต้องถ่ายใบชั่ง เพราะจะรู้สุทธิตอนขากลับ
+      </div>
+    </div>
+
+    <button class="btn btn-brown" onclick="submitRampDrop()">
+      📍 ยืนยันถึงลานวางกระบะ
+    </button>
+  `;
+}
 function formClient(){
   const isOther=jobType!=='ปาล์ม';
   return `${hubBlock('client','เลขไมล์ถึงลูกค้า','เลขดุมล้อถึงลูกค้า')}
@@ -740,7 +778,48 @@ async function submitStart(){
   renderTimeline();
   alert('✅ บันทึกออกโรงงานแล้วครับ');
 }
+async function submitRampDrop(){
+  const mileR = getOcrValue('mile-rampDrop');
+  const hubR = getOcrValue('hub-rampDrop');
 
+  if(!mileR){
+    alert('กรุณาถ่ายรูปเลขไมล์ถึงลานวางกระบะ');
+    return;
+  }
+
+  if(!hubR){
+    alert('กรุณาถ่ายรูปเลขดุมล้อถึงลานวางกระบะ');
+    return;
+  }
+
+  const prevHub = hubHistory.start || 0;
+  if(prevHub > 0 && parseFloat(hubR) < prevHub){
+    alert('⚠️ เลขดุมล้อถึงลาน ต้องไม่น้อยกว่าเลขดุมล้อเริ่ม');
+    return;
+  }
+
+  const fields = {
+    'เลขไมล์ลาน': mileR,
+    'เลขดุมล้อลาน': hubR
+  };
+
+  await postGAS({
+    action:'submitWeight',
+    orderId:order['Order ID'],
+    userId:U.userId,
+    jobType,
+    checkPoint:'ลานวางกระบะ',
+    fields
+  });
+
+  hubHistory.ramp = parseFloat(hubR) || 0;
+
+  order['สถานะ']='ถึงลานวางกระบะ';
+  renderTimeline();
+
+  alert('✅ บันทึกถึงลานวางกระบะแล้วครับ');
+}
+  
 async function submitClient(){
   if(!validateHub('client')){alert('⚠️ เลขดุมล้อต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
   const mileC=reqVal('mile-client','เลขไมล์ถึงลูกค้า');if(!mileC) return;
