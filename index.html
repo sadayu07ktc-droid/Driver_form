@@ -625,15 +625,25 @@ async function onOcrPhoto(input, boxId, lblId, key, type) {
         'หนัก: ' + (res.gross || '-') +
         ' / เบา: ' + (res.tare || '-') +
         ' / สุทธิ: ' + (res.net || '-');
-
+    
+      if (res.pricePerKg) {
+        displayValue += ' / ราคา: ' + res.pricePerKg;
+      }
+    
+      if (res.totalAmount) {
+        displayValue += ' / รวมเงิน: ' + res.totalAmount;
+      }
+    
       ocrData[key] = {
         gross: res.gross || '',
         tare: res.tare || '',
         net: res.net || '',
+        pricePerKg: res.pricePerKg || '',
+        totalAmount: res.totalAmount || '',
         fileUrl: res.fileUrl || ''
       };
     } else {
-      displayValue = res.value || '';
+        displayValue = res.value || '';
       ocrData[key] = {
         value: res.value || '',
         fileUrl: res.fileUrl || ''
