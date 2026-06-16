@@ -369,20 +369,26 @@ function formRampDrop(){
   `;
 }
 function formClient(){
-  const isOther=jobType!=='ปาล์ม';
-  return `${hubBlock('client','เลขไมล์ถึงลูกค้า','เลขดุมล้อถึงลูกค้า')}
-    ${isOther?`<div class="field">
-      <div class="sec-lbl">⚖️ ชั่งที่ลูกค้า</div>
-      <div class="chips" id="weigh-client-chips">
-        <span class="chip" onclick="pickWeighChip(this,'ไม่มีชั่ง')">ไม่มีชั่ง</span>
-        <span class="chip" onclick="pickWeighChip(this,'มีชั่ง')">มีชั่ง</span>
+  return `
+    ${ocrMileHubBlock(
+      'client',
+      'รูปเลขไมล์ออกจากลูกค้า',
+      'รูปเลขดุมล้อออกจากลูกค้า'
+    )}
+
+    <div class="net-badge">
+      <div class="net-lbl">หมายเหตุ</div>
+      <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
+        หลังรับกระบะจากลูกค้าเรียบร้อย<br>
+        ให้ถ่ายเลขไมล์และเลขดุมล้อก่อนออกเดินทาง
       </div>
-      <div class="hide mt8" id="weight-client-other">
-        ${weightBlock('client','น้ำหนักที่ลูกค้า')}
-        <label class="lbl mt8">รูปใบชั่งลูกค้า</label>
-        ${photoBox('client-photo','แนบรูปใบชั่ง','client')}
-      </div></div>`:''}
-    <button class="btn btn-green" onclick="submitClient()">📍 ยืนยันถึงลูกค้า</button>`;
+    </div>
+
+    <button class="btn btn-green"
+            onclick="submitClient()">
+      🌴 ยืนยันออกจากลูกค้า
+    </button>
+  `;
 }
 
 function formRamp(){
@@ -829,17 +835,58 @@ async function submitRampDrop(){
 }
   
 async function submitClient(){
-  if(!validateHub('client')){alert('⚠️ เลขดุมล้อต้องไม่น้อยกว่าจุดก่อนหน้า');return;}
-  const mileC=reqVal('mile-client','เลขไมล์ถึงลูกค้า');if(!mileC) return;
-  const hubC=reqVal('hub-client','เลขดุมล้อถึงลูกค้า');if(!hubC) return;
-  const r=await postGAS({action:'driverArrived',orderId:order['Order ID'],userId:U.userId});
-  if(!r?.success){alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
-  hubHistory.client=parseFloat(hubC);
-  const fields={'เลขไมล์ลูกค้า':mileC,'เลขดุมล้อลูกค้า':hubC};
-  const h=getVal('w-client-h'),l=getVal('w-client-l');
-  if(h&&l){fields['น้ำหนักหนักลูกค้า']=h;fields['น้ำหนักเบาลูกค้า']=l;fields['สุทธิลูกค้า']=Math.abs(parseFloat(h)-parseFloat(l));if(photos['client']) fields['รูปลูกค้า']=photos['client'];}
-  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลูกค้า',fields});
-  order['สถานะ']='ถึงลูกค้า';renderTimeline();alert('✅ บันทึกถึงลูกค้าแล้วครับ');
+
+  const mileClient =
+    getOcrValue('mile-client');
+
+  const hubClient =
+    getOcrValue('hub-client');
+
+  if(!mileClient){
+    alert('กรุณาถ่ายเลขไมล์');
+    return;
+  }
+
+  if(!hubClient){
+    alert('กรุณาถ่ายเลขดุมล้อ');
+    return;
+  }
+
+  const prevHub =
+    hubHistory.ramp || 0;
+
+  if(
+    prevHub > 0 &&
+    parseFloat(hubClient) < prevHub
+  ){
+    alert(
+      'เลขดุมล้อลูกค้า ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า'
+    );
+    return;
+  }
+
+  const fields = {
+    'เลขไมล์ลูกค้า': mileClient,
+    'เลขดุมล้อลูกค้า': hubClient
+  };
+
+  await postGAS({
+    action:'submitWeight',
+    orderId:order['Order ID'],
+    userId:U.userId,
+    jobType,
+    checkPoint:'ลูกค้า',
+    fields
+  });
+
+  hubHistory.client =
+    parseFloat(hubClient) || 0;
+
+  order['สถานะ']='ถึงลูกค้า';
+
+  renderTimeline();
+
+  alert('✅ บันทึกออกจากลูกค้าเรียบร้อย');
 }
 
 async function submitRamp(){
