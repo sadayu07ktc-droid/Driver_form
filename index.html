@@ -656,6 +656,9 @@ async function submitStart(){
 }
 
 async function submitRampDrop(){
+  console.log('submitRamp called');
+  console.log('mileR:', getOcrValue('mile-ramp'));
+  console.log('hubR:', getOcrValue('hub-ramp'));
   const mileR=getOcrValue('mile-rampDrop');
   const hubR=getOcrValue('hub-rampDrop');
   if(!mileR){alert('กรุณาถ่ายรูปเลขไมล์ถึงลานวางกระบะ');return;}
