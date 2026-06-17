@@ -712,13 +712,15 @@ async function submitRamp(){
     alert('กรุณาถ่ายใบชั่งลานเท และตรวจสอบค่า OCR');return;
   }
 
-  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลานขากลับ',
-    fields:{
-      'เลขไมล์ลาน':mileR,'เลขดุมล้อลาน':hubR,
-      'น้ำหนักหนักลาน':weightRamp.gross,'น้ำหนักเบาลาน':weightRamp.tare,'สุทธิลาน':weightRamp.net,
-      'รูปลาน':photos['weight-ramp']||''
-    }},'🏭 กำลังบันทึกถึงลานขากลับ...');
-
+  const r = await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลานขากลับ',
+  fields:{
+    'เลขไมล์ลาน':mileR,'เลขดุมล้อลาน':hubR,
+    'น้ำหนักหนักลาน':weightRamp.gross,'น้ำหนักเบาลาน':weightRamp.tare,'สุทธิลาน':weightRamp.net,
+    'รูปลาน':photos['weight-ramp']||''
+  }},'🏭 กำลังบันทึกถึงลานขากลับ...');
+  
+  alert('postGAS result: ' + JSON.stringify(r)); // ← เพิ่มตรงนี้
+  
   hubHistory.ramp=parseFloat(hubR)||0;
   order['สถานะ']='ถึงลานขากลับ';
   renderTimeline();
