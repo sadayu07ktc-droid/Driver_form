@@ -709,6 +709,7 @@ async function submitRamp(){
   if(prevHub>0&&parseFloat(hubR)<prevHub){alert('⚠️ เลขดุมล้อลานขากลับ ต้องไม่น้อยกว่าเลขดุมล้อจุดลูกค้า');return;}
 
   const weightRamp=getWeightOcrData('weight-ramp');
+  alert('weight-ramp: ' + JSON.stringify(weightRamp)); // ← บรรทัด 711.5
   if(!weightRamp||!weightRamp.gross||!weightRamp.tare||!weightRamp.net){
     alert('กรุณาถ่ายใบชั่งลานเท และตรวจสอบค่า OCR');return;
   }
