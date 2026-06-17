@@ -398,7 +398,7 @@ function formRamp(){
     ${ocrMileHubBlock('ramp','รูปเลขไมล์ถึงลานขากลับ','รูปเลขดุมล้อถึงลานขากลับ')}
 
     <div class="sec-lbl">⚖️ ใบชั่งลานเท</div>
-    ${ocrPhotoBox('ramp-weight','รูปใบชั่งลานเท','weight-ramp','ใบชั่ง')}
+    ${ocrPhotoBox('ramp-weight','รูปใบชั่งลานเท','weight-ramp','ใบชั่งลาน')}
 
     <div class="net-badge">
       <div class="net-lbl">หมายเหตุ</div>
@@ -416,12 +416,12 @@ function formRamp(){
 function formFactory(){
   return `
     <div class="sec-lbl">⚖️ ใบชั่งลูกค้า (ที่โรงงาน)</div>
-    ${ocrPhotoBox('factory-client-weight','รูปใบชั่งลูกค้า','weight-factory-client','ใบชั่ง')}
+    ${ocrPhotoBox('factory-client-weight','รูปใบชั่งลูกค้า','weight-factory-client','ใบชั่งลูกค้า')}
 
     <div class="sec-divider"></div>
 
     <div class="sec-lbl">⚖️ ใบชั่งลานเท (ที่โรงงาน)</div>
-    ${ocrPhotoBox('factory-ramp-weight','รูปใบชั่งลานเท','weight-factory-ramp','ใบชั่ง')}
+    ${ocrPhotoBox('factory-ramp-weight','รูปใบชั่งลานเท','weight-factory-ramp','ใบชั่งลาน')}
 
     <div class="sec-divider"></div>
 
@@ -620,29 +620,32 @@ async function onOcrPhoto(input, boxId, lblId, key, type) {
 
     let displayValue = '';
 
-    if (type === 'ใบชั่ง') {
+    if (type === 'ใบชั่งลูกค้า' || type === 'ใบชั่งลาน') {
+  
       displayValue =
         'หนัก: ' + (res.gross || '-') +
         ' / เบา: ' + (res.tare || '-') +
         ' / สุทธิ: ' + (res.net || '-');
-    
-      if (res.pricePerKg) {
-        displayValue += ' / ราคา: ' + res.pricePerKg;
-      }
-    
-      if (res.totalAmount) {
-        displayValue += ' / รวมเงิน: ' + res.totalAmount;
-      }
-    
-      ocrData[key] = {
-        gross: res.gross || '',
-        tare: res.tare || '',
-        net: res.net || '',
-        pricePerKg: res.pricePerKg || '',
-        totalAmount: res.totalAmount || '',
-        fileUrl: res.fileUrl || ''
-      };
-    } else {
+  
+    // แสดงราคาเฉพาะใบชั่งลูกค้า
+    if (type === 'ใบชั่งลูกค้า' && res.pricePerKg) {
+      displayValue += ' / ราคา: ' + res.pricePerKg;
+    }
+  
+    if (type === 'ใบชั่งลูกค้า' && res.totalAmount) {
+      displayValue += ' / รวมเงิน: ' + res.totalAmount;
+    }
+  
+    ocrData[key] = {
+      gross: res.gross || '',
+      tare: res.tare || '',
+      net: res.net || '',
+      pricePerKg: res.pricePerKg || '',
+      totalAmount: res.totalAmount || '',
+      fileUrl: res.fileUrl || ''
+    };
+  
+  } else {
         displayValue = res.value || '';
       ocrData[key] = {
         value: res.value || '',
