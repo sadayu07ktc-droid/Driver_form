@@ -699,9 +699,9 @@ async function submitClient(){
 }
 
 async function submitRamp(){
-  alert('submitRamp called'); // ← เพิ่มบรรทัดนี้
   const mileR=getOcrValue('mile-ramp');
   const hubR=getOcrValue('hub-ramp');
+  alert('mileR=' + mileR + ' hubR=' + hubR);
   if(!mileR){alert('กรุณาถ่ายเลขไมล์ออกจากลานขากลับ');return;}
   if(!hubR){alert('กรุณาถ่ายเลขดุมล้อออกจากลานขากลับ');return;}
 
