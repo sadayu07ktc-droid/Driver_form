@@ -822,8 +822,6 @@ async function submitRamp(){
     'รูปลาน':photos['weight-ramp']||''
   }},'🏭 กำลังบันทึกถึงลานขากลับ...');
   
-  alert('postGAS result: ' + JSON.stringify(r)); // ← เพิ่มตรงนี้
-  
   hubHistory.ramp=parseFloat(hubR)||0;
   order['สถานะ']='ถึงลานขากลับ';
   renderTimeline();
