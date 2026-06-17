@@ -278,7 +278,13 @@ function getStepState(key,status,idx){
 }
 
 function getStepTime(key){
-  return {start:order['เวลาเริ่มงาน'],client:order['เวลาถึงลูกค้า'],factory:order['เวลาเสร็จงาน']}[key]||'';
+  return {
+    start:order['เวลาเริ่มงาน'],
+    rampDrop:order['เวลาถึงลานวางกระบะ'],
+    client:order['เวลาถึงลูกค้า'],
+    ramp:order['เวลาถึงลานขากลับ'],
+    factory:order['เวลาเสร็จงาน']
+  }[key] || '';
 }
 
 function renderTimeline(){
