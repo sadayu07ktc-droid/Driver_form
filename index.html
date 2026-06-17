@@ -655,11 +655,22 @@ async function onOcrPhoto(input, boxId, lblId, key, type) {
 
     document.getElementById(lblId).textContent = '✅ อ่าน OCR แล้ว';
     document.getElementById('ocr-' + key)?.classList.remove('hide');
-    document.getElementById('ocr-val-' + key).textContent = displayValue;
+    const ocrValEl = document.getElementById('ocr-val-' + key);
+
+    if (type === 'ใบชั่งลูกค้า' || type === 'ใบชั่งลาน') {
+      ocrValEl.innerHTML = buildWeightEditFields(key, type, ocrData[key]);
+    } else {
+      ocrValEl.textContent = displayValue;
+    }
 
     const edit = document.getElementById('ocr-edit-' + key);
-    if (edit && type !== 'ใบชั่ง') edit.value = res.value || '';
-  };
+
+    if (
+      edit &&
+      !['ใบชั่งลูกค้า','ใบชั่งลาน'].includes(type)
+    ){
+      edit.value = res.value || '';
+    }
 
   reader.readAsDataURL(file);
 }
@@ -674,6 +685,70 @@ function getOcrValue(key) {
 
   return '';
 }
+
+function buildWeightEditFields(key, type, data) {
+  const showPrice = type === 'ใบชั่งลูกค้า';
+
+  if (showPrice) {
+    return `
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px">
+        <div>
+          <label class="lbl">หนัก</label>
+          <input class="inp" id="ocr-${key}-gross" value="${data.gross || ''}">
+        </div>
+
+        <div>
+          <label class="lbl">เบา</label>
+          <input class="inp" id="ocr-${key}-tare" value="${data.tare || ''}">
+        </div>
+
+        <div>
+          <label class="lbl">สุทธิ</label>
+          <input class="inp" id="ocr-${key}-net" value="${data.net || ''}">
+        </div>
+
+        <div>
+          <label class="lbl">ราคา/กก.</label>
+          <input class="inp" id="ocr-${key}-price" value="${data.pricePerKg || ''}">
+        </div>
+
+        <div>
+          <label class="lbl">รวมเงิน</label>
+          <input class="inp" id="ocr-${key}-total" value="${data.totalAmount || ''}">
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px">
+      <div>
+        <label class="lbl">หนัก</label>
+        <input class="inp" id="ocr-${key}-gross" value="${data.gross || ''}">
+      </div>
+
+      <div>
+        <label class="lbl">เบา</label>
+        <input class="inp" id="ocr-${key}-tare" value="${data.tare || ''}">
+      </div>
+
+      <div>
+        <label class="lbl">สุทธิ</label>
+        <input class="inp" id="ocr-${key}-net" value="${data.net || ''}">
+      </div>
+    </div>
+  `;
+}  
+
+function getWeightOcrData(key){
+  return {
+    gross: document.getElementById('ocr-' + key + '-gross')?.value || '',
+    tare: document.getElementById('ocr-' + key + '-tare')?.value || '',
+    net: document.getElementById('ocr-' + key + '-net')?.value || '',
+    pricePerKg: document.getElementById('ocr-' + key + '-price')?.value || '',
+    totalAmount: document.getElementById('ocr-' + key + '-total')?.value || ''
+  };
+}  
   
 function ocrPhotoBox(id, label, key, type) {
   return `
@@ -927,7 +1002,7 @@ async function submitRamp(){
     return;
   }
 
-  const weightRamp = ocrData['weight-ramp'];
+  const weightRamp = getWeightOcrData('weight-ramp');
 
   if(!weightRamp || !weightRamp.gross || !weightRamp.tare || !weightRamp.net){
     alert('กรุณาถ่ายใบชั่งลานเท และตรวจสอบค่า OCR');
@@ -981,13 +1056,13 @@ function prepareFactory(){
     return;
   }
 
-  const wClient = ocrData['weight-factory-client'];
+  const wClient = getWeightOcrData('weight-factory-client');
   if(!wClient || !wClient.gross || !wClient.tare || !wClient.net){
     alert('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');
     return;
   }
 
-  const wRamp = ocrData['weight-factory-ramp'];
+  const wRamp = getWeightOcrData('weight-factory-ramp');
   if(!wRamp || !wRamp.gross || !wRamp.tare || !wRamp.net){
     alert('กรุณาถ่ายใบชั่งลานเทที่โรงงาน');
     return;
