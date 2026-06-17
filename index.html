@@ -56,6 +56,7 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .inp:focus{border-color:var(--active);background:var(--white)}
 .inp.err{border-color:var(--red);background:var(--red-l)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .net-badge{background:var(--g4);border:1px solid var(--g3);border-radius:10px;padding:8px 12px;text-align:center;margin-top:8px}
 .net-badge .net-lbl{font-size:10px;color:var(--g2);font-weight:600}
 .net-badge .net-val{font-size:20px;font-weight:700;color:var(--g1)}
@@ -92,7 +93,6 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 #success .si{font-size:72px}#success h2{font-size:24px;font-weight:700}
 #success p{font-size:14px;opacity:.9;line-height:1.8}
 .btn-close{margin-top:8px;padding:12px 36px;border-radius:999px;background:rgba(255,255,255,.2);color:#fff;font-size:15px;font-family:'Sarabun',sans-serif;border:2px solid rgba(255,255,255,.4);cursor:pointer}
-/* Dashboard */
 #dashboard{display:none;position:fixed;inset:0;z-index:150;overflow-y:auto;background:rgba(0,0,0,.6)}
 #dashboard.show{display:block}
 .dash-inner{background:var(--white);margin:16px;border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.2)}
@@ -115,17 +115,18 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .sec-divider{height:1px;background:var(--border);margin:14px 0}
 .hide{display:none!important}.mt8{margin-top:8px}
 .err-msg{font-size:11px;color:var(--red);margin-top:4px}
+/* OCR result display — read-only value */
+.ocr-val-display{font-size:18px;font-weight:700;color:var(--g1);margin:4px 0 8px}
 </style>
 </head>
 <body>
-<div id="overlay"><div class="spinner"></div><p>กำลังบันทึก...</p></div>
+<div id="overlay"><div class="spinner"></div><p id="overlay-msg">กำลังบันทึก...</p></div>
 <div id="success">
   <div class="si">🏁</div><h2>เสร็จงานแล้ว!</h2>
   <p id="success-msg">ส่งข้อมูลให้ Admin และเจ้าของสวนแล้วครับ</p>
   <button class="btn-close" onclick="liff.closeWindow()">ปิดหน้าต่าง</button>
 </div>
 
-<!-- Dashboard Popup -->
 <div id="dashboard">
   <div class="dash-inner">
     <div class="dash-header">
@@ -178,11 +179,10 @@ const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjf
 const LIFF_ID='2010274217-SozYWeE5';
 let U={}, order=null, jobType='', hasRamp=false, photos={};
 let fuelRowCounter=0;
-// ✅ ข้อ 1: เก็บเลขดุมล้อแทนเลขไมล์สำหรับแสดงผลสรุป
 let hubHistory={start:0, client:0, ramp:0};
 let collectedData={};
-let ocrData = {};
-  
+let ocrData={};
+
 function buildPriceList(){
   const dl=document.createElement('datalist');dl.id='fuel-prices';
   for(let p=3001;p<=5000;p++){const opt=document.createElement('option');opt.value=(p/100).toFixed(2);dl.appendChild(opt);}
@@ -234,7 +234,7 @@ function renderOrderBanner(){
 }
 
 function getSteps(){
-  if(jobType==='ปาล์ม'&&hasRamp) {
+  if(jobType==='ปาล์ม'&&hasRamp){
     return [
       {key:'start',label:'🚀 ออกโรงงาน'},
       {key:'rampDrop',label:'📍 ถึงลานวางกระบะ'},
@@ -243,15 +243,13 @@ function getSteps(){
       {key:'factory',label:'🏁 ถึงโรงงาน'}
     ];
   }
-
-  if(jobType==='ปาล์ม') {
+  if(jobType==='ปาล์ม'){
     return [
       {key:'start',label:'🚀 ออกโรงงาน'},
       {key:'client',label:'🌴 ถึงลูกค้า'},
       {key:'factory',label:'🏁 ถึงโรงงาน'}
     ];
   }
-
   return [
     {key:'start',label:'🚀 ออกโรงงาน'},
     {key:'client',label:'📦 ถึงลูกค้า'},
@@ -261,17 +259,10 @@ function getSteps(){
 
 function getStepState(key,status,idx){
   const map={
-    'รับงานแล้ว':0,
-    'เริ่มงานแล้ว':1,
-    'ถึงลานวางกระบะ':2,
-    'ถึงลูกค้า':3,
-    'ถึงลานขากลับ':4,
-    'ถึงลาน':4,
-    'เสร็จงาน':99
+    'รับงานแล้ว':0,'เริ่มงานแล้ว':1,'ถึงลานวางกระบะ':2,
+    'ถึงลูกค้า':3,'ถึงลานขากลับ':4,'ถึงลาน':4,'เสร็จงาน':99
   };
-
   const cur=map[status]??0;
-
   if(cur>idx) return 'done';
   if(cur===idx) return 'active';
   return 'pending';
@@ -284,7 +275,7 @@ function getStepTime(key){
     client:order['เวลาถึงลูกค้า'],
     ramp:order['เวลาถึงลานขากลับ'],
     factory:order['เวลาเสร็จงาน']
-  }[key] || '';
+  }[key]||'';
 }
 
 function renderTimeline(){
@@ -314,20 +305,6 @@ function photoBox(id,label,key){
   </label>`;
 }
 
-function weightBlock(prefix,label){
-  return `<div class="sec-lbl">⚖️ ${label}</div>
-    <div class="row2">
-      <div><label class="lbl">รถหนัก (กก.) <span class="req">*</span></label>
-        <input class="inp" type="number" id="w-${prefix}-h" placeholder="0" oninput="calcNet('${prefix}')"></div>
-      <div><label class="lbl">รถเบา (กก.) <span class="req">*</span></label>
-        <input class="inp" type="number" id="w-${prefix}-l" placeholder="0" oninput="calcNet('${prefix}')"></div>
-    </div>
-    <div class="net-badge hide" id="net-${prefix}">
-      <div class="net-lbl">สุทธิ</div>
-      <div><span class="net-val" id="nv-${prefix}">0</span> <span class="net-unit">กก.</span></div>
-    </div>`;
-}
-
 function buildForm(key){
   if(key==='start') return formStart();
   if(key==='rampDrop') return formRampDrop();
@@ -337,104 +314,64 @@ function buildForm(key){
   return '';
 }
 
-// ✅ ข้อ 1: label เปลี่ยนเป็นเลขดุมล้อ, ไม่มี mileBlock แยก — รวมใน hubBlock
-function hubBlock(key,labelMile,labelHub){
-  return `<div class="sec-lbl">📍 เลขไมล์ + ดุมล้อ</div>
-    <div class="row2">
-      <div><label class="lbl">${labelMile} <span class="req">*</span></label>
-        <input class="inp" type="number" id="mile-${key}" placeholder="0"></div>
-      <div><label class="lbl">${labelHub} <span class="req">*</span></label>
-        <input class="inp" type="number" id="hub-${key}" placeholder="0">
-        <div class="err-msg hide" id="err-hub-${key}">⚠️ ต้องไม่น้อยกว่าจุดก่อนหน้า</div></div>
-    </div>`;
-}
-
 function formStart(){
   return `
     ${ocrMileHubBlock('start','รูปเลขไมล์เริ่ม','รูปเลขดุมล้อเริ่ม')}
-
-    <button class="btn btn-green" onclick="submitStart()">
-      🚀 ยืนยันออกโรงงาน
-    </button>
+    <button class="btn btn-green" onclick="submitStart()">🚀 ยืนยันออกโรงงาน</button>
   `;
 }
-  
+
 function formRampDrop(){
   return `
     ${ocrMileHubBlock('rampDrop','รูปเลขไมล์ถึงลานวางกระบะ','รูปเลขดุมล้อถึงลานวางกระบะ')}
-
     <div class="net-badge">
       <div class="net-lbl">หมายเหตุ</div>
       <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
-        จุดนี้วางกระบะที่ลานเทเท่านั้น<br>
-        ไม่ต้องถ่ายใบชั่ง เพราะจะรู้สุทธิตอนขากลับ
+        จุดนี้วางกระบะที่ลานเทเท่านั้น<br>ไม่ต้องถ่ายใบชั่ง เพราะจะรู้สุทธิตอนขากลับ
       </div>
     </div>
-
-    <button class="btn btn-brown" onclick="submitRampDrop()">
-      📍 ยืนยันถึงลานวางกระบะ
-    </button>
+    <button class="btn btn-brown" onclick="submitRampDrop()">📍 ยืนยันถึงลานวางกระบะ</button>
   `;
 }
-  
+
 function formClient(){
   return `
-    ${ocrMileHubBlock(
-      'client',
-      'รูปเลขไมล์ออกจากลูกค้า',
-      'รูปเลขดุมล้อออกจากลูกค้า'
-    )}
-
+    ${ocrMileHubBlock('client','รูปเลขไมล์ออกจากลูกค้า','รูปเลขดุมล้อออกจากลูกค้า')}
     <div class="net-badge">
       <div class="net-lbl">หมายเหตุ</div>
       <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
-        หลังรับกระบะจากลูกค้าเรียบร้อย<br>
-        ให้ถ่ายเลขไมล์และเลขดุมล้อก่อนออกเดินทาง
+        หลังรับกระบะจากลูกค้าเรียบร้อย<br>ให้ถ่ายเลขไมล์และเลขดุมล้อก่อนออกเดินทาง
       </div>
     </div>
-
-    <button class="btn btn-green"
-            onclick="submitClient()">
-      🌴 ยืนยันออกจากลูกค้า
-    </button>
+    <button class="btn btn-green" onclick="submitClient()">🌴 ยืนยันออกจากลูกค้า</button>
   `;
 }
+
 function formRamp(){
   return `
     ${ocrMileHubBlock('ramp','รูปเลขไมล์ถึงลานขากลับ','รูปเลขดุมล้อถึงลานขากลับ')}
-
     <div class="sec-lbl">⚖️ ใบชั่งลานเท</div>
     ${ocrPhotoBox('ramp-weight','รูปใบชั่งลานเท','weight-ramp','ใบชั่งลาน')}
-
     <div class="net-badge">
       <div class="net-lbl">หมายเหตุ</div>
       <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
-        จุดนี้คือกลับถึงลานเพื่อรับกระบะพร้อมผลปาล์ม<br>
-        ระบบจะ OCR น้ำหนักหนัก / เบา / สุทธิ จากใบชั่งลานเท
+        จุดนี้คือกลับถึงลานเพื่อรับกระบะพร้อมผลปาล์ม<br>ระบบจะ OCR น้ำหนักหนัก / เบา / สุทธิ จากใบชั่งลานเท
       </div>
     </div>
-
-    <button class="btn btn-brown" onclick="submitRamp()">
-      🏭 ยืนยันกลับถึงลานขากลับ
-    </button>
+    <button class="btn btn-brown" onclick="submitRamp()">🏭 ยืนยันกลับถึงลานขากลับ</button>
   `;
 }
+
 function formFactory(){
   return `
     <div class="sec-lbl">⚖️ ใบชั่งลูกค้า (ที่โรงงาน)</div>
     ${ocrPhotoBox('factory-client-weight','รูปใบชั่งลูกค้า','weight-factory-client','ใบชั่งลูกค้า')}
-
     <div class="sec-divider"></div>
-
     <div class="sec-lbl">⚖️ ใบชั่งลานเท (ที่โรงงาน)</div>
     ${ocrPhotoBox('factory-ramp-weight','รูปใบชั่งลานเท','weight-factory-ramp','ใบชั่งลาน')}
-
     <div class="sec-divider"></div>
-
     ${ocrMileHubBlock('factory','รูปเลขไมล์หลังชั่งเสร็จ','รูปเลขดุมล้อหลังชั่งเสร็จ')}
-
     <div class="sec-divider"></div>
-
     <div class="sec-lbl">⛽ เติมน้ำมันที่โรงงาน</div>
     <div class="exp-section" style="margin-top:0">
       <div class="row2">
@@ -447,55 +384,210 @@ function formFactory(){
           <input class="inp" type="text" id="fuel-factory-price" placeholder="30.01" list="fuel-prices" oninput="calcFuelFactory()">
         </div>
       </div>
-
       <label class="lbl mt8">รูปใบเติมน้ำมัน</label>
       ${photoBox('fuel-factory-photo','แนบรูปใบเติมน้ำมัน','fuel-factory')}
-
       <div class="net-badge hide" id="fuel-factory-total-badge">
         <div class="net-lbl">ยอดรวมน้ำมันโรงงาน</div>
         <div><span class="net-val" id="fuel-factory-total">0</span> <span class="net-unit">บาท</span></div>
       </div>
     </div>
-
-    <button class="btn btn-green" onclick="prepareFactory()">
-      📋 ดูสรุปก่อนส่ง
-    </button>
+    <button class="btn btn-green" onclick="prepareFactory()">📋 ดูสรุปก่อนส่ง</button>
   `;
 }
 
-// ── Chip helpers ──────────────────────────────────────────
-function pickChip(el,groupId,dataKey){
-  document.querySelectorAll(`#${groupId} .chip`).forEach(c=>c.classList.remove('on'));
-  el.classList.add('on');
-  if(dataKey==='truck-type'){
-    const isHeavy=el.textContent.includes('หนัก');
-    document.getElementById('weight-start-other')?.classList.toggle('hide',!isHeavy);
+// ── OCR photo box — ซ่อน ocr-edit สำหรับใบชั่ง, โชว์เฉพาะ ไมล์/ดุมล้อ ──
+function ocrPhotoBox(id, label, key, type){
+  const isWeight = (type === 'ใบชั่งลูกค้า' || type === 'ใบชั่งลาน');
+  return `
+    <div class="field">
+      <label class="lbl">${label} <span class="req">*</span></label>
+      <label class="photo-box" id="box-${id}" for="inp-${id}">
+        <input type="file" id="inp-${id}" accept="image/*" capture="environment"
+               onchange="onOcrPhoto(this,'box-${id}','lbl-${id}','${key}','${type}')">
+        <div class="ph-icon">📷</div>
+        <div class="ph-lbl" id="lbl-${id}">ถ่ายรูปเพื่ออ่าน OCR</div>
+      </label>
+      <div class="net-badge hide" id="ocr-${key}">
+        <div class="net-lbl">ค่าที่ OCR อ่านได้</div>
+        <div id="ocr-val-${key}" class="ocr-val-display">—</div>
+        ${isWeight ? '' : `<input class="inp mt8" id="ocr-edit-${key}" placeholder="แก้ไขตัวเลขได้ถ้า OCR ผิด">`}
+      </div>
+    </div>
+  `;
+}
+
+function ocrMileHubBlock(key, mileLabel, hubLabel){
+  return `
+    <div class="sec-lbl">📍 ถ่ายรูปไมล์ + ดุมล้อ</div>
+    ${ocrPhotoBox(key+'-mile', mileLabel, 'mile-'+key, 'ไมล์')}
+    ${ocrPhotoBox(key+'-hub', hubLabel, 'hub-'+key, 'ดุมล้อ')}
+  `;
+}
+
+// ── buildWeightEditFields — หนัก/เบา/สุทธิ แถวแรก, ราคา/รวมเงิน แถวสอง ──
+function buildWeightEditFields(key, type, data){
+  const showPrice = (type === 'ใบชั่งลูกค้า');
+  return `
+    <div class="row3" style="margin-top:8px">
+      <div>
+        <label class="lbl">รถหนัก (กก.)</label>
+        <input class="inp" id="ocr-${key}-gross" value="${data.gross||''}">
+      </div>
+      <div>
+        <label class="lbl">รถเบา (กก.)</label>
+        <input class="inp" id="ocr-${key}-tare" value="${data.tare||''}">
+      </div>
+      <div>
+        <label class="lbl">น้ำหนักสุทธิ (กก.)</label>
+        <input class="inp" id="ocr-${key}-net" value="${data.net||''}">
+      </div>
+    </div>
+    ${showPrice ? `
+    <div class="row2" style="margin-top:8px">
+      <div>
+        <label class="lbl">ราคา/กก.</label>
+        <input class="inp" id="ocr-${key}-price" value="${data.pricePerKg||''}">
+      </div>
+      <div>
+        <label class="lbl">รวมเงิน (บาท)</label>
+        <input class="inp" id="ocr-${key}-total" value="${data.totalAmount||''}">
+      </div>
+    </div>` : ''}
+  `;
+}
+
+function getWeightOcrData(key){
+  return {
+    gross: document.getElementById('ocr-'+key+'-gross')?.value||'',
+    tare:  document.getElementById('ocr-'+key+'-tare')?.value||'',
+    net:   document.getElementById('ocr-'+key+'-net')?.value||'',
+    pricePerKg:   document.getElementById('ocr-'+key+'-price')?.value||'',
+    totalAmount:  document.getElementById('ocr-'+key+'-total')?.value||''
+  };
+}
+
+function getOcrValue(key){
+  const edit=document.getElementById('ocr-edit-'+key);
+  if(edit&&edit.value) return edit.value;
+  if(ocrData[key]&&typeof ocrData[key]==='object') return ocrData[key].value||'';
+  return '';
+}
+
+// ── setLoading รับ message ──
+function setLoading(on, msg='กำลังบันทึก...'){
+  document.getElementById('overlay').classList.toggle('show',on);
+  if(on){
+    document.getElementById('overlay-msg').textContent=msg;
+    setTimeout(()=>document.getElementById('overlay').classList.remove('show'),15000);
   }
 }
 
-// ✅ ข้อ 2: แก้ chip มีชั่ง/ไม่มีชั่ง — toggle ถูกต้อง หุบได้
-function pickWeighChip(el, val){
-  const chips=document.querySelectorAll('#weigh-client-chips .chip');
-  const weightDiv=document.getElementById('weight-client-other');
-  // ถ้ากดซ้ำ chip เดิมที่ on อยู่ → ไม่ทำอะไร
-  chips.forEach(c=>c.classList.remove('on'));
-  el.classList.add('on');
-  if(val==='มีชั่ง'){
-    weightDiv?.classList.remove('hide');
-  } else {
-    weightDiv?.classList.add('hide');
-  }
+// ── postGAS รับ msg ──
+async function postGAS(payload, msg='กำลังบันทึก...'){
+  setLoading(true, msg);
+  try{
+    const res=await fetch(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
+    const text=await res.text();
+    try{return JSON.parse(text);}
+    catch(e){console.warn('postGAS parse warn:',text.substring(0,200));return{success:true};}
+  }catch(e){
+    console.error('postGAS error:',e);
+    try{fetch(GAS_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(payload)});}catch(_){}
+    return{success:true,_fallback:true};
+  }finally{setLoading(false);}
 }
 
-function toggleExp(key){
-  const chip=document.getElementById(`chip-${key}`);
-  const sec=document.getElementById(`exp-${key}`);
-  const isOn=chip.classList.toggle('on');
-  sec.classList.toggle('hide',!isOn);
-  if(key==='fuel-road'&&isOn&&document.getElementById('fuel-road-rows').children.length===0) addFuelRow();
+function onPhoto(input,boxId,lblId,key){
+  const file=input.files[0];if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    photos[key]=e.target.result;
+    document.getElementById(boxId)?.classList.add('has-photo');
+    const lbl=document.getElementById(lblId);if(lbl) lbl.textContent='✅ แนบรูปแล้ว';
+  };
+  reader.readAsDataURL(file);
 }
 
-// ── Fuel rows ─────────────────────────────────────────────
+async function onOcrPhoto(input, boxId, lblId, key, type){
+  const file=input.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    const base64=e.target.result;
+    photos[key]=base64;
+    document.getElementById(boxId)?.classList.add('has-photo');
+    document.getElementById(lblId).textContent='⏳ กำลังอ่าน OCR...';
+
+    const res=await postGAS({
+      action:'ocrImage',
+      userId:U.userId,
+      orderId:order['Order ID'],
+      imageKey:key,
+      imageType:type,
+      imageBase64:base64
+    },'📷 กำลัง OCR รูป...');
+
+    if(!res||!res.success){
+      document.getElementById(lblId).textContent='⚠️ OCR ไม่สำเร็จ';
+      alert('OCR ไม่สำเร็จ: '+(res?.error||'ไม่ทราบสาเหตุ'));
+      return;
+    }
+
+    const isWeight=(type==='ใบชั่งลูกค้า'||type==='ใบชั่งลาน');
+
+    if(isWeight){
+      ocrData[key]={
+        gross:res.gross||'',
+        tare:res.tare||'',
+        net:res.net||'',
+        pricePerKg:res.pricePerKg||'',
+        totalAmount:res.totalAmount||'',
+        fileUrl:res.fileUrl||''
+      };
+    }else{
+      ocrData[key]={value:res.value||'',fileUrl:res.fileUrl||''};
+    }
+
+    document.getElementById(lblId).textContent='✅ อ่าน OCR แล้ว';
+    document.getElementById('ocr-'+key)?.classList.remove('hide');
+    const ocrValEl=document.getElementById('ocr-val-'+key);
+
+    if(isWeight){
+      // แสดงตัวเลขแก้ไขได้ทันที ไม่มี read-only display ซ้ำ
+      ocrValEl.innerHTML=buildWeightEditFields(key,type,ocrData[key]);
+    }else{
+      // ไมล์/ดุมล้อ — โชว์ตัวเลขใหญ่ + ช่องแก้ไข
+      ocrValEl.textContent=res.value||'';
+      const edit=document.getElementById('ocr-edit-'+key);
+      if(edit) edit.value=res.value||'';
+    }
+  };
+  reader.readAsDataURL(file); // ← นอก onload
+}
+
+// ── Fuel ──
+function calcFuelRoad(){
+  let total=0;
+  document.querySelectorAll('[id^="fl-liter-"]').forEach(el=>{
+    const rowId=el.id.replace('fl-liter-','');
+    const l=parseFloat(el.value)||0;
+    const p=parseFloat(document.getElementById(`fl-price-${rowId}`)?.value)||0;
+    total+=l*p;
+  });
+  const badge=document.getElementById('fuel-road-total-badge');
+  const span=document.getElementById('fuel-road-total');
+  if(badge&&span){badge.classList.toggle('hide',total===0);span.textContent=total.toFixed(2);}
+}
+
+function calcFuelFactory(){
+  const l=parseFloat(document.getElementById('fuel-factory-liter')?.value)||0;
+  const p=parseFloat(document.getElementById('fuel-factory-price')?.value)||0;
+  const total=l*p;
+  const badge=document.getElementById('fuel-factory-total-badge');
+  const span=document.getElementById('fuel-factory-total');
+  if(badge&&span){badge.classList.toggle('hide',total===0);span.textContent=total.toFixed(2);}
+}
+
 function addFuelRow(){
   fuelRowCounter++;
   const id=fuelRowCounter;
@@ -535,38 +627,8 @@ function renumberFuelRows(){
   });
 }
 
-function calcFuelRoad(){
-  let total=0;
-  document.querySelectorAll('[id^="fl-liter-"]').forEach(el=>{
-    const rowId=el.id.replace('fl-liter-','');
-    const l=parseFloat(el.value)||0;
-    const p=parseFloat(document.getElementById(`fl-price-${rowId}`)?.value)||0;
-    total+=l*p;
-  });
-  const badge=document.getElementById('fuel-road-total-badge');
-  const span=document.getElementById('fuel-road-total');
-  if(badge&&span){badge.classList.toggle('hide',total===0);span.textContent=total.toFixed(2);}
-}
+function getVal(id){return document.getElementById(id)?.value||'';}
 
-function calcFuelFactory(){
-  const l=parseFloat(document.getElementById('fuel-factory-liter')?.value)||0;
-  const p=parseFloat(document.getElementById('fuel-factory-price')?.value)||0;
-  const total=l*p;
-  const badge=document.getElementById('fuel-factory-total-badge');
-  const span=document.getElementById('fuel-factory-total');
-  if(badge&&span){badge.classList.toggle('hide',total===0);span.textContent=total.toFixed(2);}
-}
-
-function calcNet(prefix){
-  const h=parseFloat(document.getElementById(`w-${prefix}-h`)?.value)||0;
-  const l=parseFloat(document.getElementById(`w-${prefix}-l`)?.value)||0;
-  if(h<=0&&l<=0) return;
-  const badge=document.getElementById(`net-${prefix}`);
-  const val=document.getElementById(`nv-${prefix}`);
-  if(badge&&val){badge.classList.remove('hide');val.textContent=Math.round(Math.abs(h-l)).toLocaleString();}
-}
-
-// ✅ ข้อ 1: validate เลขดุมล้อแทนไมล์สำหรับ sequence check
 function getPrevHub(key){
   if(key==='client') return hubHistory.start||0;
   if(key==='ramp')   return hubHistory.client||0;
@@ -574,278 +636,19 @@ function getPrevHub(key){
   return 0;
 }
 
-function validateHub(key){
-  const val=parseFloat(document.getElementById(`hub-${key}`)?.value)||0;
-  const prev=getPrevHub(key);
-  const errEl=document.getElementById(`err-hub-${key}`);
-  const inp=document.getElementById(`hub-${key}`);
-  if(prev>0&&val<prev){
-    inp?.classList.add('err');errEl?.classList.remove('hide');return false;
-  }
-  inp?.classList.remove('err');errEl?.classList.add('hide');return true;
-}
-
-function onPhoto(input,boxId,lblId,key){
-  const file=input.files[0];if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    photos[key]=e.target.result;
-    document.getElementById(boxId)?.classList.add('has-photo');
-    const lbl=document.getElementById(lblId);if(lbl) lbl.textContent='✅ แนบรูปแล้ว';
-  };
-  reader.readAsDataURL(file);
-}
-
-async function onOcrPhoto(input, boxId, lblId, key, type) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    const base64 = e.target.result;
-    photos[key] = base64;
-    document.getElementById(boxId)?.classList.add('has-photo');
-    document.getElementById(lblId).textContent = '⏳ กำลังอ่าน OCR...';
-    const res = await postGAS({
-      action: 'ocrImage',
-      userId: U.userId,
-      orderId: order['Order ID'],
-      imageKey: key,
-      imageType: type,
-      imageBase64: base64
-    });
-    if (!res || !res.success) {
-      document.getElementById(lblId).textContent = '⚠️ OCR ไม่สำเร็จ';
-      alert('OCR ไม่สำเร็จ: ' + (res?.error || 'ไม่ทราบสาเหตุ'));
-      return;
-    }
-    let displayValue = '';
-    if (type === 'ใบชั่งลูกค้า' || type === 'ใบชั่งลาน') {
-      displayValue =
-        'หนัก: ' + (res.gross || '-') +
-        ' / เบา: ' + (res.tare || '-') +
-        ' / สุทธิ: ' + (res.net || '-');
-      if (type === 'ใบชั่งลูกค้า' && res.pricePerKg) {
-        displayValue += ' / ราคา: ' + res.pricePerKg;
-      }
-      if (type === 'ใบชั่งลูกค้า' && res.totalAmount) {
-        displayValue += ' / รวมเงิน: ' + res.totalAmount;
-      }
-      ocrData[key] = {
-        gross: res.gross || '',
-        tare: res.tare || '',
-        net: res.net || '',
-        pricePerKg: res.pricePerKg || '',
-        totalAmount: res.totalAmount || '',
-        fileUrl: res.fileUrl || ''
-      };
-    } else {
-      displayValue = res.value || '';
-      ocrData[key] = {
-        value: res.value || '',
-        fileUrl: res.fileUrl || ''
-      };
-    }
-    document.getElementById(lblId).textContent = '✅ อ่าน OCR แล้ว';
-    document.getElementById('ocr-' + key)?.classList.remove('hide');
-    const ocrValEl = document.getElementById('ocr-val-' + key);
-    if (type === 'ใบชั่งลูกค้า' || type === 'ใบชั่งลาน') {
-      ocrValEl.innerHTML = buildWeightEditFields(key, type, ocrData[key]);
-    } else {
-      ocrValEl.textContent = displayValue;
-    }
-    const edit = document.getElementById('ocr-edit-' + key);
-    if (edit && !['ใบชั่งลูกค้า','ใบชั่งลาน'].includes(type)) {
-      edit.value = res.value || '';
-    }
-  };  // ← ปิด reader.onload
-  reader.readAsDataURL(file);  // ← อยู่นอก onload แล้ว
-}
-
-function getOcrValue(key) {
-  const edit = document.getElementById('ocr-edit-' + key);
-  if (edit && edit.value) return edit.value;
-
-  if (ocrData[key] && typeof ocrData[key] === 'object') {
-    return ocrData[key].value || '';
-  }
-
-  return '';
-}
-
-function buildWeightEditFields(key, type, data) {
-  const showPrice = type === 'ใบชั่งลูกค้า';
-
-  if (showPrice) {
-    return `
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px">
-        <div>
-          <label class="lbl">หนัก</label>
-          <input class="inp" id="ocr-${key}-gross" value="${data.gross || ''}">
-        </div>
-
-        <div>
-          <label class="lbl">เบา</label>
-          <input class="inp" id="ocr-${key}-tare" value="${data.tare || ''}">
-        </div>
-
-        <div>
-          <label class="lbl">สุทธิ</label>
-          <input class="inp" id="ocr-${key}-net" value="${data.net || ''}">
-        </div>
-
-        <div>
-          <label class="lbl">ราคา/กก.</label>
-          <input class="inp" id="ocr-${key}-price" value="${data.pricePerKg || ''}">
-        </div>
-
-        <div>
-          <label class="lbl">รวมเงิน</label>
-          <input class="inp" id="ocr-${key}-total" value="${data.totalAmount || ''}">
-        </div>
-      </div>
-    `;
-  }
-
-  return `
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px">
-      <div>
-        <label class="lbl">หนัก</label>
-        <input class="inp" id="ocr-${key}-gross" value="${data.gross || ''}">
-      </div>
-
-      <div>
-        <label class="lbl">เบา</label>
-        <input class="inp" id="ocr-${key}-tare" value="${data.tare || ''}">
-      </div>
-
-      <div>
-        <label class="lbl">สุทธิ</label>
-        <input class="inp" id="ocr-${key}-net" value="${data.net || ''}">
-      </div>
-    </div>
-  `;
-}  
-
-function getWeightOcrData(key){
-  return {
-    gross: document.getElementById('ocr-' + key + '-gross')?.value || '',
-    tare: document.getElementById('ocr-' + key + '-tare')?.value || '',
-    net: document.getElementById('ocr-' + key + '-net')?.value || '',
-    pricePerKg: document.getElementById('ocr-' + key + '-price')?.value || '',
-    totalAmount: document.getElementById('ocr-' + key + '-total')?.value || ''
-  };
-}  
-  
-function ocrPhotoBox(id, label, key, type) {
-  return `
-    <div class="field">
-      <label class="lbl">${label} <span class="req">*</span></label>
-
-      <label class="photo-box" id="box-${id}" for="inp-${id}">
-        <input type="file"
-               id="inp-${id}"
-               accept="image/*"
-               capture="environment"
-               onchange="onOcrPhoto(this,'box-${id}','lbl-${id}','${key}','${type}')">
-
-        <div class="ph-icon">📷</div>
-        <div class="ph-lbl" id="lbl-${id}">TEST OCR ใหม่</div>
-      </label>
-
-      <div class="net-badge hide" id="ocr-${key}">
-        <div class="net-lbl">ค่าที่ OCR อ่านได้</div>
-        <div>
-          <span class="net-val" id="ocr-val-${key}">—</span>
-        </div>
-        <input class="inp mt8"
-               id="ocr-edit-${key}"
-               placeholder="แก้ไขตัวเลขได้ถ้า OCR ผิด">
-      </div>
-    </div>
-  `;
-}
-
-function ocrMileHubBlock(key, mileLabel, hubLabel) {
-  return `
-    <div class="sec-lbl">📍 ถ่ายรูปไมล์ + ดุมล้อ</div>
-
-    ${ocrPhotoBox(key + '-mile', mileLabel, 'mile-' + key, 'ไมล์')}
-
-    ${ocrPhotoBox(key + '-hub', hubLabel, 'hub-' + key, 'ดุมล้อ')}
-  `;
-}
-
-
-
-
-function getVal(id){return document.getElementById(id)?.value||'';}
-function reqVal(id,label){
-  const v=getVal(id);
-  if(!v||parseFloat(v)<=0){alert(`กรุณากรอก ${label}`);return null;}
-  return v;
-}
-
-// ✅ แก้ postGAS — CORS fix
-async function postGAS(payload){
-  setLoading(true);
-  try{
-    const res=await fetch(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
-    const text=await res.text();
-    try{return JSON.parse(text);}
-    catch(e){console.warn('postGAS parse warn:',text.substring(0,200));return{success:true};}
-  }catch(e){
-    console.error('postGAS error:',e);
-    try{fetch(GAS_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(payload)});}catch(_){}
-    return{success:true,_fallback:true};
-  }finally{setLoading(false);}
-}
-
-function setLoading(on){
-  document.getElementById('overlay').classList.toggle('show',on);
-  if(on) setTimeout(()=>document.getElementById('overlay').classList.remove('show'),15000);
-}
-
-// ── Submit functions ──────────────────────────────────────
+// ── Submit functions ──
 async function submitStart(){
-  const mileS = getOcrValue('mile-start');
-  const hubS = getOcrValue('hub-start');
+  const mileS=getOcrValue('mile-start');
+  const hubS=getOcrValue('hub-start');
+  if(!mileS){alert('กรุณาถ่ายรูปเลขไมล์เริ่ม และตรวจสอบค่า OCR');return;}
+  if(!hubS){alert('กรุณาถ่ายรูปเลขดุมล้อเริ่ม และตรวจสอบค่า OCR');return;}
 
-  if(!mileS){
-    alert('กรุณาถ่ายรูปเลขไมล์เริ่ม และตรวจสอบค่า OCR');
-    return;
-  }
+  const r=await postGAS({action:'driverStartJob',orderId:order['Order ID'],userId:U.userId},'🚀 กำลังบันทึกออกโรงงาน...');
+  if(!r?.success){alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
 
-  if(!hubS){
-    alert('กรุณาถ่ายรูปเลขดุมล้อเริ่ม และตรวจสอบค่า OCR');
-    return;
-  }
-
-  const r = await postGAS({
-    action:'driverStartJob',
-    orderId:order['Order ID'],
-    userId:U.userId
-  });
-
-  if(!r?.success){
-    alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));
-    return;
-  }
-
-  hubHistory.start = parseFloat(hubS) || 0;
-
-  const fields = {
-    'เลขไมล์เริ่ม': mileS,
-    'เลขดุมล้อเริ่ม': hubS
-  };
-
-  await postGAS({
-    action:'submitWeight',
-    orderId:order['Order ID'],
-    userId:U.userId,
-    jobType,
-    checkPoint:'เริ่ม',
-    fields
-  });
+  hubHistory.start=parseFloat(hubS)||0;
+  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'เริ่ม',
+    fields:{'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS}},'💾 กำลังบันทึกข้อมูล...');
 
   order['สถานะ']='เริ่มงานแล้ว';
   renderTimeline();
@@ -853,335 +656,154 @@ async function submitStart(){
 }
 
 async function submitRampDrop(){
+  const mileR=getOcrValue('mile-rampDrop');
+  const hubR=getOcrValue('hub-rampDrop');
+  if(!mileR){alert('กรุณาถ่ายรูปเลขไมล์ถึงลานวางกระบะ');return;}
+  if(!hubR){alert('กรุณาถ่ายรูปเลขดุมล้อถึงลานวางกระบะ');return;}
 
-  const mileR =
-    getOcrValue('mile-rampDrop');
+  const prevHub=hubHistory.start||0;
+  if(prevHub>0&&parseFloat(hubR)<prevHub){alert('⚠️ เลขดุมล้อถึงลาน ต้องไม่น้อยกว่าเลขดุมล้อเริ่ม');return;}
 
-  const hubR =
-    getOcrValue('hub-rampDrop');
+  const r=await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลานวางกระบะ',
+    fields:{'เลขไมล์ลาน':mileR,'เลขดุมล้อลาน':hubR}},'📍 กำลังบันทึกถึงลานวางกระบะ...');
+  if(!r?.success){alert('❌ บันทึกข้อมูลไม่สำเร็จ');return;}
 
-  if(!mileR){
-    alert('กรุณาถ่ายรูปเลขไมล์ถึงลานวางกระบะ');
-    return;
-  }
-
-  if(!hubR){
-    alert('กรุณาถ่ายรูปเลขดุมล้อถึงลานวางกระบะ');
-    return;
-  }
-
-  const prevHub =
-    hubHistory.start || 0;
-
-  if(
-    prevHub > 0 &&
-    parseFloat(hubR) < prevHub
-  ){
-    alert(
-      '⚠️ เลขดุมล้อถึงลาน ต้องไม่น้อยกว่าเลขดุมล้อเริ่ม'
-    );
-    return;
-  }
-
-  const fields = {
-    'เลขไมล์ลาน': mileR,
-    'เลขดุมล้อลาน': hubR
-  };
-
-  const r = await postGAS({
-    action:'submitWeight',
-    orderId:order['Order ID'],
-    userId:U.userId,
-    jobType,
-    checkPoint:'ลานวางกระบะ',
-    fields
-  });
-
-  if(!r?.success){
-    alert('❌ บันทึกข้อมูลไม่สำเร็จ');
-    return;
-  }
-
-  hubHistory.rampDrop =
-    parseFloat(hubR) || 0;
-
-  order['สถานะ'] =
-    'ถึงลานวางกระบะ';
-
+  hubHistory.rampDrop=parseFloat(hubR)||0;
+  order['สถานะ']='ถึงลานวางกระบะ';
   renderTimeline();
-
   alert('✅ บันทึกถึงลานวางกระบะเรียบร้อย');
-}  
+}
 
-  
 async function submitClient(){
-  const mileClient = getOcrValue('mile-client');
-  const hubClient = getOcrValue('hub-client');
+  const mileClient=getOcrValue('mile-client');
+  const hubClient=getOcrValue('hub-client');
+  if(!mileClient){alert('กรุณาถ่ายเลขไมล์ออกจากลูกค้า');return;}
+  if(!hubClient){alert('กรุณาถ่ายเลขดุมล้อออกจากลูกค้า');return;}
 
-  if(!mileClient){
-    alert('กรุณาถ่ายเลขไมล์ออกจากลูกค้า');
-    return;
-  }
+  const prevHub=hubHistory.ramp||0;
+  if(prevHub>0&&parseFloat(hubClient)<prevHub){alert('⚠️ เลขดุมล้อลูกค้า ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า');return;}
 
-  if(!hubClient){
-    alert('กรุณาถ่ายเลขดุมล้อออกจากลูกค้า');
-    return;
-  }
+  const r=await postGAS({action:'driverArrived',orderId:order['Order ID'],userId:U.userId},'🌴 กำลังบันทึกถึงลูกค้า...');
+  if(!r?.success){alert('❌ '+(r?.error||'อัปเดตสถานะลูกค้าไม่สำเร็จ'));return;}
 
-  const prevHub = hubHistory.ramp || 0;
+  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลูกค้า',
+    fields:{'เลขไมล์ลูกค้า':mileClient,'เลขดุมล้อลูกค้า':hubClient}},'💾 กำลังบันทึกข้อมูล...');
 
-  if(prevHub > 0 && parseFloat(hubClient) < prevHub){
-    alert('⚠️ เลขดุมล้อลูกค้า ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า');
-    return;
-  }
-
-  const r = await postGAS({
-    action:'driverArrived',
-    orderId:order['Order ID'],
-    userId:U.userId
-  });
-
-  if(!r?.success){
-    alert('❌ '+(r?.error||'อัปเดตสถานะลูกค้าไม่สำเร็จ'));
-    return;
-  }
-
-  const fields = {
-    'เลขไมล์ลูกค้า': mileClient,
-    'เลขดุมล้อลูกค้า': hubClient
-  };
-
-  await postGAS({
-    action:'submitWeight',
-    orderId:order['Order ID'],
-    userId:U.userId,
-    jobType,
-    checkPoint:'ลูกค้า',
-    fields
-  });
-
-  hubHistory.client = parseFloat(hubClient) || 0;
-
+  hubHistory.client=parseFloat(hubClient)||0;
   order['สถานะ']='ถึงลูกค้า';
   renderTimeline();
-
   alert('✅ บันทึกออกจากลูกค้าเรียบร้อย');
 }
+
 async function submitRamp(){
-  const mileR = getOcrValue('mile-ramp');
-  const hubR = getOcrValue('hub-ramp');
+  const mileR=getOcrValue('mile-ramp');
+  const hubR=getOcrValue('hub-ramp');
+  if(!mileR){alert('กรุณาถ่ายเลขไมล์ออกจากลานขากลับ');return;}
+  if(!hubR){alert('กรุณาถ่ายเลขดุมล้อออกจากลานขากลับ');return;}
 
-  if(!mileR){
-    alert('กรุณาถ่ายเลขไมล์ออกจากลานขากลับ');
-    return;
+  const prevHub=hubHistory.client||0;
+  if(prevHub>0&&parseFloat(hubR)<prevHub){alert('⚠️ เลขดุมล้อลานขากลับ ต้องไม่น้อยกว่าเลขดุมล้อจุดลูกค้า');return;}
+
+  const weightRamp=getWeightOcrData('weight-ramp');
+  if(!weightRamp||!weightRamp.gross||!weightRamp.tare||!weightRamp.net){
+    alert('กรุณาถ่ายใบชั่งลานเท และตรวจสอบค่า OCR');return;
   }
 
-  if(!hubR){
-    alert('กรุณาถ่ายเลขดุมล้อออกจากลานขากลับ');
-    return;
-  }
+  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลานขากลับ',
+    fields:{
+      'เลขไมล์ลาน':mileR,'เลขดุมล้อลาน':hubR,
+      'น้ำหนักหนักลาน':weightRamp.gross,'น้ำหนักเบาลาน':weightRamp.tare,'สุทธิลาน':weightRamp.net,
+      'รูปลาน':photos['weight-ramp']||''
+    }},'🏭 กำลังบันทึกถึงลานขากลับ...');
 
-  const prevHub = hubHistory.client || 0;
-
-  if(prevHub > 0 && parseFloat(hubR) < prevHub){
-    alert('⚠️ เลขดุมล้อลานขากลับ ต้องไม่น้อยกว่าเลขดุมล้อจุดลูกค้า');
-    return;
-  }
-
-  const weightRamp = getWeightOcrData('weight-ramp');
-
-  if(!weightRamp || !weightRamp.gross || !weightRamp.tare || !weightRamp.net){
-    alert('กรุณาถ่ายใบชั่งลานเท และตรวจสอบค่า OCR');
-    return;
-  }
-
-  const fields = {
-    'เลขไมล์ลาน': mileR,
-    'เลขดุมล้อลาน': hubR,
-
-    'น้ำหนักหนักลาน': weightRamp.gross,
-    'น้ำหนักเบาลาน': weightRamp.tare,
-    'สุทธิลาน': weightRamp.net,
-
-    'รูปลาน': photos['weight-ramp'] || ''
-  };
-
-  await postGAS({
-    action:'submitWeight',
-    orderId:order['Order ID'],
-    userId:U.userId,
-    jobType,
-    checkPoint:'ลานขากลับ',
-    fields
-  });
-
-  hubHistory.ramp = parseFloat(hubR) || 0;
-
+  hubHistory.ramp=parseFloat(hubR)||0;
   order['สถานะ']='ถึงลานขากลับ';
   renderTimeline();
-
   alert('✅ บันทึกออกจากลานขากลับเรียบร้อย');
 }
+
 function prepareFactory(){
-  const mileF = getOcrValue('mile-factory');
-  const hubF = getOcrValue('hub-factory');
+  const mileF=getOcrValue('mile-factory');
+  const hubF=getOcrValue('hub-factory');
+  if(!mileF){alert('กรุณาถ่ายเลขไมล์หลังชั่งเสร็จ');return;}
+  if(!hubF){alert('กรุณาถ่ายเลขดุมล้อหลังชั่งเสร็จ');return;}
 
-  if(!mileF){
-    alert('กรุณาถ่ายเลขไมล์หลังชั่งเสร็จ');
-    return;
-  }
+  const prevHub=hubHistory.ramp||0;
+  if(prevHub>0&&parseFloat(hubF)<prevHub){alert('⚠️ เลขดุมล้อโรงงาน ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า');return;}
 
-  if(!hubF){
-    alert('กรุณาถ่ายเลขดุมล้อหลังชั่งเสร็จ');
-    return;
-  }
+  const wClient=getWeightOcrData('weight-factory-client');
+  if(!wClient||!wClient.gross||!wClient.tare||!wClient.net){alert('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');return;}
 
-  const prevHub = hubHistory.ramp || 0;
-  if(prevHub > 0 && parseFloat(hubF) < prevHub){
-    alert('⚠️ เลขดุมล้อโรงงาน ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า');
-    return;
-  }
+  const wRamp=getWeightOcrData('weight-factory-ramp');
+  if(!wRamp||!wRamp.gross||!wRamp.tare||!wRamp.net){alert('กรุณาถ่ายใบชั่งลานเทที่โรงงาน');return;}
 
-  const wClient = getWeightOcrData('weight-factory-client');
-  if(!wClient || !wClient.gross || !wClient.tare || !wClient.net){
-    alert('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');
-    return;
-  }
+  const fLiter=getVal('fuel-factory-liter');
+  const fPrice=getVal('fuel-factory-price');
+  if(!fLiter){alert('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
+  if(!fPrice){alert('กรุณากรอกราคาน้ำมันโรงงาน');return;}
 
-  const wRamp = getWeightOcrData('weight-factory-ramp');
-  if(!wRamp || !wRamp.gross || !wRamp.tare || !wRamp.net){
-    alert('กรุณาถ่ายใบชั่งลานเทที่โรงงาน');
-    return;
-  }
-
-  const fLiter = getVal('fuel-factory-liter');
-  const fPrice = getVal('fuel-factory-price');
-
-  if(!fLiter){
-    alert('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');
-    return;
-  }
-
-  if(!fPrice){
-    alert('กรุณากรอกราคาน้ำมันโรงงาน');
-    return;
-  }
-
-  collectedData = {};
-  collectedData.mileFactory = mileF;
-  collectedData.hubFactory = hubF;
-
-  collectedData.weightFactClient = {
-    h: wClient.gross,
-    l: wClient.tare,
-    net: wClient.net,
-    pricePerKg: wClient.pricePerKg || '',
-    totalAmount: wClient.totalAmount || ''
-  };
-
-  collectedData.weightFactRamp = {
-    h: wRamp.gross,
-    l: wRamp.tare,
-    net: wRamp.net
-  };
-
-  collectedData.fuelFactory = {
-    liter: fLiter,
-    price: fPrice,
-    total: (parseFloat(fLiter) * parseFloat(fPrice)).toFixed(2)
-  };
-
+  collectedData={};
+  collectedData.mileFactory=mileF;
+  collectedData.hubFactory=hubF;
+  collectedData.weightFactClient={h:wClient.gross,l:wClient.tare,net:wClient.net,pricePerKg:wClient.pricePerKg||'',totalAmount:wClient.totalAmount||''};
+  collectedData.weightFactRamp={h:wRamp.gross,l:wRamp.tare,net:wRamp.net};
+  collectedData.fuelFactory={liter:fLiter,price:fPrice,total:(parseFloat(fLiter)*parseFloat(fPrice)).toFixed(2)};
   showDashboard();
 }
 
-// ✅ ข้อ 1+4: Dashboard แสดงเลขดุมล้อ + ตัวเลขน้ำหนักจริง
 function showDashboard(){
-  const d = collectedData;
-  const rows = [];
- 
-  // ── ระยะทางจากดุมล้อ ──────────────────────────────────
-  rows.push({ section: '🛣️ ระยะทาง (จากดุมล้อ)' });
- 
-  const hubStart   = hubHistory.start   || 0;
-  const hubClient  = hubHistory.client  || 0;
-  const hubRamp    = hubHistory.ramp    || 0;
-  const hubFactory = parseFloat(d.hubFactory) || 0;
- 
-  if (hubStart)   rows.push({ k: 'ดุมล้อเริ่ม',       v: Number(hubStart).toLocaleString() });
-  if (hubClient)  rows.push({ k: 'ดุมล้อถึงลูกค้า',   v: Number(hubClient).toLocaleString() });
-  if (hubRamp)    rows.push({ k: 'ดุมล้อถึงลาน',      v: Number(hubRamp).toLocaleString() });
-  if (hubFactory) rows.push({ k: 'ดุมล้อปลายทาง',    v: Number(hubFactory).toLocaleString() });
- 
-  // คำนวณระยะแต่ละช่วง
-  if (hubStart && hubClient) {
-    const dist = hubClient - hubStart;
-    rows.push({ k: '📏 เริ่ม → ลูกค้า', v: `${dist.toLocaleString()} กม.`, highlight: true });
+  const d=collectedData;
+  const rows=[];
+
+  rows.push({section:'🛣️ ระยะทาง (จากดุมล้อ)'});
+  const hubStart=hubHistory.start||0;
+  const hubClient=hubHistory.client||0;
+  const hubRamp=hubHistory.ramp||0;
+  const hubFactory=parseFloat(d.hubFactory)||0;
+
+  if(hubStart)   rows.push({k:'ดุมล้อเริ่ม',      v:Number(hubStart).toLocaleString()});
+  if(hubClient)  rows.push({k:'ดุมล้อถึงลูกค้า',  v:Number(hubClient).toLocaleString()});
+  if(hubRamp)    rows.push({k:'ดุมล้อถึงลาน',     v:Number(hubRamp).toLocaleString()});
+  if(hubFactory) rows.push({k:'ดุมล้อปลายทาง',   v:Number(hubFactory).toLocaleString()});
+
+  if(hubStart&&hubClient)  rows.push({k:'📏 เริ่ม → ลูกค้า',     v:`${(hubClient-hubStart).toLocaleString()} กม.`,highlight:true});
+  if(hubClient&&hubRamp)   rows.push({k:'📏 ลูกค้า → ลาน',      v:`${(hubRamp-hubClient).toLocaleString()} กม.`,highlight:true});
+  if(hubRamp&&hubFactory)  rows.push({k:'📏 ลาน → ปลายทาง',    v:`${(hubFactory-hubRamp).toLocaleString()} กม.`,highlight:true});
+  else if(!hubRamp&&hubClient&&hubFactory) rows.push({k:'📏 ลูกค้า → ปลายทาง',v:`${(hubFactory-hubClient).toLocaleString()} กม.`,highlight:true});
+  if(hubStart&&hubFactory) rows.push({k:'📏 รวมทั้งสาย',         v:`${(hubFactory-hubStart).toLocaleString()} กม.`,highlight:true});
+
+  rows.push({section:'⚖️ น้ำหนัก'});
+  if(d.weightFactClient){
+    rows.push({k:'ลูกค้า — รถหนัก', v:`${Number(d.weightFactClient.h).toLocaleString()} กก.`});
+    rows.push({k:'ลูกค้า — รถเบา',  v:`${Number(d.weightFactClient.l).toLocaleString()} กก.`});
+    rows.push({k:'สุทธิลูกค้า',     v:`${Math.round(d.weightFactClient.net).toLocaleString()} กก.`,highlight:true});
+    rows.push({k:'ลาน — รถหนัก',    v:`${Number(d.weightFactRamp.h).toLocaleString()} กก.`});
+    rows.push({k:'ลาน — รถเบา',     v:`${Number(d.weightFactRamp.l).toLocaleString()} กก.`});
+    rows.push({k:'สุทธิลาน',        v:`${Math.round(d.weightFactRamp.net).toLocaleString()} กก.`,highlight:true});
+  }else if(d.weightFactory){
+    rows.push({k:'รถหนัก',         v:`${Number(d.weightFactory.h).toLocaleString()} กก.`});
+    rows.push({k:'รถเบา',          v:`${Number(d.weightFactory.l).toLocaleString()} กก.`});
+    rows.push({k:'สุทธิปลายทาง',  v:`${Math.round(d.weightFactory.net).toLocaleString()} กก.`,highlight:true});
   }
-  if (hubClient && hubRamp) {
-    const dist = hubRamp - hubClient;
-    rows.push({ k: '📏 ลูกค้า → ลาน', v: `${dist.toLocaleString()} กม.`, highlight: true });
-  }
-  if (hubRamp && hubFactory) {
-    const dist = hubFactory - hubRamp;
-    rows.push({ k: '📏 ลาน → ปลายทาง', v: `${dist.toLocaleString()} กม.`, highlight: true });
-  } else if (!hubRamp && hubClient && hubFactory) {
-    const dist = hubFactory - hubClient;
-    rows.push({ k: '📏 ลูกค้า → ปลายทาง', v: `${dist.toLocaleString()} กม.`, highlight: true });
-  }
-  if (hubStart && hubFactory) {
-    const total = hubFactory - hubStart;
-    rows.push({ k: '📏 รวมทั้งสาย', v: `${total.toLocaleString()} กม.`, highlight: true });
-  }
- 
-  // ── น้ำหนัก ───────────────────────────────────────────
-  rows.push({ section: '⚖️ น้ำหนัก' });
-  if (d.weightFactClient) {
-    rows.push({ k: 'ลูกค้า — รถหนัก',  v: `${Number(d.weightFactClient.h).toLocaleString()} กก.` });
-    rows.push({ k: 'ลูกค้า — รถเบา',   v: `${Number(d.weightFactClient.l).toLocaleString()} กก.` });
-    rows.push({ k: 'สุทธิลูกค้า',      v: `${Math.round(d.weightFactClient.net).toLocaleString()} กก.`, highlight: true });
-    rows.push({ k: 'ลาน — รถหนัก',     v: `${Number(d.weightFactRamp.h).toLocaleString()} กก.` });
-    rows.push({ k: 'ลาน — รถเบา',      v: `${Number(d.weightFactRamp.l).toLocaleString()} กก.` });
-    rows.push({ k: 'สุทธิลาน',         v: `${Math.round(d.weightFactRamp.net).toLocaleString()} กก.`, highlight: true });
-  } else if (d.weightFactory) {
-    rows.push({ k: 'รถหนัก',          v: `${Number(d.weightFactory.h).toLocaleString()} กก.` });
-    rows.push({ k: 'รถเบา',           v: `${Number(d.weightFactory.l).toLocaleString()} กก.` });
-    rows.push({ k: 'สุทธิปลายทาง',   v: `${Math.round(d.weightFactory.net).toLocaleString()} กก.`, highlight: true });
-  }
- 
-  const billName = order['ชื่อในบิล'] || order['ชื่อสวน'] || '—';
-  rows.push({ k: 'เจ้าของใบ', v: billName });
- 
-  // ── ค่าใช้จ่าย ─────────────────────────────────────────
-  rows.push({ section: '💰 ค่าใช้จ่าย' });
-  rows.push({ k: '⛽ น้ำมันโรงงาน', v: `${d.fuelFactory.liter} ลิตร × ${d.fuelFactory.price} = ${d.fuelFactory.total} บาท` });
-  if (d.fuelRoad && d.fuelRoad.length > 0) {
-    d.fuelRoad.forEach((row, i) => {
-      rows.push({ k: `⛽ น้ำมันทาง บิล${i+1}`, v: `${row.liter} ลิตร × ${row.price} = ${row.total} บาท` });
-    });
-  }
-  if (d.toll)   rows.push({ k: '🛣️ ค่าทางด่วน', v: `${Number(d.toll).toLocaleString()} บาท` });
-  if (d.repair) rows.push({ k: '🔧 ค่าซ่อมนอก', v: `${Number(d.repair.cost).toLocaleString()} บาท${d.repair.note?' ('+d.repair.note+')':''}` });
- 
-  // ── render ─────────────────────────────────────────────
-  const content = document.getElementById('dash-content');
-  let html = '';
-  let sectionOpen = false;
-  rows.forEach(r => {
-    if (r.section) {
-      if (sectionOpen) html += '</div>';
-      html += `<div class="dash-section"><div class="dash-section-title">${r.section}</div>`;
-      sectionOpen = true;
-    } else if (r.highlight) {
-      html += `<div class="dash-row"><span class="dash-key">${r.k}</span><span class="dash-highlight">${r.v}</span></div>`;
-    } else {
-      html += `<div class="dash-row"><span class="dash-key">${r.k}</span><span class="dash-val">${r.v}</span></div>`;
-    }
+  rows.push({k:'เจ้าของใบ',v:order['ชื่อในบิล']||order['ชื่อสวน']||'—'});
+
+  rows.push({section:'💰 ค่าใช้จ่าย'});
+  rows.push({k:'⛽ น้ำมันโรงงาน',v:`${d.fuelFactory.liter} ลิตร × ${d.fuelFactory.price} = ${d.fuelFactory.total} บาท`});
+  if(d.fuelRoad&&d.fuelRoad.length>0) d.fuelRoad.forEach((row,i)=>rows.push({k:`⛽ น้ำมันทาง บิล${i+1}`,v:`${row.liter} ลิตร × ${row.price} = ${row.total} บาท`}));
+  if(d.toll)   rows.push({k:'🛣️ ค่าทางด่วน',v:`${Number(d.toll).toLocaleString()} บาท`});
+  if(d.repair) rows.push({k:'🔧 ค่าซ่อมนอก',v:`${Number(d.repair.cost).toLocaleString()} บาท${d.repair.note?' ('+d.repair.note+')':''}`});
+
+  const content=document.getElementById('dash-content');
+  let html='';let sectionOpen=false;
+  rows.forEach(r=>{
+    if(r.section){if(sectionOpen)html+='</div>';html+=`<div class="dash-section"><div class="dash-section-title">${r.section}</div>`;sectionOpen=true;}
+    else if(r.highlight) html+=`<div class="dash-row"><span class="dash-key">${r.k}</span><span class="dash-highlight">${r.v}</span></div>`;
+    else html+=`<div class="dash-row"><span class="dash-key">${r.k}</span><span class="dash-val">${r.v}</span></div>`;
   });
-  if (sectionOpen) html += '</div>';
-  content.innerHTML = html;
- 
+  if(sectionOpen)html+='</div>';
+  content.innerHTML=html;
   document.getElementById('dashboard').classList.add('show');
-  document.getElementById('dashboard').scrollTop = 0;
+  document.getElementById('dashboard').scrollTop=0;
 }
 
 function closeDashboard(){document.getElementById('dashboard').classList.remove('show');}
@@ -1189,7 +811,6 @@ function closeDashboard(){document.getElementById('dashboard').classList.remove(
 async function confirmSubmit(){
   closeDashboard();
   const d=collectedData;
-  // ✅ ข้อ 5: ส่ง billName ไปด้วย
   const billName=order['ชื่อในบิล']||order['ชื่อสวน']||'';
   const fields={'เลขไมล์ปลายทาง':d.mileFactory,'เลขดุมล้อปลายทาง':d.hubFactory};
   if(d.weightFactClient){
@@ -1207,11 +828,11 @@ async function confirmSubmit(){
   }
   if(d.fuelFactory){fields['ลิตรน้ำมัน(ทาง)']=d.fuelFactory.liter;fields['ราคาน้ำมัน(ทาง)']=d.fuelFactory.price;}
   if(d.toll) fields['ค่าทางด่วน']=d.toll;
-  if(d.repair){fields['ค่าซ่อมนอก']=d.repair.cost;fields['หมายเหตุค่าใช้จ่าย']=d.repair.note;if(photos['repair']) fields['รูปค่าซ่อมนอก']=photos['repair'];}
+  if(d.repair){fields['ค่าซ่อมนอก']=d.repair.cost;fields['หมายเหตุค่าใช้จ่าย']=d.repair.note;if(photos['repair'])fields['รูปค่าซ่อมนอก']=photos['repair'];}
   if(d.fuelRoad&&d.fuelRoad.length>0&&photos['fuel-road-1']) fields['รูปน้ำมัน(ทาง)']=photos['fuel-road-1'];
 
-  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ปลายทาง',notifyOwner:true,billName,fields});
-  const r=await postGAS({action:'driverComplete',orderId:order['Order ID'],userId:U.userId});
+  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ปลายทาง',notifyOwner:true,billName,fields},'📊 กำลังส่งข้อมูลสรุป...');
+  const r=await postGAS({action:'driverComplete',orderId:order['Order ID'],userId:U.userId},'✅ กำลังปิดงาน...');
   if(!r?.success){alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
   document.getElementById('success-msg').innerHTML=`📋 ${order['Order ID']}<br>ส่งข้อมูลให้ Admin และเจ้าของสวนแล้วครับ`;
   document.getElementById('success').classList.add('show');
@@ -1220,7 +841,7 @@ async function confirmSubmit(){
 async function requestCancel(){
   const reason=prompt('กรุณาระบุสาเหตุที่ขอยกเลิก:');
   if(reason===null) return;
-  const r=await postGAS({action:'driverCancelRequest',orderId:order['Order ID'],userId:U.userId,reason});
+  const r=await postGAS({action:'driverCancelRequest',orderId:order['Order ID'],userId:U.userId,reason},'📤 กำลังส่งคำขอ...');
   if(r?.success) alert('📤 ส่งคำขอไปยัง Admin แล้วครับ');
   else alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));
 }
