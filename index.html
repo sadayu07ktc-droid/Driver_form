@@ -391,6 +391,87 @@ function formFactory(){
         <div><span class="net-val" id="fuel-factory-total">0</span> <span class="net-unit">บาท</span></div>
       </div>
     </div>
+        <div class="sec-divider"></div>
+
+    <div class="sec-lbl">💰 ค่าใช้จ่ายอื่น ๆ</div>
+
+    <div class="field">
+      <label class="lbl">⛽ เติมน้ำมันระหว่างทาง</label>
+      <div class="chips">
+        <span class="chip" onclick="pickExpenseChip(this,'fuel-road','ไม่มี')">ไม่มี</span>
+        <span class="chip" onclick="pickExpenseChip(this,'fuel-road','มี')">มี</span>
+      </div>
+      <div class="hide" id="exp-fuel-road">
+        <div class="exp-section mt8">
+          <div id="fuel-road-rows"></div>
+          <button class="btn-add" onclick="addFuelRow()">+ เพิ่มบิลน้ำมัน</button>
+          <div class="total-badge hide" id="fuel-road-total-badge">
+            รวม: <span id="fuel-road-total">0</span> บาท
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="lbl">🛣️ ค่าทางด่วน</label>
+      <div class="chips">
+        <span class="chip" onclick="pickExpenseChip(this,'toll','ไม่มี')">ไม่มี</span>
+        <span class="chip" onclick="pickExpenseChip(this,'toll','มี')">มี</span>
+      </div>
+      <div class="hide" id="exp-toll">
+        <div class="exp-section mt8">
+          <label class="lbl">จำนวนเงิน (บาท)</label>
+          <input class="inp" type="number" id="toll-amount" placeholder="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="lbl">🔧 ค่าซ่อมนอก</label>
+      <div class="chips">
+        <span class="chip" onclick="pickExpenseChip(this,'repair','ไม่มี')">ไม่มี</span>
+        <span class="chip" onclick="pickExpenseChip(this,'repair','มี')">มี</span>
+      </div>
+      <div class="hide" id="exp-repair">
+        <div class="exp-section mt8">
+          <label class="lbl">จำนวนเงิน (บาท)</label>
+          <input class="inp" type="number" id="repair-cost" placeholder="0">
+          <label class="lbl mt8">หมายเหตุ</label>
+          <input class="inp mt8" type="text" id="repair-note" placeholder="รายละเอียด">
+          <label class="lbl mt8">รูปบิลซ่อม</label>
+          ${photoBox('repair-photo','แนบรูปบิลซ่อม','repair')}
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="lbl">📦 ค่าลงของ</label>
+      <div class="chips">
+        <span class="chip" onclick="pickExpenseChip(this,'unload','ไม่มี')">ไม่มี</span>
+        <span class="chip" onclick="pickExpenseChip(this,'unload','มี')">มี</span>
+      </div>
+      <div class="hide" id="exp-unload">
+        <div class="exp-section mt8">
+          <label class="lbl">จำนวนเงิน (บาท)</label>
+          <input class="inp" type="number" id="unload-cost" placeholder="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="lbl">👷 ค่าจ้างเด็กลงสินค้านอก</label>
+      <div class="chips">
+        <span class="chip" onclick="pickExpenseChip(this,'helper','ไม่มี')">ไม่มี</span>
+        <span class="chip" onclick="pickExpenseChip(this,'helper','มี')">มี</span>
+      </div>
+      <div class="hide" id="exp-helper">
+        <div class="exp-section mt8">
+          <label class="lbl">จำนวนเงิน (บาท)</label>
+          <input class="inp" type="number" id="helper-cost" placeholder="0">
+        </div>
+      </div>
+    </div>    
+    
     <button class="btn btn-green" onclick="prepareFactory()">📋 ดูสรุปก่อนส่ง</button>
   `;
 }
@@ -611,6 +692,28 @@ function addFuelRow(){
   renumberFuelRows();calcFuelRoad();
 }
 
+function pickExpenseChip(el, key, val){
+  const box = el.closest('.field');
+  box.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+
+  const sec = document.getElementById('exp-' + key);
+
+  if(val === 'มี'){
+    sec?.classList.remove('hide');
+
+    if(
+      key === 'fuel-road' &&
+      document.getElementById('fuel-road-rows').children.length === 0
+    ){
+      addFuelRow();
+    }
+
+  }else{
+    sec?.classList.add('hide');
+  }
+}
+
 function removeFuelRow(id){
   document.getElementById(`fuel-row-${id}`)?.remove();
   renumberFuelRows();calcFuelRoad();
@@ -753,6 +856,47 @@ function prepareFactory(){
   collectedData.weightFactClient={h:wClient.gross,l:wClient.tare,net:wClient.net,pricePerKg:wClient.pricePerKg||'',totalAmount:wClient.totalAmount||''};
   collectedData.weightFactRamp={h:wRamp.gross,l:wRamp.tare,net:wRamp.net};
   collectedData.fuelFactory={liter:fLiter,price:fPrice,total:(parseFloat(fLiter)*parseFloat(fPrice)).toFixed(2)};
+  // ค่าใช้จ่ายอื่น ๆ
+if(document.getElementById('exp-fuel-road') && !document.getElementById('exp-fuel-road').classList.contains('hide')){
+  const rows = [];
+
+  document.querySelectorAll('[id^="fl-liter-"]').forEach(el => {
+    const rowId = el.id.replace('fl-liter-', '');
+    const liter = parseFloat(el.value) || 0;
+    const price = parseFloat(document.getElementById('fl-price-' + rowId)?.value) || 0;
+
+    if(liter > 0){
+      rows.push({
+        liter,
+        price,
+        total: (liter * price).toFixed(2),
+        photo: photos['fuel-road-' + rowId] || ''
+      });
+    }
+  });
+
+  collectedData.fuelRoad = rows;
+}
+
+if(document.getElementById('exp-toll') && !document.getElementById('exp-toll').classList.contains('hide')){
+  collectedData.toll = getVal('toll-amount');
+}
+
+if(document.getElementById('exp-repair') && !document.getElementById('exp-repair').classList.contains('hide')){
+  collectedData.repair = {
+    cost: getVal('repair-cost'),
+    note: getVal('repair-note'),
+    photo: photos['repair'] || ''
+  };
+}
+
+if(document.getElementById('exp-unload') && !document.getElementById('exp-unload').classList.contains('hide')){
+  collectedData.unloadCost = getVal('unload-cost');
+}
+
+if(document.getElementById('exp-helper') && !document.getElementById('exp-helper').classList.contains('hide')){
+  collectedData.helperCost = getVal('helper-cost');
+}
   showDashboard();
 }
 
@@ -797,6 +941,19 @@ function showDashboard(){
   if(d.fuelRoad&&d.fuelRoad.length>0) d.fuelRoad.forEach((row,i)=>rows.push({k:`⛽ น้ำมันทาง บิล${i+1}`,v:`${row.liter} ลิตร × ${row.price} = ${row.total} บาท`}));
   if(d.toll)   rows.push({k:'🛣️ ค่าทางด่วน',v:`${Number(d.toll).toLocaleString()} บาท`});
   if(d.repair) rows.push({k:'🔧 ค่าซ่อมนอก',v:`${Number(d.repair.cost).toLocaleString()} บาท${d.repair.note?' ('+d.repair.note+')':''}`});
+  if(d.unloadCost){
+  rows.push({
+    k:'📦 ค่าลงของ',
+    v:`${Number(d.unloadCost).toLocaleString()} บาท`
+  });
+}
+
+if(d.helperCost){
+  rows.push({
+    k:'👷 ค่าเด็กลงสินค้า',
+    v:`${Number(d.helperCost).toLocaleString()} บาท`
+  });
+}
 
   const content=document.getElementById('dash-content');
   let html='';let sectionOpen=false;
