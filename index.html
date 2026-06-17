@@ -352,6 +352,18 @@ function formRamp(){
     ${ocrMileHubBlock('ramp','รูปเลขไมล์ถึงลานขากลับ','รูปเลขดุมล้อถึงลานขากลับ')}
     <div class="sec-lbl">⚖️ ใบชั่งลานเท</div>
     ${ocrPhotoBox('ramp-weight','รูปใบชั่งลานเท','weight-ramp','ใบชั่งลาน')}
+    
+    <button class="btn btn-red" onclick="
+      ocrData['mile-ramp']={value:'86774'};
+      ocrData['hub-ramp']={value:'117748'};
+      if(document.getElementById('ocr-edit-mile-ramp')) document.getElementById('ocr-edit-mile-ramp').value='86774';
+      if(document.getElementById('ocr-edit-hub-ramp')) document.getElementById('ocr-edit-hub-ramp').value='117748';
+      if(document.getElementById('ocr-weight-ramp-gross')) document.getElementById('ocr-weight-ramp-gross').value='50270';
+      if(document.getElementById('ocr-weight-ramp-tare')) document.getElementById('ocr-weight-ramp-tare').value='20980';
+      if(document.getElementById('ocr-weight-ramp-net')) document.getElementById('ocr-weight-ramp-net').value='29290';
+      alert('ใส่ค่า test แล้ว');
+    ">🧪 ใส่ค่า Test</button>
+    
     <div class="net-badge">
       <div class="net-lbl">หมายเหตุ</div>
       <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
