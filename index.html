@@ -264,7 +264,40 @@ function fmtDateTime(v){
   if(isNaN(d)) return v;
   return fmtDate(v) + ' ' + fmtTime(v);
 }
+// คำนวณสเต็ปของ "งานนั้น" โดยตรง (ไม่พึ่ง global jobType/hasRamp)
+function stepsOf(o){
+  const jt = o['ประเภทงาน']||'ปาล์ม';
+  const hr = !!(o['จุดรับเพิ่ม']);
+  if(hr) return [
+    {key:'start',label:'ออกโรงงาน'},
+    {key:'rampDrop',label:'วางกระบะที่ลาน'},
+    {key:'client',label:'ถึงลูกค้า'},
+    {key:'ramp',label:'กลับถึงลาน'},
+    {key:'factory',label:'ถึงโรงงาน'}
+  ];
+  return [
+    {key:'start',label:'ออกโรงงาน'},
+    {key:'client',label:'ถึงลูกค้า'},
+    {key:'factory',label:'ถึงโรงงาน'}
+  ];
+}
 
+// หา "ปุ่มถัดไป" + ป้ายสถานะ ของงานนั้น ตาม สถานะ ปัจจุบัน
+function nextActionOf(o){
+  const st = o['สถานะ']||'รับงานแล้ว';
+  const hr = !!(o['จุดรับเพิ่ม']);
+  if(st==='เสร็จงาน') return null;            // จบแล้ว ไม่มีปุ่ม
+
+  // map: สถานะปัจจุบัน -> label ของ checkpoint ถัดไปที่ต้องกด
+  let nextLabel;
+  if(st==='รับงานแล้ว')            nextLabel='เริ่มงาน';
+  else if(st==='เริ่มงานแล้ว')      nextLabel = hr ? 'วางกระบะที่ลาน' : 'ถึงลูกค้า';
+  else if(st==='ถึงลานวางกระบะ')    nextLabel='ถึงลูกค้า';
+  else if(st==='ถึงลูกค้า')         nextLabel = hr ? 'กลับถึงลาน' : 'ถึงโรงงาน';
+  else if(st==='ถึงลานขากลับ'||st==='ถึงลาน') nextLabel='ถึงโรงงาน';
+  else nextLabel='ทำงานต่อ';
+  return nextLabel;
+}
 // 🆕 ── หน้าจอรายการคิวงาน ───────────────────────────────
 function renderJobList(){
   const list=document.getElementById('job-list');
@@ -284,7 +317,7 @@ function renderJobList(){
         <div class="jl-oid">${oid}</div>
         <div class="jl-info"><span>🌳 ${garden}</span><span>📅 ${dt} ⏰ ${tm}</span><span>📍 จุดรับ ${pickup}</span></div>
         <div class="jl-btns">
-          <button class="btn-sm start" onclick="openJob('${oid}')">▶ เริ่มงาน</button>
+          <button class="btn-sm start" onclick="openJob('${oid}')">▶ ${nextActionOf(o)||'ดูงาน'}</button>
           <button class="btn-sm cancel" onclick="cancelJob('${oid}')">✕ ยกเลิก</button>
         </div>
       </div>`;
