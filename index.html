@@ -967,14 +967,16 @@ function showDashboard(){
   else if(!hubRamp&&hubClient&&hubFactory) rows.push({k:'📏 ลูกค้า → ปลายทาง',v:`${(hubFactory-hubClient).toLocaleString()} กม.`,highlight:true});
   if(hubStart&&hubFactory) rows.push({k:'📏 รวมทั้งสาย',         v:`${(hubFactory-hubStart).toLocaleString()} กม.`,highlight:true});
 
-  rows.push({section:'⚖️ น้ำหนัก'});
+ rows.push({section:'⚖️ น้ำหนัก'});
   if(d.weightFactClient){
     rows.push({k:'ลูกค้า — รถหนัก', v:`${Number(d.weightFactClient.h).toLocaleString()} กก.`});
     rows.push({k:'ลูกค้า — รถเบา',  v:`${Number(d.weightFactClient.l).toLocaleString()} กก.`});
     rows.push({k:'สุทธิลูกค้า',     v:`${Math.round(d.weightFactClient.net).toLocaleString()} กก.`,highlight:true});
-    rows.push({k:'ลาน — รถหนัก',    v:`${Number(d.weightFactRamp.h).toLocaleString()} กก.`});
-    rows.push({k:'ลาน — รถเบา',     v:`${Number(d.weightFactRamp.l).toLocaleString()} กก.`});
-    rows.push({k:'สุทธิลาน',        v:`${Math.round(d.weightFactRamp.net).toLocaleString()} กก.`,highlight:true});
+    if(d.weightFactRamp){   // ✅ โชว์เฉพาะตอนแวะลาน
+      rows.push({k:'ลาน — รถหนัก',    v:`${Number(d.weightFactRamp.h).toLocaleString()} กก.`});
+      rows.push({k:'ลาน — รถเบา',     v:`${Number(d.weightFactRamp.l).toLocaleString()} กก.`});
+      rows.push({k:'สุทธิลาน',        v:`${Math.round(d.weightFactRamp.net).toLocaleString()} กก.`,highlight:true});
+    }
   }else if(d.weightFactory){
     rows.push({k:'รถหนัก',         v:`${Number(d.weightFactory.h).toLocaleString()} กก.`});
     rows.push({k:'รถเบา',          v:`${Number(d.weightFactory.l).toLocaleString()} กก.`});
