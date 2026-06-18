@@ -298,6 +298,16 @@ function nextActionOf(o){
   else nextLabel='ทำงานต่อ';
   return nextLabel;
 }
+
+function jobTypeBadge(o){
+  const jt = o['ประเภทงาน']||'ปาล์ม';
+  const hr = !!(o['จุดรับเพิ่ม']);
+  if(jt==='ปาล์ม' && hr) return '🏭 ปาล์ม+ลาน';
+  if(jt==='ปาล์ม')       return '🌴 ปาล์ม';
+  if(hr)                 return '🏭 งานอื่นๆ+ลาน';
+  return '📦 งานอื่นๆ';
+}
+  
 // 🆕 ── หน้าจอรายการคิวงาน ───────────────────────────────
 function renderJobList(){
   const list=document.getElementById('job-list');
@@ -313,8 +323,8 @@ function renderJobList(){
     if(i===0){
       html+=`
       <div class="jl-card active">
-        <div class="jl-top"><span class="jl-no">งานที่ 1 · วิ่งได้</span><span class="jl-st">${status}</span></div>
-        <div class="jl-oid">${oid}</div>
+        <div class="jl-top"><span class="jl-no">งานที่ 1 · วิ่งได้</span><span class="jl-st">สถานะ: ${status}</span></div>
+        <div class="jl-oid">${oid} <span style="font-size:11px;font-weight:600;background:var(--g3);color:var(--g1);padding:2px 8px;border-radius:20px;margin-left:4px">${jobTypeBadge(o)}</span></div>
         <div class="jl-info"><span>🌳 ${garden}</span><span>📅 ${dt} ⏰ ${tm}</span><span>📍 จุดรับ ${pickup}</span></div>
         <div class="jl-btns">
           <button class="btn-sm start" onclick="openJob('${oid}')">▶ ${nextActionOf(o)||'ดูงาน'}</button>
@@ -324,8 +334,8 @@ function renderJobList(){
     }else{
       html+=`
       <div class="jl-card queued">
-        <div class="jl-top"><span class="jl-no q">งานที่ ${i+1}</span><span class="jl-st" style="color:var(--text-l)">🔒 รอคิว</span></div>
-        <div class="jl-oid">${oid}</div>
+        <div class="jl-top"><span class="jl-no q">งานที่ ${i+1}</span><span class="jl-st" style="color:var(--text-l)">สถานะ: ${status} 🔒</span></div>
+        <div class="jl-oid">${oid} <span style="font-size:11px;font-weight:600;background:var(--g3);color:var(--g1);padding:2px 8px;border-radius:20px;margin-left:4px">${jobTypeBadge(o)}</span></div>
         <div class="jl-info"><span>🌳 ${garden}</span><span>📅 ${dt} ⏰ ${tm}</span><span>📍 จุดรับ ${pickup}</span></div>
         <div class="jl-note">ทำงานที่ 1 ให้เสร็จก่อน ถึงจะเริ่มงานนี้ได้</div>
         <button class="btn-sm cancel" style="width:100%" onclick="cancelJob('${oid}')">✕ ยกเลิกงานนี้</button>
