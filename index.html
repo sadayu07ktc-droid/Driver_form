@@ -1081,7 +1081,7 @@ async function confirmSubmit(){
     
     // ✅ อัปโหลดรูประหว่างทาง (ถ้ามี)
     if (firstPhotoBase64) {
-      const upRes = await postGAS({action:'uploadImage', orderId:order['Order ID'], imageBase64:firstPhotoBase64, prefix:'FUEL'}, '⛽ กำลังอัปโหลดบิลน้ำมัน...');
+      const upRes = await postGAS({action:'uploadImage', orderId:order['Order ID'], userId:U.userId, imageBase64:firstPhotoBase64, prefix:'FUEL'}, '⛽ กำลังอัปโหลดบิลน้ำมัน...');
       if(upRes && upRes.success) fields['รูปน้ำมัน(ทาง)'] = upRes.fileUrl;
     }
   }
@@ -1094,7 +1094,7 @@ async function confirmSubmit(){
     fields['หมายเหตุค่าใช้จ่าย'] = d.repair.note; 
     // ✅ อัปโหลดรูปซ่อมรถ (ถ้ามี)
     if(photos['repair']){
-      const upRes = await postGAS({action:'uploadImage', orderId:order['Order ID'], imageBase64:photos['repair'], prefix:'REPAIR'}, '🔧 กำลังอัปโหลดรูปบิลซ่อม...');
+      const upRes = await postGAS({action:'uploadImage', orderId:order['Order ID'], userId:U.userId, imageBase64:photos['repair'], prefix:'REPAIR'}, '🔧 กำลังอัปโหลดรูปบิลซ่อม...');
       if(upRes && upRes.success) fields['รูปค่าซ่อมนอก'] = upRes.fileUrl;
     }
   }
