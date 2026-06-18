@@ -1027,6 +1027,8 @@ async function confirmSubmit(){
     Object.assign(fields,{
       'น้ำหนักหนักปลายทาง':d.weightFactClient.h,'น้ำหนักเบาปลายทาง':d.weightFactClient.l,
       'สุทธิปลายทาง':d.weightFactClient.net,
+      'ราคาต่อกก.':d.weightFactClient.pricePerKg || '',   // ✅ เพิ่ม
+      'ยอดรวมเงิน':d.weightFactClient.totalAmount || '',  // ✅ เพิ่ม      
       'รูปปลายทาง': d.weightFactClient.fileUrl || ''
     });
     
