@@ -853,9 +853,9 @@ async function submitRamp(){
 
   const r = await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลานขากลับ',
   fields:{
-    'เลขไมล์ลาน':mileR,'เลขดุมล้อลาน':hubR,
-    'น้ำหนักหนักลาน':weightRamp.gross,'น้ำหนักเบาลาน':weightRamp.tare,'สุทธิลาน':weightRamp.net,
-    'รูปลาน': rampPhotoUrl // ✅ [แก้ตรงนี้ 2] ส่ง URL ไปแทน
+    'เลขไมล์ลานขากลับ':mileR, 'เลขดุมล้อลานขากลับ':hubR,
+    'น้ำหนักหนักลาน(ที่ลาน)':weightRamp.gross, 'น้ำหนักเบาลาน(ที่ลาน)':weightRamp.tare, 'สุทธิลาน(ที่ลาน)':weightRamp.net,
+    'รูปใบชั่งลาน(ที่ลาน)': rampPhotoUrl // ✅ แยกรูปที่ลานชัดเจน
   }},'🏭 กำลังบันทึกถึงลานขากลับ...');
 
   hubHistory.ramp=parseFloat(hubR)||0;
@@ -1020,33 +1020,50 @@ function closeDashboard(){document.getElementById('dashboard').classList.remove(
 
 async function confirmSubmit(){
   closeDashboard();
-  const d=collectedData;
-  const billName=order['ชื่อในบิล']||order['ชื่อสวน']||'';
-  const fields={'เลขไมล์ปลายทาง':d.mileFactory,'เลขดุมล้อปลายทาง':d.hubFactory};
+  const d = collectedData;
+  const billName = order['ชื่อในบิล'] || order['ชื่อสวน'] || '';
+  
+  // เก็บไมล์/ดุมล้อปลายทาง
+  const fields = {'เลขไมล์ปลายทาง':d.mileFactory, 'เลขดุมล้อปลายทาง':d.hubFactory};
+  
+  // --- 1. จัดการน้ำหนักและรูปใบชั่ง (แยกชื่อคอลัมน์ให้ชัดเจน) ---
   if(d.weightFactClient){
+    // ✅ งานปาล์ม: ข้อมูลลูกค้า (ลงช่องลูกค้าเท่านั้น)
     Object.assign(fields,{
-      'น้ำหนักหนักปลายทาง':d.weightFactClient.h,'น้ำหนักเบาปลายทาง':d.weightFactClient.l,
-      'สุทธิปลายทาง':d.weightFactClient.net,
-      'ราคาต่อกก.':d.weightFactClient.pricePerKg || '',   // ✅ เพิ่ม
-      'ยอดรวมเงิน':d.weightFactClient.totalAmount || '',  // ✅ เพิ่ม      
-      'รูปปลายทาง': d.weightFactClient.fileUrl || ''
+      'น้ำหนักหนักลูกค้า': d.weightFactClient.h,
+      'น้ำหนักเบาลูกค้า': d.weightFactClient.l,
+      'สุทธิลูกค้า': d.weightFactClient.net,
+      'ราคาต่อกก.': d.weightFactClient.pricePerKg || '',
+      'ยอดรวมเงิน': d.weightFactClient.totalAmount || '',      
+      'รูปใบชั่งลูกค้า': d.weightFactClient.fileUrl || '' // ✅ รูปลูกค้าลงช่องนี้
     });
     
-    // ✅ ส่งข้อมูลลานเท เฉพาะกรณีที่แวะลานเท่านั้น
+    // ✅ งานปาล์ม: ข้อมูลลานเทที่ชั่งในโรงงาน (ลงช่องลานเทที่โรงงาน)
     if (d.weightFactRamp) {
       Object.assign(fields,{
-        'น้ำหนักหนักลาน':d.weightFactRamp.h,'น้ำหนักเบาลาน':d.weightFactRamp.l,
-        'สุทธิลาน':d.weightFactRamp.net,
-        'รูปลาน': d.weightFactRamp.fileUrl || '' 
+        'น้ำหนักหนักลาน(ที่โรงงาน)': d.weightFactRamp.h,
+        'น้ำหนักเบาลาน(ที่โรงงาน)': d.weightFactRamp.l,
+        'สุทธิลาน(ที่โรงงาน)': d.weightFactRamp.net,
+        'รูปใบชั่งลาน(ที่โรงงาน)': d.weightFactRamp.fileUrl || ''  // ✅ รูปลานลงช่องนี้
       });
     }
-  }else if(d.weightFactory){
+  } else if(d.weightFactory){
+     // ✅ งานอื่นๆ ที่ไม่ใช่งานปาล์ม (ค่อยลงช่องปลายทาง)
      Object.assign(fields,{
-      'น้ำหนักหนักปลายทาง':d.weightFactory.h,'น้ำหนักเบาปลายทาง':d.weightFactory.l,
-      'สุทธิปลายทาง':d.weightFactory.net,'รูปปลายทาง':photos['factory']||''
+      'น้ำหนักหนักปลายทาง': d.weightFactory.h, 
+      'น้ำหนักเบาปลายทาง': d.weightFactory.l,
+      'สุทธิปลายทาง': d.weightFactory.net, 
+      'รูปปลายทาง': photos['factory'] || ''
     });
   }
-  // --- 2. จัดการ น้ำมันระหว่างทาง (รวมลิตร หาราคาเฉลี่ย และอัปโหลดรูป) ---
+
+  // --- 2. จัดการ น้ำมันโรงงาน (ของเดิมคุณลืมใส่ตรงนี้ไปครับ) ---
+  if(d.fuelFactory){
+    fields['ลิตรน้ำมัน(โรงงาน)'] = d.fuelFactory.liter;
+    fields['ราคาน้ำมัน(โรงงาน)'] = d.fuelFactory.price;
+  }
+
+  // --- 3. จัดการ น้ำมันระหว่างทาง (รวมลิตร หาราคาเฉลี่ย และอัปโหลดรูป) ---
   if(d.fuelRoad && d.fuelRoad.length > 0){
     let sumLiter = 0;
     let sumTotalCost = 0;
@@ -1069,8 +1086,8 @@ async function confirmSubmit(){
     }
   }
 
-  // --- 3. ค่าใช้จ่ายอื่นๆ และอัปโหลดรูปซ่อมรถ ---
-  if(d.toll) fields['ค่าทางด่วน']=d.toll;
+  // --- 4. ค่าใช้จ่ายอื่นๆ และอัปโหลดรูปซ่อมรถ ---
+  if(d.toll) fields['ค่าทางด่วน'] = d.toll;
   
   if(d.repair){
     fields['ค่าซ่อมนอก'] = d.repair.cost; 
@@ -1085,9 +1102,15 @@ async function confirmSubmit(){
   if(d.unloadCost) fields['ค่าลงของ'] = d.unloadCost;
   if(d.helperCost) fields['ค่าจ้างเด็กลงสินค้านอก'] = d.helperCost;
 
+  // --- 5. ยิง API ส่งข้อมูลทั้งหมด ---
   await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ปลายทาง',notifyOwner:true,billName,fields},'📊 กำลังส่งข้อมูลสรุป...');
-  const r=await postGAS({action:'driverComplete',orderId:order['Order ID'],userId:U.userId},'✅ กำลังปิดงาน...');
-  if(!r?.success){alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
+  const r = await postGAS({action:'driverComplete',orderId:order['Order ID'],userId:U.userId},'✅ กำลังปิดงาน...');
+  
+  if(!r?.success){
+    alert('❌ ' + (r?.error || 'เกิดข้อผิดพลาด'));
+    return;
+  }
+  
   document.getElementById('success-msg').innerHTML=`📋 ${order['Order ID']}<br>ส่งข้อมูลให้ Admin และเจ้าของสวนแล้วครับ`;
   document.getElementById('success').classList.add('show');
 }
