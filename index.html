@@ -253,7 +253,7 @@ function renderOrderBanner(){
 }
 
 function getSteps(){
-  if(jobType==='ปาล์ม'&&hasRamp){
+  if(hasRamp){
     return [
       {key:'start',label:'🚀 ออกโรงงาน'},
       {key:'rampDrop',label:'📍 ถึงลานวางกระบะ'},
@@ -281,7 +281,7 @@ function getActiveStepKey(status) {
   if (status === 'เสร็จงาน') return null;
   if (status === 'รับงานแล้ว') return 'start';
   
-  if (jobType === 'ปาล์ม' && hasRamp) {
+  if (hasRamp) {
     if (status === 'เริ่มงานแล้ว') return 'rampDrop';
     if (status === 'ถึงลานวางกระบะ') return 'client';
     if (status === 'ถึงลูกค้า') return 'ramp';
