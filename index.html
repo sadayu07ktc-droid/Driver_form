@@ -1072,10 +1072,16 @@ async function confirmSubmit(){
     });
   }
 
-  // --- 2. จัดการ น้ำมันโรงงาน (ของเดิมคุณลืมใส่ตรงนี้ไปครับ) ---
+  // --- 2. จัดการ น้ำมันโรงงาน + อัปโหลดรูปใบเสร็จโรงงาน ---
   if(d.fuelFactory){
     fields['ลิตรน้ำมัน(โรงงาน)'] = d.fuelFactory.liter;
     fields['ราคาน้ำมัน(โรงงาน)'] = d.fuelFactory.price;
+    
+    // อัปโหลดรูปน้ำมันโรงงานเข้า Drive (ถ้าคนขับมีการถ่ายรูปไว้)
+    if(photos['fuel-factory']){
+      const upRes = await postGAS({action:'uploadImage', orderId:order['Order ID'], userId:U.userId, imageBase64:photos['fuel-factory'], prefix:'FUEL_FAC'}, '⛽ กำลังอัปโหลดบิลน้ำมันโรงงาน...');
+      if(upRes && upRes.success) fields['รูปน้ำมัน(โรงงาน)'] = upRes.fileUrl;
+    }
   }
 
   // --- 3. จัดการ น้ำมันระหว่างทาง (รวมลิตร หาราคาเฉลี่ย และอัปโหลดรูป) ---
