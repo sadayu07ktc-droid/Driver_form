@@ -257,14 +257,37 @@ function getSteps(){
   ];
 }
 
-function getStepState(key,status,idx){
-  const map={
-    'รับงานแล้ว':0,'เริ่มงานแล้ว':1,'ถึงลานวางกระบะ':2,
-    'ถึงลูกค้า':3,'ถึงลานขากลับ':4,'ถึงลาน':4,'เสร็จงาน':99
-  };
-  const cur=map[status]??0;
-  if(cur>idx) return 'done';
-  if(cur===idx) return 'active';
+// ✅ 1. เพิ่มฟังก์ชันหา Step ที่ควรจะ Active
+function getActiveStepKey(status) {
+  if (status === 'เสร็จงาน') return null;
+  if (status === 'รับงานแล้ว') return 'start';
+  
+  if (jobType === 'ปาล์ม' && hasRamp) {
+    if (status === 'เริ่มงานแล้ว') return 'rampDrop';
+    if (status === 'ถึงลานวางกระบะ') return 'client';
+    if (status === 'ถึงลูกค้า') return 'ramp';
+    if (status === 'ถึงลานขากลับ' || status === 'ถึงลาน') return 'factory';
+  } else {
+    // ปาล์มเฉยๆ (ไม่แวะลาน) และ งานอื่นๆ
+    if (status === 'เริ่มงานแล้ว') return 'client';
+    if (status === 'ถึงลูกค้า') return 'factory';
+  }
+  return null;
+}
+
+// ✅ 2. ตัวเช็คสถานะ Step แบบอิงตาม Key ของงานจริง
+function getStepState(key, status, idx) {
+  if (status === 'เสร็จงาน') return 'done';
+  
+  const steps = getSteps();
+  const activeKey = getActiveStepKey(status);
+  
+  if (!activeKey) return 'pending';
+  
+  const activeIdx = steps.findIndex(s => s.key === activeKey);
+  
+  if (idx < activeIdx) return 'done';
+  if (idx === activeIdx) return 'active';
   return 'pending';
 }
 
@@ -363,13 +386,22 @@ function formRamp(){
 }
 
 function formFactory(){
-  return `
+  let html = `
     <div class="sec-lbl">⚖️ ใบชั่งลูกค้า (ที่โรงงาน)</div>
     ${ocrPhotoBox('factory-client-weight','รูปใบชั่งลูกค้า','weight-factory-client','ใบชั่งลูกค้า')}
     <div class="sec-divider"></div>
-    <div class="sec-lbl">⚖️ ใบชั่งลานเท (ที่โรงงาน)</div>
-    ${ocrPhotoBox('factory-ramp-weight','รูปใบชั่งลานเท','weight-factory-ramp','ใบชั่งลาน')}
-    <div class="sec-divider"></div>
+  `;
+
+  // ✅ เช็คเพื่อซ่อนใบชั่งลานเท ถ้าไม่ได้แวะลาน
+  if (hasRamp) {
+    html += `
+      <div class="sec-lbl">⚖️ ใบชั่งลานเท (ที่โรงงาน)</div>
+      ${ocrPhotoBox('factory-ramp-weight','รูปใบชั่งลานเท','weight-factory-ramp','ใบชั่งลาน')}
+      <div class="sec-divider"></div>
+    `;
+  }
+
+  html += `
     ${ocrMileHubBlock('factory','รูปเลขไมล์หลังชั่งเสร็จ','รูปเลขดุมล้อหลังชั่งเสร็จ')}
     <div class="sec-divider"></div>
     <div class="sec-lbl">⛽ เติมน้ำมันที่โรงงาน</div>
@@ -391,7 +423,7 @@ function formFactory(){
         <div><span class="net-val" id="fuel-factory-total">0</span> <span class="net-unit">บาท</span></div>
       </div>
     </div>
-        <div class="sec-divider"></div>
+    <div class="sec-divider"></div>
 
     <div class="sec-lbl">💰 ค่าใช้จ่ายอื่น ๆ</div>
 
@@ -474,6 +506,7 @@ function formFactory(){
     
     <button class="btn btn-green" onclick="prepareFactory()">📋 ดูสรุปก่อนส่ง</button>
   `;
+  return html;
 }
 
 // ── OCR photo box — ซ่อน ocr-edit สำหรับใบชั่ง, โชว์เฉพาะ ไมล์/ดุมล้อ ──
@@ -837,14 +870,19 @@ function prepareFactory(){
   if(!mileF){alert('กรุณาถ่ายเลขไมล์หลังชั่งเสร็จ');return;}
   if(!hubF){alert('กรุณาถ่ายเลขดุมล้อหลังชั่งเสร็จ');return;}
 
-  const prevHub=hubHistory.ramp||0;
-  if(prevHub>0&&parseFloat(hubF)<prevHub){alert('⚠️ เลขดุมล้อโรงงาน ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า');return;}
+  // ✅ เปลี่ยนมาใช้ getPrevHub เพื่อให้ดึงค่าจุดก่อนหน้าได้ถูกต้องเสมอ
+  const prevHub = getPrevHub('factory');
+  if(prevHub>0 && parseFloat(hubF)<prevHub){alert('⚠️ เลขดุมล้อโรงงาน ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า');return;}
 
   const wClient=getWeightOcrData('weight-factory-client');
   if(!wClient||!wClient.gross||!wClient.tare||!wClient.net){alert('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');return;}
 
-  const wRamp=getWeightOcrData('weight-factory-ramp');
-  if(!wRamp||!wRamp.gross||!wRamp.tare||!wRamp.net){alert('กรุณาถ่ายใบชั่งลานเทที่โรงงาน');return;}
+  // ✅ เช็คและบังคับถ่ายใบชั่งลาน "เฉพาะกรณีที่มีแวะลานเท่านั้น"
+  let wRamp = null;
+  if (hasRamp) {
+    wRamp=getWeightOcrData('weight-factory-ramp');
+    if(!wRamp||!wRamp.gross||!wRamp.tare||!wRamp.net){alert('กรุณาถ่ายใบชั่งลานเทที่โรงงาน');return;}
+  }
 
   const fLiter=getVal('fuel-factory-liter');
   const fPrice=getVal('fuel-factory-price');
@@ -853,60 +891,58 @@ function prepareFactory(){
 
   collectedData={};
   
-  // ✅ 1. ดึง fileUrl จาก ocrData มาพักไว้ก่อน
   const urlClient = ocrData['weight-factory-client'] ? ocrData['weight-factory-client'].fileUrl : '';
   const urlRamp = ocrData['weight-factory-ramp'] ? ocrData['weight-factory-ramp'].fileUrl : '';
 
   collectedData.mileFactory=mileF;
   collectedData.hubFactory=hubF;
   
-  // ✅ 2. แนบ fileUrl เข้าไปเก็บไว้ใน object ด้วย
   collectedData.weightFactClient={h:wClient.gross, l:wClient.tare, net:wClient.net, pricePerKg:wClient.pricePerKg||'', totalAmount:wClient.totalAmount||'', fileUrl: urlClient};
-  collectedData.weightFactRamp={h:wRamp.gross, l:wRamp.tare, net:wRamp.net, fileUrl: urlRamp};
   
+  // ✅ เก็บค่าลาน เฉพาะกรณีที่แวะลาน
+  if (hasRamp) {
+    collectedData.weightFactRamp={h:wRamp.gross, l:wRamp.tare, net:wRamp.net, fileUrl: urlRamp};
+  }
+
   collectedData.fuelFactory={liter:fLiter,price:fPrice,total:(parseFloat(fLiter)*parseFloat(fPrice)).toFixed(2)};
   
-  // ค่าใช้จ่ายอื่น ๆ
-if(document.getElementById('exp-fuel-road') && !document.getElementById('exp-fuel-road').classList.contains('hide')){
-  const rows = [];
+  // -- ค่าใช้จ่ายอื่น ๆ (เหมือนเดิม) --
+  if(document.getElementById('exp-fuel-road') && !document.getElementById('exp-fuel-road').classList.contains('hide')){
+    const rows = [];
+    document.querySelectorAll('[id^="fl-liter-"]').forEach(el => {
+      const rowId = el.id.replace('fl-liter-', '');
+      const liter = parseFloat(el.value) || 0;
+      const price = parseFloat(document.getElementById('fl-price-' + rowId)?.value) || 0;
+      if(liter > 0){
+        rows.push({
+          liter, price, total: (liter * price).toFixed(2),
+          photo: photos['fuel-road-' + rowId] || ''
+        });
+      }
+    });
+    collectedData.fuelRoad = rows;
+  }
 
-  document.querySelectorAll('[id^="fl-liter-"]').forEach(el => {
-    const rowId = el.id.replace('fl-liter-', '');
-    const liter = parseFloat(el.value) || 0;
-    const price = parseFloat(document.getElementById('fl-price-' + rowId)?.value) || 0;
+  if(document.getElementById('exp-toll') && !document.getElementById('exp-toll').classList.contains('hide')){
+    collectedData.toll = getVal('toll-amount');
+  }
 
-    if(liter > 0){
-      rows.push({
-        liter,
-        price,
-        total: (liter * price).toFixed(2),
-        photo: photos['fuel-road-' + rowId] || ''
-      });
-    }
-  });
+  if(document.getElementById('exp-repair') && !document.getElementById('exp-repair').classList.contains('hide')){
+    collectedData.repair = {
+      cost: getVal('repair-cost'),
+      note: getVal('repair-note'),
+      photo: photos['repair'] || ''
+    };
+  }
 
-  collectedData.fuelRoad = rows;
-}
+  if(document.getElementById('exp-unload') && !document.getElementById('exp-unload').classList.contains('hide')){
+    collectedData.unloadCost = getVal('unload-cost');
+  }
 
-if(document.getElementById('exp-toll') && !document.getElementById('exp-toll').classList.contains('hide')){
-  collectedData.toll = getVal('toll-amount');
-}
-
-if(document.getElementById('exp-repair') && !document.getElementById('exp-repair').classList.contains('hide')){
-  collectedData.repair = {
-    cost: getVal('repair-cost'),
-    note: getVal('repair-note'),
-    photo: photos['repair'] || ''
-  };
-}
-
-if(document.getElementById('exp-unload') && !document.getElementById('exp-unload').classList.contains('hide')){
-  collectedData.unloadCost = getVal('unload-cost');
-}
-
-if(document.getElementById('exp-helper') && !document.getElementById('exp-helper').classList.contains('hide')){
-  collectedData.helperCost = getVal('helper-cost');
-}
+  if(document.getElementById('exp-helper') && !document.getElementById('exp-helper').classList.contains('hide')){
+    collectedData.helperCost = getVal('helper-cost');
+  }
+  
   showDashboard();
 }
 
@@ -986,16 +1022,22 @@ async function confirmSubmit(){
   const billName=order['ชื่อในบิล']||order['ชื่อสวน']||'';
   const fields={'เลขไมล์ปลายทาง':d.mileFactory,'เลขดุมล้อปลายทาง':d.hubFactory};
   if(d.weightFactClient){
+    Object.assign(fields,{
+      'น้ำหนักหนักปลายทาง':d.weightFactClient.h,'น้ำหนักเบาปลายทาง':d.weightFactClient.l,
+      'สุทธิปลายทาง':d.weightFactClient.net,
+      'รูปปลายทาง': d.weightFactClient.fileUrl || ''
+    });
+    
+    // ✅ ส่งข้อมูลลานเท เฉพาะกรณีที่แวะลานเท่านั้น
+    if (d.weightFactRamp) {
       Object.assign(fields,{
-        'น้ำหนักหนักปลายทาง':d.weightFactClient.h,'น้ำหนักเบาปลายทาง':d.weightFactClient.l,
-        'สุทธิปลายทาง':d.weightFactClient.net,
-        'รูปปลายทาง': d.weightFactClient.fileUrl || '', // ✅ ดึง URL ที่ฝากไว้มาใช้แทน Base64
         'น้ำหนักหนักลาน':d.weightFactRamp.h,'น้ำหนักเบาลาน':d.weightFactRamp.l,
         'สุทธิลาน':d.weightFactRamp.net,
-        'รูปลาน': d.weightFactRamp.fileUrl || '' // ✅ ดึง URL ที่ฝากไว้มาใช้แทน Base64
+        'รูปลาน': d.weightFactRamp.fileUrl || '' 
       });
+    }
   }else if(d.weightFactory){
-    Object.assign(fields,{
+     Object.assign(fields,{
       'น้ำหนักหนักปลายทาง':d.weightFactory.h,'น้ำหนักเบาปลายทาง':d.weightFactory.l,
       'สุทธิปลายทาง':d.weightFactory.net,'รูปปลายทาง':photos['factory']||''
     });
