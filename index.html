@@ -245,6 +245,7 @@ function renderOrderBanner(){
   const typeEl=document.getElementById('ob-type');
   if(jobType==='ปาล์ม'&&hasRamp){typeEl.textContent='🏭 ปาล์ม+ลาน';typeEl.className='ob-type ramp';}
   else if(jobType==='ปาล์ม'){typeEl.textContent='🌴 ปาล์ม';typeEl.className='ob-type palm';}
+  else if(hasRamp){typeEl.textContent='🏭 งานอื่นๆ+ลาน';typeEl.className='ob-type ramp';}
   else{typeEl.textContent='📦 งานอื่นๆ';typeEl.className='ob-type other';}
   if(hasRamp){
     document.getElementById('ob-ramp-row').classList.remove('hide');
