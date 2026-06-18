@@ -815,15 +815,16 @@ async function submitRamp(){
     alert('กรุณาถ่ายใบชั่งลานเท และตรวจสอบค่า OCR');return;
   }
 
+  // ✅ [แก้ตรงนี้ 1] ดึง fileUrl แบบลิงก์แทนข้อความ Base64
+  const rampPhotoUrl = ocrData['weight-ramp'] ? ocrData['weight-ramp'].fileUrl : '';
+
   const r = await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลานขากลับ',
   fields:{
     'เลขไมล์ลาน':mileR,'เลขดุมล้อลาน':hubR,
     'น้ำหนักหนักลาน':weightRamp.gross,'น้ำหนักเบาลาน':weightRamp.tare,'สุทธิลาน':weightRamp.net,
-    'รูปลาน':photos['weight-ramp']||''
+    'รูปลาน': rampPhotoUrl // ✅ [แก้ตรงนี้ 2] ส่ง URL ไปแทน
   }},'🏭 กำลังบันทึกถึงลานขากลับ...');
 
-  alert('r=' + JSON.stringify(r)); // ← เพิ่มตรงนี้
-  
   hubHistory.ramp=parseFloat(hubR)||0;
   order['สถานะ']='ถึงลานขากลับ';
   renderTimeline();
@@ -851,11 +852,20 @@ function prepareFactory(){
   if(!fPrice){alert('กรุณากรอกราคาน้ำมันโรงงาน');return;}
 
   collectedData={};
+  
+  // ✅ 1. ดึง fileUrl จาก ocrData มาพักไว้ก่อน
+  const urlClient = ocrData['weight-factory-client'] ? ocrData['weight-factory-client'].fileUrl : '';
+  const urlRamp = ocrData['weight-factory-ramp'] ? ocrData['weight-factory-ramp'].fileUrl : '';
+
   collectedData.mileFactory=mileF;
   collectedData.hubFactory=hubF;
-  collectedData.weightFactClient={h:wClient.gross,l:wClient.tare,net:wClient.net,pricePerKg:wClient.pricePerKg||'',totalAmount:wClient.totalAmount||''};
-  collectedData.weightFactRamp={h:wRamp.gross,l:wRamp.tare,net:wRamp.net};
+  
+  // ✅ 2. แนบ fileUrl เข้าไปเก็บไว้ใน object ด้วย
+  collectedData.weightFactClient={h:wClient.gross, l:wClient.tare, net:wClient.net, pricePerKg:wClient.pricePerKg||'', totalAmount:wClient.totalAmount||'', fileUrl: urlClient};
+  collectedData.weightFactRamp={h:wRamp.gross, l:wRamp.tare, net:wRamp.net, fileUrl: urlRamp};
+  
   collectedData.fuelFactory={liter:fLiter,price:fPrice,total:(parseFloat(fLiter)*parseFloat(fPrice)).toFixed(2)};
+  
   // ค่าใช้จ่ายอื่น ๆ
 if(document.getElementById('exp-fuel-road') && !document.getElementById('exp-fuel-road').classList.contains('hide')){
   const rows = [];
@@ -976,12 +986,14 @@ async function confirmSubmit(){
   const billName=order['ชื่อในบิล']||order['ชื่อสวน']||'';
   const fields={'เลขไมล์ปลายทาง':d.mileFactory,'เลขดุมล้อปลายทาง':d.hubFactory};
   if(d.weightFactClient){
-    Object.assign(fields,{
-      'น้ำหนักหนักปลายทาง':d.weightFactClient.h,'น้ำหนักเบาปลายทาง':d.weightFactClient.l,
-      'สุทธิปลายทาง':d.weightFactClient.net,'รูปปลายทาง':photos['fact-client']||'',
-      'น้ำหนักหนักลาน':d.weightFactRamp.h,'น้ำหนักเบาลาน':d.weightFactRamp.l,
-      'สุทธิลาน':d.weightFactRamp.net,'รูปลาน':photos['fact-ramp']||''
-    });
+      Object.assign(fields,{
+        'น้ำหนักหนักปลายทาง':d.weightFactClient.h,'น้ำหนักเบาปลายทาง':d.weightFactClient.l,
+        'สุทธิปลายทาง':d.weightFactClient.net,
+        'รูปปลายทาง': d.weightFactClient.fileUrl || '', // ✅ ดึง URL ที่ฝากไว้มาใช้แทน Base64
+        'น้ำหนักหนักลาน':d.weightFactRamp.h,'น้ำหนักเบาลาน':d.weightFactRamp.l,
+        'สุทธิลาน':d.weightFactRamp.net,
+        'รูปลาน': d.weightFactRamp.fileUrl || '' // ✅ ดึง URL ที่ฝากไว้มาใช้แทน Base64
+      });
   }else if(d.weightFactory){
     Object.assign(fields,{
       'น้ำหนักหนักปลายทาง':d.weightFactory.h,'น้ำหนักเบาปลายทาง':d.weightFactory.l,
