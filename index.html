@@ -793,22 +793,37 @@ async function submitStart(){
 
 async function submitRampDrop(){
   console.log('submitRamp called');
-  console.log('mileR:', getOcrValue('mile-ramp'));
-  console.log('hubR:', getOcrValue('hub-ramp'));
-  const mileR=getOcrValue('mile-rampDrop');
-  const hubR=getOcrValue('hub-rampDrop');
+  console.log('mileR:', getOcrValue('mile-rampDrop'));
+  console.log('hubR:', getOcrValue('hub-rampDrop'));
+  const mileR = getOcrValue('mile-rampDrop');
+  const hubR = getOcrValue('hub-rampDrop');
+  
   if(!mileR){alert('กรุณาถ่ายรูปเลขไมล์ถึงลานวางกระบะ');return;}
   if(!hubR){alert('กรุณาถ่ายรูปเลขดุมล้อถึงลานวางกระบะ');return;}
 
-  const prevHub=hubHistory.start||0;
-  if(prevHub>0&&parseFloat(hubR)<prevHub){alert('⚠️ เลขดุมล้อถึงลาน ต้องไม่น้อยกว่าเลขดุมล้อเริ่ม');return;}
+  const prevHub = hubHistory.start || 0;
+  if(prevHub > 0 && parseFloat(hubR) < prevHub){
+    alert('⚠️ เลขดุมล้อถึงลาน ต้องไม่น้อยกว่าเลขดุมล้อเริ่ม');
+    return;
+  }
 
-  const r=await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลานวางกระบะ',
-    fields:{'เลขไมล์ลาน':mileR,'เลขดุมล้อลาน':hubR}},'📍 กำลังบันทึกถึงลานวางกระบะ...');
+  // ✅ แก้ไขชื่อ Key ตรง fields ให้ตรงกับหัวคอลัมน์ใน Google Sheet เป๊ะๆ
+  const r = await postGAS({
+    action:'submitWeight',
+    orderId:order['Order ID'],
+    userId:U.userId,
+    jobType,
+    checkPoint:'ลานวางกระบะ',
+    fields:{
+      'เลขไมล์ลานวางกระบะ': mileR, 
+      'เลขดุมล้อลานวางกระบะ': hubR
+    }
+  }, '📍 กำลังบันทึกถึงลานวางกระบะ...');
+
   if(!r?.success){alert('❌ บันทึกข้อมูลไม่สำเร็จ');return;}
 
-  hubHistory.rampDrop=parseFloat(hubR)||0;
-  order['สถานะ']='ถึงลานวางกระบะ';
+  hubHistory.rampDrop = parseFloat(hubR) || 0;
+  order['สถานะ'] = 'ถึงลานวางกระบะ';
   renderTimeline();
   alert('✅ บันทึกถึงลานวางกระบะเรียบร้อย');
 }
