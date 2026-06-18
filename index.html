@@ -216,11 +216,30 @@ async function init(){
   }catch(e){document.getElementById('drv-name').textContent='⚠️ โหลดไม่สำเร็จ';}
 }
 
+ function fmtDate(v){
+  if(!v) return '—';
+  const d = new Date(v);
+  if(isNaN(d)) return v;
+  return d.toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'Asia/Bangkok'});
+}
+function fmtTime(v){
+  if(!v) return '—';
+  const d = new Date(v);
+  if(isNaN(d)) return v;
+  return d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Bangkok'}) + ' น.';
+} 
+function fmtDateTime(v){
+  if(!v) return '';
+  const d = new Date(v);
+  if(isNaN(d)) return v;
+  return fmtDate(v) + ' ' + fmtTime(v);
+}
+  
 function renderOrderBanner(){
   document.getElementById('ob-id').textContent=`📋 ${order['Order ID']}`;
   document.getElementById('ob-garden').textContent=order['ชื่อสวน']||'—';
-  document.getElementById('ob-date').textContent=order['วันที่ต้องการ']||'—';
-  document.getElementById('ob-time').textContent=order['เวลา']||'—';
+  document.getElementById('ob-date').textContent=fmtDate(order['วันที่ต้องการ']);
+  document.getElementById('ob-time').textContent=fmtTime(order['เวลา']);
   document.getElementById('ob-bin').textContent=`${order['จำนวนกระบะ']} ใบ`;
   document.getElementById('ob-pickup').textContent=order['จุดรับ']||'—';
   const typeEl=document.getElementById('ob-type');
@@ -312,7 +331,7 @@ function renderTimeline(){
     card.innerHTML=`
       <div class="tl-head">
         <span class="tl-step-label">${step.label}</span>
-        <span class="tl-step-time">${state==='done'?(getStepTime(step.key)||'✅'):state==='active'?'กำลังดำเนินการ':'รอดำเนินการ'}</span>
+        <span class="tl-step-time">${state==='done'?(fmtDateTime(getStepTime(step.key))||'✅'):state==='active'?'กำลังดำเนินการ':'รอดำเนินการ'}</span>
       </div>
       ${state==='active'?`<div class="tl-body">${buildForm(step.key)}</div>`:''}
     `;
