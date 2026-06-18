@@ -1046,10 +1046,44 @@ async function confirmSubmit(){
       'สุทธิปลายทาง':d.weightFactory.net,'รูปปลายทาง':photos['factory']||''
     });
   }
-  if(d.fuelFactory){fields['ลิตรน้ำมัน(ทาง)']=d.fuelFactory.liter;fields['ราคาน้ำมัน(ทาง)']=d.fuelFactory.price;}
+  // --- 2. จัดการ น้ำมันระหว่างทาง (รวมลิตร หาราคาเฉลี่ย และอัปโหลดรูป) ---
+  if(d.fuelRoad && d.fuelRoad.length > 0){
+    let sumLiter = 0;
+    let sumTotalCost = 0;
+    let firstPhotoBase64 = '';
+
+    d.fuelRoad.forEach((bill, index) => {
+      sumLiter += parseFloat(bill.liter);
+      sumTotalCost += parseFloat(bill.total);
+      if (index === 0) firstPhotoBase64 = bill.photo; 
+    });
+
+    fields['ลิตรน้ำมัน(ทาง)'] = sumLiter;
+    fields['ราคาน้ำมัน(ทาง)'] = (sumTotalCost / sumLiter).toFixed(2);
+    fields['ยอดรวมเงินน้ำมัน(ทาง)'] = sumTotalCost; 
+    
+    // ✅ อัปโหลดรูประหว่างทาง (ถ้ามี)
+    if (firstPhotoBase64) {
+      const upRes = await postGAS({action:'uploadImage', orderId:order['Order ID'], imageBase64:firstPhotoBase64, prefix:'FUEL'}, '⛽ กำลังอัปโหลดบิลน้ำมัน...');
+      if(upRes && upRes.success) fields['รูปน้ำมัน(ทาง)'] = upRes.fileUrl;
+    }
+  }
+
+  // --- 3. ค่าใช้จ่ายอื่นๆ และอัปโหลดรูปซ่อมรถ ---
   if(d.toll) fields['ค่าทางด่วน']=d.toll;
-  if(d.repair){fields['ค่าซ่อมนอก']=d.repair.cost;fields['หมายเหตุค่าใช้จ่าย']=d.repair.note;if(photos['repair'])fields['รูปค่าซ่อมนอก']=photos['repair'];}
-  if(d.fuelRoad&&d.fuelRoad.length>0&&photos['fuel-road-1']) fields['รูปน้ำมัน(ทาง)']=photos['fuel-road-1'];
+  
+  if(d.repair){
+    fields['ค่าซ่อมนอก'] = d.repair.cost; 
+    fields['หมายเหตุค่าใช้จ่าย'] = d.repair.note; 
+    // ✅ อัปโหลดรูปซ่อมรถ (ถ้ามี)
+    if(photos['repair']){
+      const upRes = await postGAS({action:'uploadImage', orderId:order['Order ID'], imageBase64:photos['repair'], prefix:'REPAIR'}, '🔧 กำลังอัปโหลดรูปบิลซ่อม...');
+      if(upRes && upRes.success) fields['รูปค่าซ่อมนอก'] = upRes.fileUrl;
+    }
+  }
+  
+  if(d.unloadCost) fields['ค่าลงของ'] = d.unloadCost;
+  if(d.helperCost) fields['ค่าจ้างเด็กลงสินค้านอก'] = d.helperCost;
 
   await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ปลายทาง',notifyOwner:true,billName,fields},'📊 กำลังส่งข้อมูลสรุป...');
   const r=await postGAS({action:'driverComplete',orderId:order['Order ID'],userId:U.userId},'✅ กำลังปิดงาน...');
