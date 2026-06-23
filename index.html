@@ -307,6 +307,22 @@ function jobTypeBadge(o){
   if(hr)                 return '🏭 งานอื่นๆ+ลาน';
   return '📦 งานอื่นๆ';
 }
+// ✅ โหลดงานใหม่จาก server (ใช้หลังส่งคำขอยกเลิก เพื่อให้สถานะอัปเดต)
+async function reloadOrders(){
+  try{
+    const oRes = await fetch(`${GAS_URL}?action=getDriverOrder&userId=${U.userId}`).then(r=>r.json());
+    if(oRes.status==='ok' && oRes.orders.length>0){
+      allOrders = oRes.orders.slice().sort((a,b)=>
+        new Date(a['เวลารับงาน']||a['Timestamp']||0) - new Date(b['เวลารับงาน']||b['Timestamp']||0)
+      );
+      renderJobList();
+    }else{
+      document.getElementById('job-list').classList.add('hide');
+      document.getElementById('job-form').classList.add('hide');
+      document.getElementById('no-order').classList.remove('hide');
+    }
+  }catch(e){ console.warn('reloadOrders error:', e); }
+}
   
 // 🆕 ── หน้าจอรายการคิวงาน ───────────────────────────────
 function renderJobList(){
@@ -321,15 +337,18 @@ function renderJobList(){
           pickup=o['จุดรับ']||'—', status=o['สถานะ']||'รับงานแล้ว',
           dt=fmtDate(o['วันที่ต้องการ']), tm=fmtTime(o['เวลา']);
     if(i===0){
+      const pendingCancel = (status === 'รออนุมัติยกเลิก');
+      const stColor = pendingCancel ? 'var(--red)' : 'var(--g2)';
+      const btnsHtml = pendingCancel
+        ? `<div style="flex:1;text-align:center;padding:10px;border-radius:10px;background:var(--red-l);color:var(--red);font-weight:600;font-size:13px">⏳ รออนุมัติยกเลิก จาก Admin</div>`
+        : `<button class="btn-sm start" onclick="openJob('${oid}')">▶ ${nextActionOf(o)||'ดูงาน'}</button>
+           <button class="btn-sm cancel" onclick="cancelJob('${oid}')">✕ ยกเลิก</button>`;
       html+=`
       <div class="jl-card active">
-        <div class="jl-top"><span class="jl-no">งานที่ 1 · วิ่งได้</span><span class="jl-st">สถานะ: ${status}</span></div>
+        <div class="jl-top"><span class="jl-no">งานที่ 1 · วิ่งได้</span><span class="jl-st" style="color:${stColor}">สถานะ: ${status}</span></div>
         <div class="jl-oid">${oid} <span style="font-size:11px;font-weight:600;background:var(--g3);color:var(--g1);padding:2px 8px;border-radius:20px;margin-left:4px">${jobTypeBadge(o)}</span></div>
         <div class="jl-info"><span>🌳 ${garden}</span><span>📅 ${dt} ⏰ ${tm}</span><span>📍 จุดรับ ${pickup}</span></div>
-        <div class="jl-btns">
-          <button class="btn-sm start" onclick="openJob('${oid}')">▶ ${nextActionOf(o)||'ดูงาน'}</button>
-          <button class="btn-sm cancel" onclick="cancelJob('${oid}')">✕ ยกเลิก</button>
-        </div>
+        <div class="jl-btns">${btnsHtml}</div>
       </div>`;
     }else{
       html+=`
@@ -369,7 +388,10 @@ async function cancelJob(orderId){
   if(reason===null) return;
   if(!reason.trim()){alert('กรุณาระบุเหตุผล');return;}
   const r=await postGAS({action:'driverCancelRequest',orderId,userId:U.userId,reason},'📤 กำลังส่งคำขอ...');
-  if(r?.success) alert('📤 ส่งคำขอยกเลิกไปยัง Admin แล้วครับ\nรออนุมัติจาก Admin');
+  if(r?.success){
+    alert('📤 ส่งคำขอยกเลิกไปยัง Admin แล้วครับ\nรออนุมัติจาก Admin');
+    await reloadOrders();   // ✅ รีเฟรชให้สถานะอัปเดตเป็น "รออนุมัติยกเลิก"
+  }
   else alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));
 }
 
@@ -1298,7 +1320,11 @@ async function requestCancel(){
   const reason=prompt('กรุณาระบุสาเหตุที่ขอยกเลิก:');
   if(reason===null) return;
   const r=await postGAS({action:'driverCancelRequest',orderId:order['Order ID'],userId:U.userId,reason},'📤 กำลังส่งคำขอ...');
-  if(r?.success) alert('📤 ส่งคำขอไปยัง Admin แล้วครับ');
+  if(r?.success){
+    alert('📤 ส่งคำขอไปยัง Admin แล้วครับ');
+    backToList();           // ✅ กลับหน้ารายการ
+    await reloadOrders();    // ✅ รีเฟรชสถานะ
+  }
   else alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));
 }
 
