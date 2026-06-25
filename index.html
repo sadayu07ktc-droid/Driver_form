@@ -8,7 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 :root{
   --g1:#2D5A27;--g2:#4A7C3F;--g3:#D6E8D0;--g4:#F0F7EE;
@@ -111,8 +110,6 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .dash-val{font-size:13px;font-weight:600;color:var(--text)}
 .dash-highlight{font-size:15px;font-weight:700;color:var(--g1)}
 .dash-footer{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.btn-save-img{grid-column:1/-1;padding:13px;border-radius:12px;border:1.5px solid var(--g2);font-family:'Sarabun',sans-serif;font-size:15px;font-weight:700;cursor:pointer;background:var(--g4);color:var(--g1)}
-.btn-save-img:active{opacity:.85}
 .btn-confirm{padding:13px;border-radius:12px;border:none;font-family:'Sarabun',sans-serif;font-size:15px;font-weight:700;cursor:pointer;background:var(--g2);color:#fff}
 .btn-back-dash{padding:13px;border-radius:12px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:15px;font-weight:600;cursor:pointer;background:var(--white);color:var(--text-m)}
 .no-order{text-align:center;padding:48px 24px;color:var(--text-m)}
@@ -150,15 +147,6 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .ts-dropdown{border:1.5px solid var(--border);border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;margin-top:4px;background:var(--white)}
 .ts-dropdown .active{background:var(--g3)!important;color:var(--g1)!important}
 .ts-control input::placeholder{color:var(--text-l)}
-/* 🆕 หน้าแสดงรูปสรุป (กดค้างเพื่อเซฟ) */
-#img-viewer{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;flex-direction:column}
-#img-viewer.show{display:flex}
-.iv-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:rgba(0,0,0,.6);flex-shrink:0}
-.iv-hint{font-size:13px;color:#fff;font-weight:600}
-.iv-close{padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.2);color:#fff;font-size:14px;font-family:'Sarabun',sans-serif;border:1.5px solid rgba(255,255,255,.4);cursor:pointer;flex-shrink:0}
-.iv-share{padding:8px 16px;border-radius:999px;background:var(--g2);color:#fff;font-size:14px;font-weight:600;font-family:'Sarabun',sans-serif;border:none;cursor:pointer;flex-shrink:0}
-.iv-scroll{flex:1;overflow:auto;padding:14px;display:flex;justify-content:center;align-items:flex-start}
-#iv-img{max-width:100%;height:auto;border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,.5)}
 </style>
 </head>
 <body>
@@ -169,16 +157,6 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
   <button class="btn-close" onclick="liff.closeWindow()">ปิดหน้าต่าง</button>
 </div>
 
-<!-- 🆕 หน้าแสดงรูปสรุป — กดค้างที่รูปเพื่อบันทึก (รองรับ LIFF iOS/Android) -->
-<div id="img-viewer">
-  <div class="iv-bar">
-    <span class="iv-hint">👆 กดค้างที่รูปเพื่อบันทึก หรือกดปุ่มแชร์</span>
-    <button class="iv-share" onclick="shareDashboardImage()">📤 แชร์/เซฟ</button>
-    <button class="iv-close" onclick="closeImgViewer()">✕ ปิด</button>
-  </div>
-  <div class="iv-scroll"><img id="iv-img" alt="สรุปงาน"></div>
-</div>
-
 <div id="dashboard">
   <div class="dash-inner">
     <div class="dash-header">
@@ -187,7 +165,6 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
     </div>
     <div id="dash-content"></div>
     <div class="dash-footer">
-      <button class="btn-save-img" onclick="saveDashboardImage()">💾 บันทึกรูปหน้าสรุป</button>
       <button class="btn-back-dash" onclick="closeDashboard()">← แก้ไข</button>
       <button class="btn-confirm" onclick="confirmSubmit()">✅ ยืนยันส่ง</button>
     </div>
@@ -1353,82 +1330,6 @@ if(d.helperCost){
   content.innerHTML=html;
   document.getElementById('dashboard').classList.add('show');
   document.getElementById('dashboard').scrollTop=0;
-}
-
-// ✅ บันทึกหน้าสรุป (dashboard) เป็นรูป — รองรับ LIFF Android/iOS
-let _dashImgBlob = null;   // เก็บ blob ของรูปสรุปไว้แชร์/ดาวน์โหลด
-
-async function saveDashboardImage(){
-  const target = document.querySelector('#dashboard .dash-inner');
-  if(!target){ alert('ไม่พบหน้าสรุป'); return; }
-  if(typeof html2canvas === 'undefined'){ alert('โหลดเครื่องมือบันทึกรูปไม่สำเร็จ ลองใหม่อีกครั้งครับ'); return; }
-
-  const btn = document.querySelector('.btn-save-img');
-  const orig = btn ? btn.textContent : '';
-  if(btn){ btn.textContent = '⏳ กำลังสร้างรูป...'; btn.disabled = true; }
-
-  try{
-    const canvas = await html2canvas(target, {
-      backgroundColor:'#ffffff',
-      scale: Math.min(window.devicePixelRatio || 2, 2),
-      useCORS:true,
-      logging:false
-    });
-
-    // เก็บ blob ไว้ใช้ตอนกดแชร์
-    _dashImgBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-
-    // โชว์รูปในหน้า viewer (กดค้างเซฟได้ + มีปุ่มแชร์)
-    document.getElementById('iv-img').src = canvas.toDataURL('image/png');
-    document.getElementById('img-viewer').classList.add('show');
-
-  }catch(err){
-    console.error('saveDashboardImage error:', err);
-    alert('สร้างรูปไม่สำเร็จ ลองใหม่อีกครั้งครับ');
-  }finally{
-    if(btn){ btn.textContent = orig; btn.disabled = false; }
-  }
-}
-
-// ✅ แชร์/เซฟรูป — ลองไล่: Web Share (ไฟล์) → ดาวน์โหลด → แจ้งกดค้าง
-async function shareDashboardImage(){
-  if(!_dashImgBlob){ alert('ยังไม่มีรูป กรุณากดสร้างรูปใหม่ครับ'); return; }
-  const oid = (order && order['Order ID']) ? order['Order ID'] : 'order';
-  const fname = `สรุปงาน_${oid}.png`;
-  const file = new File([_dashImgBlob], fname, { type:'image/png' });
-
-  // 🔍 ชั่วคราว: เช็คว่าเครื่องรองรับอะไรบ้าง
-  const canShareFiles = !!(navigator.canShare && navigator.canShare({ files:[file] }));
-  alert('DEBUG\nnavigator.share: ' + (typeof navigator.share) +
-        '\nnavigator.canShare: ' + (typeof navigator.canShare) +
-        '\ncanShare(files): ' + canShareFiles);
-
-  // 1) Web Share API แบบแชร์ไฟล์ (Android ใน LINE รองรับดีสุด)
-  try{
-    if(canShareFiles){
-      await navigator.share({ files:[file], title:fname, text:`สรุปงาน ${oid}` });
-      return;
-    }
-  }catch(e){ alert('share error: ' + (e && e.message ? e.message : e)); }
-
-  // 2) ดาวน์โหลดตรง
-  try{
-    const url = URL.createObjectURL(_dashImgBlob);
-    const a = document.createElement('a');
-    a.href = url; a.download = fname;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url), 1500);
-    alert('ลองดาวน์โหลดแล้ว — ถ้าไม่มีไฟล์ ให้กดค้างที่รูปแทนครับ');
-    return;
-  }catch(e){ alert('download error: ' + (e && e.message ? e.message : e)); }
-
-  // 3) สุดท้าย — แจ้งให้กดค้างที่รูป
-  alert('กรุณากดค้างที่รูป แล้วเลือก "บันทึกภาพ" ครับ');
-}
-
-function closeImgViewer(){
-  document.getElementById('img-viewer').classList.remove('show');
-  document.getElementById('iv-img').src = '';
 }
 
 function closeDashboard(){document.getElementById('dashboard').classList.remove('show');}
