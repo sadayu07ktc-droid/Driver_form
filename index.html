@@ -1145,6 +1145,13 @@ function showDashboard(){
   const d=collectedData;
   const rows=[];
 
+  // ✅ สรุปข้อมูลออเดอร์ไว้บนสุด
+  rows.push({section:'📋 ข้อมูลออเดอร์'});
+  rows.push({k:'เลขที่ออเดอร์', v:order['Order ID'], highlight:true});
+  rows.push({k:'วันที่',        v:fmtDate(order['วันที่ต้องการ'])});
+  rows.push({k:'จุดรับ',        v:order['จุดรับ']||'—'});
+  if(hasRamp) rows.push({k:'แวะลานเท 🏭', v:order['จุดรับเพิ่ม']||'—'});
+
   rows.push({section:'🛣️ ระยะทาง (จากดุมล้อ)'});
   const hubStart=hubHistory.start||0;
   const hubClient=hubHistory.client||0;
