@@ -150,6 +150,14 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .ts-dropdown{border:1.5px solid var(--border);border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;margin-top:4px;background:var(--white)}
 .ts-dropdown .active{background:var(--g3)!important;color:var(--g1)!important}
 .ts-control input::placeholder{color:var(--text-l)}
+/* 🆕 หน้าแสดงรูปสรุป (กดค้างเพื่อเซฟ) */
+#img-viewer{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;flex-direction:column}
+#img-viewer.show{display:flex}
+.iv-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:rgba(0,0,0,.6);flex-shrink:0}
+.iv-hint{font-size:13px;color:#fff;font-weight:600}
+.iv-close{padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.2);color:#fff;font-size:14px;font-family:'Sarabun',sans-serif;border:1.5px solid rgba(255,255,255,.4);cursor:pointer;flex-shrink:0}
+.iv-scroll{flex:1;overflow:auto;padding:14px;display:flex;justify-content:center;align-items:flex-start}
+#iv-img{max-width:100%;height:auto;border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,.5)}
 </style>
 </head>
 <body>
@@ -158,6 +166,15 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
   <div class="si">🏁</div><h2>เสร็จงานแล้ว!</h2>
   <p id="success-msg">ส่งข้อมูลให้ Admin และเจ้าของสวนแล้วครับ</p>
   <button class="btn-close" onclick="liff.closeWindow()">ปิดหน้าต่าง</button>
+</div>
+
+<!-- 🆕 หน้าแสดงรูปสรุป — กดค้างที่รูปเพื่อบันทึก (รองรับ LIFF iOS/Android) -->
+<div id="img-viewer">
+  <div class="iv-bar">
+    <span class="iv-hint">👆 กดค้างที่รูป แล้วเลือก "บันทึกภาพ"</span>
+    <button class="iv-close" onclick="closeImgViewer()">✕ ปิด</button>
+  </div>
+  <div class="iv-scroll"><img id="iv-img" alt="สรุปงาน"></div>
 </div>
 
 <div id="dashboard">
@@ -1336,7 +1353,7 @@ if(d.helperCost){
   document.getElementById('dashboard').scrollTop=0;
 }
 
-// ✅ บันทึกหน้าสรุป (dashboard) เป็นรูปลงเครื่อง — ให้คนขับเก็บเป็นหลักฐานจบงาน
+// ✅ บันทึกหน้าสรุป (dashboard) เป็นรูป — เปิดรูปเต็มจอ ให้คนขับกดค้างเพื่อเซฟ (รองรับ LIFF iOS/Android)
 async function saveDashboardImage(){
   const target = document.querySelector('#dashboard .dash-inner');
   if(!target){ alert('ไม่พบหน้าสรุป'); return; }
@@ -1354,27 +1371,22 @@ async function saveDashboardImage(){
       logging:false
     });
 
-    const oid = (order && order['Order ID']) ? order['Order ID'] : 'order';
-    const fname = `สรุปงาน_${oid}.png`;
-
-    canvas.toBlob(function(blob){
-      if(!blob){ alert('สร้างรูปไม่สำเร็จ ลองใหม่ครับ'); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fname;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(()=>URL.revokeObjectURL(url), 1000);
-    }, 'image/png');
+    // แปลงเป็น data URL แล้วโชว์ในหน้า viewer — ผู้ใช้กดค้างที่รูปเพื่อ "บันทึกภาพ"
+    const dataUrl = canvas.toDataURL('image/png');
+    document.getElementById('iv-img').src = dataUrl;
+    document.getElementById('img-viewer').classList.add('show');
 
   }catch(err){
     console.error('saveDashboardImage error:', err);
-    alert('บันทึกรูปไม่สำเร็จ ลองใหม่อีกครั้งครับ');
+    alert('สร้างรูปไม่สำเร็จ ลองใหม่อีกครั้งครับ');
   }finally{
     if(btn){ btn.textContent = orig; btn.disabled = false; }
   }
+}
+
+function closeImgViewer(){
+  document.getElementById('img-viewer').classList.remove('show');
+  document.getElementById('iv-img').src = '';
 }
 
 function closeDashboard(){document.getElementById('dashboard').classList.remove('show');}
