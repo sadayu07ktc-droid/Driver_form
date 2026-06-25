@@ -1397,13 +1397,19 @@ async function shareDashboardImage(){
   const fname = `สรุปงาน_${oid}.png`;
   const file = new File([_dashImgBlob], fname, { type:'image/png' });
 
+  // 🔍 ชั่วคราว: เช็คว่าเครื่องรองรับอะไรบ้าง
+  const canShareFiles = !!(navigator.canShare && navigator.canShare({ files:[file] }));
+  alert('DEBUG\nnavigator.share: ' + (typeof navigator.share) +
+        '\nnavigator.canShare: ' + (typeof navigator.canShare) +
+        '\ncanShare(files): ' + canShareFiles);
+
   // 1) Web Share API แบบแชร์ไฟล์ (Android ใน LINE รองรับดีสุด)
   try{
-    if(navigator.canShare && navigator.canShare({ files:[file] })){
+    if(canShareFiles){
       await navigator.share({ files:[file], title:fname, text:`สรุปงาน ${oid}` });
       return;
     }
-  }catch(e){ console.warn('share failed, fallback', e); }
+  }catch(e){ alert('share error: ' + (e && e.message ? e.message : e)); }
 
   // 2) ดาวน์โหลดตรง
   try{
@@ -1412,8 +1418,9 @@ async function shareDashboardImage(){
     a.href = url; a.download = fname;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    alert('ลองดาวน์โหลดแล้ว — ถ้าไม่มีไฟล์ ให้กดค้างที่รูปแทนครับ');
     return;
-  }catch(e){ console.warn('download failed', e); }
+  }catch(e){ alert('download error: ' + (e && e.message ? e.message : e)); }
 
   // 3) สุดท้าย — แจ้งให้กดค้างที่รูป
   alert('กรุณากดค้างที่รูป แล้วเลือก "บันทึกภาพ" ครับ');
