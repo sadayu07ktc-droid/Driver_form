@@ -156,6 +156,7 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .iv-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:rgba(0,0,0,.6);flex-shrink:0}
 .iv-hint{font-size:13px;color:#fff;font-weight:600}
 .iv-close{padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.2);color:#fff;font-size:14px;font-family:'Sarabun',sans-serif;border:1.5px solid rgba(255,255,255,.4);cursor:pointer;flex-shrink:0}
+.iv-share{padding:8px 16px;border-radius:999px;background:var(--g2);color:#fff;font-size:14px;font-weight:600;font-family:'Sarabun',sans-serif;border:none;cursor:pointer;flex-shrink:0}
 .iv-scroll{flex:1;overflow:auto;padding:14px;display:flex;justify-content:center;align-items:flex-start}
 #iv-img{max-width:100%;height:auto;border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,.5)}
 </style>
@@ -171,7 +172,8 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 <!-- 🆕 หน้าแสดงรูปสรุป — กดค้างที่รูปเพื่อบันทึก (รองรับ LIFF iOS/Android) -->
 <div id="img-viewer">
   <div class="iv-bar">
-    <span class="iv-hint">👆 กดค้างที่รูป แล้วเลือก "บันทึกภาพ"</span>
+    <span class="iv-hint">👆 กดค้างที่รูปเพื่อบันทึก หรือกดปุ่มแชร์</span>
+    <button class="iv-share" onclick="shareDashboardImage()">📤 แชร์/เซฟ</button>
     <button class="iv-close" onclick="closeImgViewer()">✕ ปิด</button>
   </div>
   <div class="iv-scroll"><img id="iv-img" alt="สรุปงาน"></div>
@@ -1353,7 +1355,9 @@ if(d.helperCost){
   document.getElementById('dashboard').scrollTop=0;
 }
 
-// ✅ บันทึกหน้าสรุป (dashboard) เป็นรูป — เปิดรูปเต็มจอ ให้คนขับกดค้างเพื่อเซฟ (รองรับ LIFF iOS/Android)
+// ✅ บันทึกหน้าสรุป (dashboard) เป็นรูป — รองรับ LIFF Android/iOS
+let _dashImgBlob = null;   // เก็บ blob ของรูปสรุปไว้แชร์/ดาวน์โหลด
+
 async function saveDashboardImage(){
   const target = document.querySelector('#dashboard .dash-inner');
   if(!target){ alert('ไม่พบหน้าสรุป'); return; }
@@ -1371,9 +1375,11 @@ async function saveDashboardImage(){
       logging:false
     });
 
-    // แปลงเป็น data URL แล้วโชว์ในหน้า viewer — ผู้ใช้กดค้างที่รูปเพื่อ "บันทึกภาพ"
-    const dataUrl = canvas.toDataURL('image/png');
-    document.getElementById('iv-img').src = dataUrl;
+    // เก็บ blob ไว้ใช้ตอนกดแชร์
+    _dashImgBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+
+    // โชว์รูปในหน้า viewer (กดค้างเซฟได้ + มีปุ่มแชร์)
+    document.getElementById('iv-img').src = canvas.toDataURL('image/png');
     document.getElementById('img-viewer').classList.add('show');
 
   }catch(err){
@@ -1382,6 +1388,35 @@ async function saveDashboardImage(){
   }finally{
     if(btn){ btn.textContent = orig; btn.disabled = false; }
   }
+}
+
+// ✅ แชร์/เซฟรูป — ลองไล่: Web Share (ไฟล์) → ดาวน์โหลด → แจ้งกดค้าง
+async function shareDashboardImage(){
+  if(!_dashImgBlob){ alert('ยังไม่มีรูป กรุณากดสร้างรูปใหม่ครับ'); return; }
+  const oid = (order && order['Order ID']) ? order['Order ID'] : 'order';
+  const fname = `สรุปงาน_${oid}.png`;
+  const file = new File([_dashImgBlob], fname, { type:'image/png' });
+
+  // 1) Web Share API แบบแชร์ไฟล์ (Android ใน LINE รองรับดีสุด)
+  try{
+    if(navigator.canShare && navigator.canShare({ files:[file] })){
+      await navigator.share({ files:[file], title:fname, text:`สรุปงาน ${oid}` });
+      return;
+    }
+  }catch(e){ console.warn('share failed, fallback', e); }
+
+  // 2) ดาวน์โหลดตรง
+  try{
+    const url = URL.createObjectURL(_dashImgBlob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    return;
+  }catch(e){ console.warn('download failed', e); }
+
+  // 3) สุดท้าย — แจ้งให้กดค้างที่รูป
+  alert('กรุณากดค้างที่รูป แล้วเลือก "บันทึกภาพ" ครับ');
 }
 
 function closeImgViewer(){
