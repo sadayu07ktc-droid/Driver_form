@@ -210,6 +210,7 @@ let U={}, order=null, jobType='', hasRamp=false, photos={};
 let allOrders=[];
 let fuelRowCounter=0;
 let hubHistory={start:0, client:0, ramp:0};
+let readings={};   // เก็บ {mile,hub} ของแต่ละจุดที่ผ่านแล้ว เพื่อเช็คว่ามากขึ้นเรื่อยๆ
 let collectedData={};
 let ocrData={};
 
@@ -370,6 +371,7 @@ function openJob(orderId){
   jobType = order['ประเภทงาน']||'ปาล์ม';
   hasRamp = !!(order['จุดรับเพิ่ม']);
   photos={}; ocrData={}; collectedData={}; hubHistory={start:0,client:0,ramp:0};
+  readings={}; seedReadingsFromOrder();
   document.getElementById('job-list').classList.add('hide');
   document.getElementById('job-form').classList.remove('hide');
   document.getElementById('order-banner').classList.remove('hide');
@@ -952,6 +954,47 @@ function getPrevHub(key){
   return 0;
 }
 
+// ── เช็คเลขไมล์ + ดุมล้อ ต้องมากกว่าจุดก่อนหน้าทั้งคู่ (เท่ากัน/น้อยกว่า = ไม่ผ่าน) ──
+// จุดก่อนหน้าของแต่ละ checkpoint
+function prevCheckpoint(key){
+  if(key==='rampDrop') return 'start';
+  if(key==='client')   return hasRamp ? 'rampDrop' : 'start';
+  if(key==='ramp')     return 'client';
+  if(key==='factory')  return hasRamp ? 'ramp' : 'client';
+  return null; // start ไม่มีจุดก่อนหน้า
+}
+
+// คืน '' ถ้าผ่าน, คืนข้อความ error ถ้าไม่ผ่าน
+function checkReading(key, mile, hub){
+  const m=parseFloat(mile), h=parseFloat(hub);
+  if(isNaN(m)) return 'กรุณากรอกเลขไมล์ให้ถูกต้อง';
+  if(isNaN(h)) return 'กรุณากรอกเลขดุมล้อให้ถูกต้อง';
+  const pk=prevCheckpoint(key);
+  if(pk && readings[pk]){
+    const pm=parseFloat(readings[pk].mile), ph=parseFloat(readings[pk].hub);
+    if(!isNaN(pm) && m<=pm) return `⚠️ เลขไมล์ (${m.toLocaleString()}) ต้องมากกว่าจุดก่อนหน้า (${pm.toLocaleString()})`;
+    if(!isNaN(ph) && h<=ph) return `⚠️ เลขดุมล้อ (${h.toLocaleString()}) ต้องมากกว่าจุดก่อนหน้า (${ph.toLocaleString()})`;
+  }
+  return '';
+}
+
+function saveReading(key, mile, hub){ readings[key]={mile,hub}; }
+
+// เผื่อปิด-เปิด LIFF ใหม่กลางงาน — ดึงค่าที่บันทึกแล้วจาก order มาตั้งต้น
+function seedReadingsFromOrder(){
+  const map={
+    start:   ['เลขไมล์เริ่ม','เลขดุมล้อเริ่ม'],
+    rampDrop:['เลขไมล์ลานวางกระบะ','เลขดุมล้อลานวางกระบะ'],
+    client:  ['เลขไมล์ลูกค้า','เลขดุมล้อลูกค้า'],
+    ramp:    ['เลขไมล์ลานขากลับ','เลขดุมล้อลานขากลับ'],
+    factory: ['เลขไมล์ปลายทาง','เลขดุมล้อปลายทาง']
+  };
+  Object.entries(map).forEach(([k,arr])=>{
+    const mf=arr[0], hf=arr[1];
+    if(order[mf]||order[hf]) readings[k]={mile:order[mf]||'',hub:order[hf]||''};
+  });
+}
+
 // ── Submit functions ──
 async function submitStart(){
   const mileS=getOcrValue('mile-start');
@@ -959,10 +1002,13 @@ async function submitStart(){
   if(!mileS){alert('กรุณาถ่ายรูปเลขไมล์เริ่ม และตรวจสอบค่า OCR');return;}
   if(!hubS){alert('กรุณาถ่ายรูปเลขดุมล้อเริ่ม และตรวจสอบค่า OCR');return;}
 
+  const eChk=checkReading('start',mileS,hubS); if(eChk){alert(eChk);return;}
+
   const r=await postGAS({action:'driverStartJob',orderId:order['Order ID'],userId:U.userId},'🚀 กำลังบันทึกออกโรงงาน...');
   if(!r?.success){alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
 
   hubHistory.start=parseFloat(hubS)||0;
+  saveReading('start',mileS,hubS);
   await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'เริ่ม',
     fields:{'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS}},'💾 กำลังบันทึกข้อมูล...');
 
@@ -981,11 +1027,7 @@ async function submitRampDrop(){
   if(!mileR){alert('กรุณาถ่ายรูปเลขไมล์ถึงลานวางกระบะ');return;}
   if(!hubR){alert('กรุณาถ่ายรูปเลขดุมล้อถึงลานวางกระบะ');return;}
 
-  const prevHub = hubHistory.start || 0;
-  if(prevHub > 0 && parseFloat(hubR) < prevHub){
-    alert('⚠️ เลขดุมล้อถึงลาน ต้องไม่น้อยกว่าเลขดุมล้อเริ่ม');
-    return;
-  }
+  const eChk=checkReading('rampDrop',mileR,hubR); if(eChk){alert(eChk);return;}
 
   // ✅ แก้ไขชื่อ Key ตรง fields ให้ตรงกับหัวคอลัมน์ใน Google Sheet เป๊ะๆ
   const r = await postGAS({
@@ -1003,6 +1045,7 @@ async function submitRampDrop(){
   if(!r?.success){alert('❌ บันทึกข้อมูลไม่สำเร็จ');return;}
 
   hubHistory.rampDrop = parseFloat(hubR) || 0;
+  saveReading('rampDrop',mileR,hubR);
   order['สถานะ'] = 'ถึงลานวางกระบะ';
   renderTimeline();
   alert('✅ บันทึกถึงลานวางกระบะเรียบร้อย');
@@ -1014,8 +1057,7 @@ async function submitClient(){
   if(!mileClient){alert('กรุณาถ่ายเลขไมล์ออกจากลูกค้า');return;}
   if(!hubClient){alert('กรุณาถ่ายเลขดุมล้อออกจากลูกค้า');return;}
 
-  const prevHub=hubHistory.ramp||0;
-  if(prevHub>0&&parseFloat(hubClient)<prevHub){alert('⚠️ เลขดุมล้อลูกค้า ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า');return;}
+  const eChk=checkReading('client',mileClient,hubClient); if(eChk){alert(eChk);return;}
 
   const r=await postGAS({action:'driverArrived',orderId:order['Order ID'],userId:U.userId},'🌴 กำลังบันทึกถึงลูกค้า...');
   if(!r?.success){alert('❌ '+(r?.error||'อัปเดตสถานะลูกค้าไม่สำเร็จ'));return;}
@@ -1024,6 +1066,7 @@ async function submitClient(){
     fields:{'เลขไมล์ลูกค้า':mileClient,'เลขดุมล้อลูกค้า':hubClient}},'💾 กำลังบันทึกข้อมูล...');
 
   hubHistory.client=parseFloat(hubClient)||0;
+  saveReading('client',mileClient,hubClient);
   order['สถานะ']='ถึงลูกค้า';
   renderTimeline();
   alert('✅ บันทึกออกจากลูกค้าเรียบร้อย');
@@ -1035,8 +1078,7 @@ async function submitRamp(){
   if(!mileR){alert('กรุณาถ่ายเลขไมล์ออกจากลานขากลับ');return;}
   if(!hubR){alert('กรุณาถ่ายเลขดุมล้อออกจากลานขากลับ');return;}
 
-  const prevHub=hubHistory.client||0;
-  if(prevHub>0&&parseFloat(hubR)<prevHub){alert('⚠️ เลขดุมล้อลานขากลับ ต้องไม่น้อยกว่าเลขดุมล้อจุดลูกค้า');return;}
+  const eChk=checkReading('ramp',mileR,hubR); if(eChk){alert(eChk);return;}
 
   const weightRamp=getWeightOcrData('weight-ramp');
   if(!weightRamp||!weightRamp.gross||!weightRamp.tare||!weightRamp.net){
@@ -1054,6 +1096,7 @@ async function submitRamp(){
   }},'🏭 กำลังบันทึกถึงลานขากลับ...');
 
   hubHistory.ramp=parseFloat(hubR)||0;
+  saveReading('ramp',mileR,hubR);
   order['สถานะ']='ถึงลานขากลับ';
   renderTimeline();
   alert('✅ บันทึกออกจากลานขากลับเรียบร้อย');
@@ -1065,9 +1108,9 @@ function prepareFactory(){
   if(!mileF){alert('กรุณาถ่ายเลขไมล์หลังชั่งเสร็จ');return;}
   if(!hubF){alert('กรุณาถ่ายเลขดุมล้อหลังชั่งเสร็จ');return;}
 
-  // ✅ เปลี่ยนมาใช้ getPrevHub เพื่อให้ดึงค่าจุดก่อนหน้าได้ถูกต้องเสมอ
-  const prevHub = getPrevHub('factory');
-  if(prevHub>0 && parseFloat(hubF)<prevHub){alert('⚠️ เลขดุมล้อโรงงาน ต้องไม่น้อยกว่าเลขดุมล้อจุดก่อนหน้า');return;}
+  // ✅ เช็คทั้งไมล์+ดุมล้อ ต้องมากกว่าจุดก่อนหน้า (เท่ากัน/น้อยกว่า = ไม่ผ่าน)
+  const eChk=checkReading('factory',mileF,hubF); if(eChk){alert(eChk);return;}
+  saveReading('factory',mileF,hubF);
 
   const wClient=getWeightOcrData('weight-factory-client');
   if(!wClient||!wClient.gross||!wClient.tare||!wClient.net){alert('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');return;}
