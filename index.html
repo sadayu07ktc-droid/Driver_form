@@ -6,6 +6,8 @@
 <title>บันทึกงานขนส่ง — SSB</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <style>
 :root{
   --g1:#2D5A27;--g2:#4A7C3F;--g3:#D6E8D0;--g4:#F0F7EE;
@@ -134,6 +136,13 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .btn-sm{padding:9px 14px;border-radius:10px;border:none;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
 .btn-sm.start{flex:1;background:var(--g2);color:#fff}
 .btn-sm.cancel{background:var(--white);color:var(--red);border:1.5px solid var(--red)}
+/* Tom Select — ช่องเลือกราคาน้ำมัน (ค้นหาได้ ไม่บังจอ) */
+.ts-control{background:var(--bg)!important;border:1.5px solid var(--border)!important;border-radius:10px!important;padding:10px 12px!important;font-size:14px;font-family:'Sarabun',sans-serif;color:var(--text);min-height:auto!important}
+.ts-control:focus-within{border-color:var(--active)!important;box-shadow:none!important;background:var(--white)!important}
+.ts-wrapper.single .ts-control{background:var(--bg)!important}
+.ts-dropdown{border:1.5px solid var(--border);border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;margin-top:4px;background:var(--white)}
+.ts-dropdown .active{background:var(--g3)!important;color:var(--g1)!important}
+.ts-control input::placeholder{color:var(--text-l)}
 </style>
 </head>
 <body>
@@ -213,11 +222,25 @@ let hubHistory={start:0, client:0, ramp:0};
 let readings={};   // เก็บ {mile,hub} ของแต่ละจุดที่ผ่านแล้ว เพื่อเช็คว่ามากขึ้นเรื่อยๆ
 let collectedData={};
 let ocrData={};
+let priceOptions=[];
 
 function buildPriceList(){
-  const dl=document.createElement('datalist');dl.id='fuel-prices';
-  for(let p=3001;p<=5000;p++){const opt=document.createElement('option');opt.value=(p/100).toFixed(2);dl.appendChild(opt);}
-  document.body.appendChild(dl);
+  // ✅ สร้างชุดราคาน้ำมัน 30.01–50.00 (ทศนิยม 2 ตำแหน่ง) ไว้ป้อนให้ Tom Select
+  priceOptions=[];
+  for(let p=3001;p<=5000;p++){const v=(p/100).toFixed(2);priceOptions.push({value:v,text:v});}
+}
+
+// ✅ แปลง <select> ราคาน้ำมัน เป็นช่องค้นหาแบบเดียวกับ "เลือกสวน" (Tom Select)
+function initPriceSelect(el, onChangeFn){
+  if(!el || el.tomselect) return;
+  new TomSelect(el,{
+    options: priceOptions,
+    create:false,
+    placeholder:'เลือกราคา/ลิตร',
+    sortField:{field:'text',direction:'asc'},
+    maxOptions:100,
+    onChange:function(){ if(onChangeFn) onChangeFn(); }
+  });
 }
 
 async function init(){
@@ -501,6 +524,9 @@ function renderTimeline(){
     wrap.appendChild(dot);wrap.appendChild(line);wrap.appendChild(card);
     tl.appendChild(wrap);
   });
+  // ✅ ถ้าสเต็ปโรงงาน active แล้ว → แปลงช่องราคาน้ำมันโรงงานเป็น Tom Select
+  const fp=document.getElementById('fuel-factory-price');
+  if(fp && !fp.tomselect) initPriceSelect(fp, calcFuelFactory);
 }
 
 function photoBox(id,label,key){
@@ -595,7 +621,7 @@ function formFactory(){
         </div>
         <div>
           <label class="lbl">ราคา/ลิตร <span class="req">*</span></label>
-          <input class="inp" type="text" id="fuel-factory-price" placeholder="30.01" list="fuel-prices" oninput="calcFuelFactory()">
+          <select class="inp" id="fuel-factory-price"></select>
         </div>
       </div>
       <label class="lbl mt8">รูปใบเติมน้ำมัน</label>
@@ -897,13 +923,14 @@ function addFuelRow(){
       <div><label class="lbl">จำนวนลิตร</label>
         <input class="inp" type="number" id="fl-liter-${id}" placeholder="0" oninput="calcFuelRoad()"></div>
       <div><label class="lbl">ราคา/ลิตร</label>
-        <input class="inp" type="text" id="fl-price-${id}" placeholder="30.01" list="fuel-prices" oninput="calcFuelRoad()"></div>
+        <select class="inp" id="fl-price-${id}"></select></div>
     </div>
     <div class="mt8">
       <label class="lbl">รูปบิลน้ำมัน</label>
       ${photoBox(`fuel-road-photo-${id}`,'แนบรูปบิลน้ำมัน',`fuel-road-${id}`)}
     </div>`;
   document.getElementById('fuel-road-rows').appendChild(div);
+  initPriceSelect(document.getElementById(`fl-price-${id}`), calcFuelRoad);  // ✅ ช่องราคาเป็น Tom Select
   renumberFuelRows();calcFuelRoad();
 }
 
@@ -1151,13 +1178,18 @@ function prepareFactory(){
       const rowId = el.id.replace('fl-liter-', '');
       const liter = parseFloat(el.value) || 0;
       const price = parseFloat(document.getElementById('fl-price-' + rowId)?.value) || 0;
-      if(liter > 0){
+      if(liter > 0 && price > 0){   // ✅ ต้องมีทั้งลิตรและราคา ถึงนับเป็นบิลที่กรอกครบ
         rows.push({
           liter, price, total: (liter * price).toFixed(2),
           photo: photos['fuel-road-' + rowId] || ''
         });
       }
     });
+    // ✅ ระดับ 1: เลือก "มี" แล้วต้องกรอกลิตร+ราคา อย่างน้อย 1 บิล
+    if(rows.length === 0){
+      alert('⚠️ เลือก "มี" น้ำมันระหว่างทาง\nกรุณากรอกจำนวนลิตร + ราคา ให้ครบอย่างน้อย 1 บิลครับ');
+      return;
+    }
     collectedData.fuelRoad = rows;
   }
 
