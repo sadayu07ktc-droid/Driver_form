@@ -230,6 +230,9 @@ let priceOptions=[];
 let ocrPending=0;   // ✅ นับจำนวน OCR ที่กำลังอ่านอยู่ (กันกดส่งก่อน OCR เสร็จ)
 let gpsMile={};     // 🆕 เก็บเลขไมล์จาก GPS แต่ละจุด {mile-start:..., mile-client:...}
 let gpsFetching={}; // 🆕 กันยิง GPS ซ้ำตอนกำลังดึงอยู่
+let loadStates={};  // 🆕 สภาพรถแต่ละจุด {start:'เบา', client:'หนัก', ...}
+// ค่าเริ่มต้นสภาพรถตามธรรมชาติงานปาล์ม (ขาไปเบา ขากลับหนัก) — คนขับแก้ได้
+const LOAD_DEFAULT={start:'เบา', rampDrop:'เบา', client:'หนัก', ramp:'หนัก', factory:'หนัก'};
 
 function buildPriceList(){
   // ✅ สร้างชุดราคาน้ำมัน 30.01–50.00 (ทศนิยม 2 ตำแหน่ง) ไว้ป้อนให้ Tom Select
@@ -402,6 +405,7 @@ function openJob(orderId){
   hasRamp = !!(order['จุดรับเพิ่ม']);
   photos={}; ocrData={}; collectedData={}; hubHistory={start:0,client:0,ramp:0};
   gpsMile={}; gpsFetching={};   // 🆕 ล้างค่า GPS ของงานก่อนหน้า
+  loadStates={};                // 🆕 ล้างสภาพรถของงานก่อนหน้า
   readings={}; seedReadingsFromOrder();
   document.getElementById('job-list').classList.add('hide');
   document.getElementById('job-form').classList.remove('hide');
@@ -758,7 +762,52 @@ function ocrMileHubBlock(key, mileLabel, hubLabel){
     <div class="sec-lbl">📍 เลขไมล์ (GPS) + ถ่ายดุมล้อ</div>
     ${gpsMileBlock('mile-'+key)}
     ${ocrPhotoBox(key+'-hub', hubLabel, 'hub-'+key, 'ดุมล้อ')}
+    ${loadStateChip(key)}
   `;
+}
+
+// 🆕 ปุ่มเลือกสภาพรถ เบา/หนัก — ตั้ง default อัตโนมัติ คนขับแตะเปลี่ยนได้
+function loadStateChip(key){
+  const cur = loadStates[key] || LOAD_DEFAULT[key] || 'เบา';
+  loadStates[key] = cur;   // ตั้งค่า default ทันที กันคนขับลืมเลือก
+  return `
+    <div class="field">
+      <label class="lbl">สภาพรถช่วงนี้ <span class="req">*</span></label>
+      <div class="chips" id="load-chips-${key}">
+        <span class="chip ${cur==='เบา'?'on':''}" onclick="pickLoadState('${key}','เบา',this)">🟢 รถเบา (ไม่มีของ)</span>
+        <span class="chip ${cur==='หนัก'?'on':''}" onclick="pickLoadState('${key}','หนัก',this)">🟠 รถหนัก (มีของ)</span>
+      </div>
+    </div>
+  `;
+}
+function pickLoadState(key, val, el){
+  loadStates[key]=val;
+  const box=document.getElementById('load-chips-'+key);
+  if(box) box.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+}
+function getLoadState(key){
+  return loadStates[key] || LOAD_DEFAULT[key] || 'เบา';
+}
+
+// 🆕 คำนวณสรุป เบา/หนัก ฝั่งมือถือ (โชว์ใน dashboard เป็น preview — ค่าจริงคิดที่ server)
+function computeLoadSummary(){
+  // ลำดับ checkpoint + คอลัมน์สภาพรถ
+  const seq=['start','rampDrop','client','ramp','factory'];
+  const pts=[];
+  seq.forEach(k=>{
+    const r=readings[k];
+    const hub=r?parseFloat(r.hub):NaN;
+    if(!isNaN(hub) && hub>0) pts.push({hub, load:getLoadState(k)});
+  });
+  let light=0, heavy=0;
+  for(let i=0;i<pts.length-1;i++){
+    const d=pts[i+1].hub-pts[i].hub;
+    if(d<=0) continue;
+    if(pts[i].load==='หนัก') heavy+=d; else light+=d;
+  }
+  const total=light+heavy;
+  return {light, heavy, pct: total>0 ? Math.round(heavy/total*1000)/10 : 0};
 }
 
 // 🆕 บล็อกเลขไมล์จาก GPS — auto-ดึง + ปุ่มดึงใหม่ + ช่องกรอกมือ (fallback)
@@ -1130,6 +1179,15 @@ function seedReadingsFromOrder(){
     const mf=arr[0], hf=arr[1];
     if(order[mf]||order[hf]) readings[k]={mile:order[mf]||'',hub:order[hf]||''};
   });
+  // 🆕 ดึงสภาพรถที่บันทึกไว้แล้วจาก order มาตั้งต้น (เผื่อปิด-เปิดแอป)
+  const loadMap={
+    start:'สภาพรถเริ่ม', rampDrop:'สภาพรถลานวางกระบะ', client:'สภาพรถลูกค้า',
+    ramp:'สภาพรถลานขากลับ', factory:'สภาพรถปลายทาง'
+  };
+  Object.entries(loadMap).forEach(([k,colName])=>{
+    const v=String(order[colName]||'').trim();
+    if(v==='เบา'||v==='หนัก') loadStates[k]=v;
+  });
 }
 
 // ── Submit functions ──
@@ -1157,7 +1215,7 @@ async function submitStart(){
   hubHistory.start=parseFloat(hubS)||0;
   saveReading('start',mileS,hubS);
   await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'เริ่ม',
-    fields:{'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS}},'💾 กำลังบันทึกข้อมูล...');
+    fields:{'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS,'สภาพรถเริ่ม':getLoadState('start')}},'💾 กำลังบันทึกข้อมูล...');
 
   order['สถานะ']='เริ่มงานแล้ว';
   renderTimeline();
@@ -1186,7 +1244,8 @@ async function submitRampDrop(){
     checkPoint:'ลานวางกระบะ',
     fields:{
       'เลขไมล์ลานวางกระบะ': mileR, 
-      'เลขดุมล้อลานวางกระบะ': hubR
+      'เลขดุมล้อลานวางกระบะ': hubR,
+      'สภาพรถลานวางกระบะ': getLoadState('rampDrop')
     }
   }, '📍 กำลังบันทึกถึงลานวางกระบะ...');
 
@@ -1212,7 +1271,7 @@ async function submitClient(){
   if(!r?.success){alert('❌ '+(r?.error||'อัปเดตสถานะลูกค้าไม่สำเร็จ'));return;}
 
   await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลูกค้า',
-    fields:{'เลขไมล์ลูกค้า':mileClient,'เลขดุมล้อลูกค้า':hubClient}},'💾 กำลังบันทึกข้อมูล...');
+    fields:{'เลขไมล์ลูกค้า':mileClient,'เลขดุมล้อลูกค้า':hubClient,'สภาพรถลูกค้า':getLoadState('client')}},'💾 กำลังบันทึกข้อมูล...');
 
   hubHistory.client=parseFloat(hubClient)||0;
   saveReading('client',mileClient,hubClient);
@@ -1241,6 +1300,7 @@ async function submitRamp(){
   const r = await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลานขากลับ',
   fields:{
     'เลขไมล์ลานขากลับ':mileR, 'เลขดุมล้อลานขากลับ':hubR,
+    'สภาพรถลานขากลับ':getLoadState('ramp'),
     'น้ำหนักหนักลาน(ที่ลาน)':weightRamp.gross, 'น้ำหนักเบาลาน(ที่ลาน)':weightRamp.tare, 'สุทธิลาน(ที่ลาน)':weightRamp.net,
     'รูปใบชั่งลาน(ที่ลาน)': rampPhotoUrl // ✅ แยกรูปที่ลานชัดเจน
   }},'🏭 กำลังบันทึกถึงลานขากลับ...');
@@ -1368,6 +1428,15 @@ function showDashboard(){
   else if(!hubRamp&&hubClient&&hubFactory) rows.push({k:'📏 ลูกค้า → ปลายทาง',v:`${(hubFactory-hubClient).toLocaleString()} กม.`,highlight:true});
   if(hubStart&&hubFactory) rows.push({k:'📏 รวมทั้งสาย',         v:`${(hubFactory-hubStart).toLocaleString()} กม.`,highlight:true});
 
+  // 🆕 สรุปสภาพรถ เบา/หนัก (preview — ค่าจริงคิดที่ server)
+  const ls=computeLoadSummary();
+  if(ls.light+ls.heavy>0){
+    rows.push({section:'🚚 สัดส่วนวิ่งรถเบา/หนัก'});
+    rows.push({k:'🟢 ระยะวิ่งรถเบา', v:`${ls.light.toLocaleString()} กม.`});
+    rows.push({k:'🟠 ระยะวิ่งรถหนัก', v:`${ls.heavy.toLocaleString()} กม.`});
+    rows.push({k:'📊 % วิ่งรถหนัก', v:`${ls.pct}%`, highlight:true});
+  }
+
  rows.push({section:'⚖️ น้ำหนัก'});
   if(d.weightFactClient){
     rows.push({k:'ลูกค้า — รถหนัก', v:`${Number(d.weightFactClient.h).toLocaleString()} กก.`});
@@ -1424,8 +1493,8 @@ async function confirmSubmit(){
   const d = collectedData;
   const billName = order['ชื่อในบิล'] || order['ชื่อสวน'] || '';
   
-  // เก็บไมล์/ดุมล้อปลายทาง
-  const fields = {'เลขไมล์ปลายทาง':d.mileFactory, 'เลขดุมล้อปลายทาง':d.hubFactory};
+  // เก็บไมล์/ดุมล้อปลายทาง + สภาพรถปลายทาง (server จะคำนวณ %วิ่งหนัก ต่อ)
+  const fields = {'เลขไมล์ปลายทาง':d.mileFactory, 'เลขดุมล้อปลายทาง':d.hubFactory, 'สภาพรถปลายทาง':getLoadState('factory')};
   
   // --- 1. จัดการน้ำหนักและรูปใบชั่ง (แยกชื่อคอลัมน์ให้ชัดเจน) ---
   if(d.weightFactClient){
