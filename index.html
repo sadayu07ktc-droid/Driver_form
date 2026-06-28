@@ -228,6 +228,8 @@ let collectedData={};
 let ocrData={};
 let priceOptions=[];
 let ocrPending=0;   // ✅ นับจำนวน OCR ที่กำลังอ่านอยู่ (กันกดส่งก่อน OCR เสร็จ)
+let gpsMile={};     // 🆕 เก็บเลขไมล์จาก GPS แต่ละจุด {mile-start:..., mile-client:...}
+let gpsFetching={}; // 🆕 กันยิง GPS ซ้ำตอนกำลังดึงอยู่
 
 function buildPriceList(){
   // ✅ สร้างชุดราคาน้ำมัน 30.01–50.00 (ทศนิยม 2 ตำแหน่ง) ไว้ป้อนให้ Tom Select
@@ -399,6 +401,7 @@ function openJob(orderId){
   jobType = order['ประเภทงาน']||'ปาล์ม';
   hasRamp = !!(order['จุดรับเพิ่ม']);
   photos={}; ocrData={}; collectedData={}; hubHistory={start:0,client:0,ramp:0};
+  gpsMile={}; gpsFetching={};   // 🆕 ล้างค่า GPS ของงานก่อนหน้า
   readings={}; seedReadingsFromOrder();
   document.getElementById('job-list').classList.add('hide');
   document.getElementById('job-form').classList.remove('hide');
@@ -532,6 +535,13 @@ function renderTimeline(){
   // ✅ ถ้าสเต็ปโรงงาน active แล้ว → แปลงช่องราคาน้ำมันโรงงานเป็น Tom Select
   const fp=document.getElementById('fuel-factory-price');
   if(fp && !fp.tomselect) initPriceSelect(fp, calcFuelFactory);
+
+  // 🆕 auto-ดึงเลขไมล์ GPS ของจุดที่กำลัง active (ถ้ายังไม่เคยดึง)
+  const activeKey=getActiveStepKey(order['สถานะ']);
+  if(activeKey){
+    const mk='mile-'+activeKey;
+    if(gpsMile[mk]==null && !gpsFetching[mk]) fetchGpsMileage(mk);
+  }
 }
 
 function photoBox(id,label,key){
@@ -576,7 +586,7 @@ function formClient(){
     <div class="net-badge">
       <div class="net-lbl">หมายเหตุ</div>
       <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
-        หลังรับกระบะจากลูกค้าเรียบร้อย<br>ให้ถ่ายเลขไมล์และเลขดุมล้อก่อนออกเดินทาง
+        หลังรับกระบะจากลูกค้าเรียบร้อย<br>ระบบจะดึงเลขไมล์จาก GPS ให้ แล้วถ่ายดุมล้อก่อนออกเดินทาง
       </div>
     </div>
     <button class="btn btn-green" onclick="submitClient()">🌴 ยืนยันออกจากลูกค้า</button>
@@ -745,10 +755,83 @@ function ocrPhotoBox(id, label, key, type){
 
 function ocrMileHubBlock(key, mileLabel, hubLabel){
   return `
-    <div class="sec-lbl">📍 ถ่ายรูปไมล์ + ดุมล้อ</div>
-    ${ocrPhotoBox(key+'-mile', mileLabel, 'mile-'+key, 'ไมล์')}
+    <div class="sec-lbl">📍 เลขไมล์ (GPS) + ถ่ายดุมล้อ</div>
+    ${gpsMileBlock('mile-'+key)}
     ${ocrPhotoBox(key+'-hub', hubLabel, 'hub-'+key, 'ดุมล้อ')}
   `;
+}
+
+// 🆕 บล็อกเลขไมล์จาก GPS — auto-ดึง + ปุ่มดึงใหม่ + ช่องกรอกมือ (fallback)
+function gpsMileBlock(mileKey){
+  const has = (gpsMile[mileKey]!=null);
+  const valTxt = has
+    ? Number(gpsMile[mileKey]).toLocaleString(undefined,{maximumFractionDigits:1})+' กม.'
+    : '—';
+  return `
+    <div class="field">
+      <label class="lbl">เลขไมล์รถ (จาก GPS) <span class="req">*</span></label>
+      <div class="net-badge" id="gps-box-${mileKey}" style="margin-top:0">
+        <div class="net-lbl">เลขไมล์สะสมจาก DTC</div>
+        <div id="gps-val-${mileKey}" class="ocr-val-display">${valTxt}</div>
+        <button class="btn-add" type="button" id="gps-btn-${mileKey}" onclick="fetchGpsMileage('${mileKey}')">📡 ดึงเลขไมล์จาก GPS</button>
+        <div id="gps-meta-${mileKey}" style="font-size:11px;color:var(--text-m);margin-top:6px"></div>
+        <div id="gps-manual-${mileKey}" class="hide" style="margin-top:8px;text-align:left">
+          <label class="lbl">⚠️ ดึง GPS ไม่ได้ — กรอกเลขไมล์จากหน้าปัดเอง</label>
+          <input class="inp" type="number" id="gps-input-${mileKey}" placeholder="กรอกเลขไมล์">
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// 🆕 ยิงไปดึงเลขไมล์ GPS จาก GAS (action=getGpsMileage)
+async function fetchGpsMileage(mileKey){
+  if(gpsFetching[mileKey]) return;       // กำลังดึงอยู่ อย่ายิงซ้ำ
+  gpsFetching[mileKey]=true;
+
+  const btn  = document.getElementById('gps-btn-'+mileKey);
+  const valEl= document.getElementById('gps-val-'+mileKey);
+  const meta = document.getElementById('gps-meta-'+mileKey);
+  const manual=document.getElementById('gps-manual-'+mileKey);
+  if(btn){ btn.disabled=true; btn.textContent='📡 กำลังดึง...'; }
+  if(meta) meta.textContent='';
+
+  try{
+    const r = await fetch(`${GAS_URL}?action=getGpsMileage&orderId=${encodeURIComponent(order['Order ID'])}`).then(x=>x.json());
+    if(r && r.status==='ok'){
+      gpsMile[mileKey]=r.mileage;
+      if(valEl) valEl.textContent=Number(r.mileage).toLocaleString(undefined,{maximumFractionDigits:1})+' กม.';
+      if(meta){
+        let txt='✅ ทะเบียน '+(r.plate||'')+' ('+(r.matchedName||'')+')';
+        if(r.ageMinutes!=null) txt += ' · ' + (r.ageMinutes<=5 ? 'ค่าสด' : 'ค่าเก่า '+r.ageMinutes+' นาที');
+        meta.textContent=txt;
+      }
+      // ดึงได้แล้ว → ปิดช่องกรอกมือ
+      manual?.classList.add('hide');
+      const mi=document.getElementById('gps-input-'+mileKey); if(mi) mi.value='';
+      if(btn) btn.textContent='🔄 ดึงใหม่';
+    }else{
+      // ดึงไม่ได้ (รถยังไม่มีกล่อง/GPS ล่ม) → เปิดช่องกรอกมือ
+      if(valEl) valEl.textContent='—';
+      if(meta)  meta.textContent='⚠️ '+(r?.error||'ดึง GPS ไม่ได้');
+      manual?.classList.remove('hide');
+      if(btn) btn.textContent='🔄 ลองดึงอีกครั้ง';
+    }
+  }catch(e){
+    if(meta) meta.textContent='⚠️ เชื่อมต่อ GPS ไม่ได้ กรอกเลขไมล์เองได้';
+    manual?.classList.remove('hide');
+    if(btn) btn.textContent='🔄 ลองดึงอีกครั้ง';
+  }finally{
+    if(btn) btn.disabled=false;
+    gpsFetching[mileKey]=false;
+  }
+}
+
+// 🆕 อ่านค่าเลขไมล์ที่จะใช้ส่ง — กรอกมือมาก่อน, ไม่งั้นใช้ค่า GPS
+function getMileValue(mileKey){
+  const manual=document.getElementById('gps-input-'+mileKey);
+  if(manual && manual.value) return manual.value;
+  return (gpsMile[mileKey]!=null) ? String(gpsMile[mileKey]) : '';
 }
 
 // ── buildWeightEditFields — หนัก/เบา/สุทธิ แถวแรก, ราคา/รวมเงิน แถวสอง ──
@@ -1024,7 +1107,9 @@ function checkReading(key, mile, hub){
   const pk=prevCheckpoint(key);
   if(pk && readings[pk]){
     const pm=parseFloat(readings[pk].mile), ph=parseFloat(readings[pk].hub);
-    if(!isNaN(pm) && m<=pm) return `⚠️ เลขไมล์ (${m.toLocaleString()}) ต้องมากกว่าจุดก่อนหน้า (${pm.toLocaleString()})`;
+    // ไมล์ GPS: ห้าม "น้อยกว่า" จุดก่อนหน้า (เท่ากันได้ เผื่อ GPS ค่าซ้ำ/รถจอด)
+    if(!isNaN(pm) && m<pm) return `⚠️ เลขไมล์ (${m.toLocaleString()}) ต้องไม่น้อยกว่าจุดก่อนหน้า (${pm.toLocaleString()})`;
+    // ดุมล้อ: ต้อง "มากกว่า" เสมอ (เป็นตัวคิดระยะทางจริง)
     if(!isNaN(ph) && h<=ph) return `⚠️ เลขดุมล้อ (${h.toLocaleString()}) ต้องมากกว่าจุดก่อนหน้า (${ph.toLocaleString()})`;
   }
   return '';
@@ -1059,9 +1144,9 @@ function ocrBusy(){
 
 async function submitStart(){
   if(ocrBusy()) return;
-  const mileS=getOcrValue('mile-start');
+  const mileS=getMileValue('mile-start');
   const hubS=getOcrValue('hub-start');
-  if(!mileS){alert('กรุณาถ่ายรูปเลขไมล์เริ่ม และตรวจสอบค่า OCR');return;}
+  if(!mileS){alert('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเลขไมล์เริ่มเอง');return;}
   if(!hubS){alert('กรุณาถ่ายรูปเลขดุมล้อเริ่ม และตรวจสอบค่า OCR');return;}
 
   const eChk=checkReading('start',mileS,hubS); if(eChk){alert(eChk);return;}
@@ -1082,12 +1167,12 @@ async function submitStart(){
 async function submitRampDrop(){
   if(ocrBusy()) return;
   console.log('submitRamp called');
-  console.log('mileR:', getOcrValue('mile-rampDrop'));
+  console.log('mileR:', getMileValue('mile-rampDrop'));
   console.log('hubR:', getOcrValue('hub-rampDrop'));
-  const mileR = getOcrValue('mile-rampDrop');
+  const mileR = getMileValue('mile-rampDrop');
   const hubR = getOcrValue('hub-rampDrop');
   
-  if(!mileR){alert('กรุณาถ่ายรูปเลขไมล์ถึงลานวางกระบะ');return;}
+  if(!mileR){alert('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
   if(!hubR){alert('กรุณาถ่ายรูปเลขดุมล้อถึงลานวางกระบะ');return;}
 
   const eChk=checkReading('rampDrop',mileR,hubR); if(eChk){alert(eChk);return;}
@@ -1116,9 +1201,9 @@ async function submitRampDrop(){
 
 async function submitClient(){
   if(ocrBusy()) return;
-  const mileClient=getOcrValue('mile-client');
+  const mileClient=getMileValue('mile-client');
   const hubClient=getOcrValue('hub-client');
-  if(!mileClient){alert('กรุณาถ่ายเลขไมล์ออกจากลูกค้า');return;}
+  if(!mileClient){alert('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
   if(!hubClient){alert('กรุณาถ่ายเลขดุมล้อออกจากลูกค้า');return;}
 
   const eChk=checkReading('client',mileClient,hubClient); if(eChk){alert(eChk);return;}
@@ -1138,9 +1223,9 @@ async function submitClient(){
 
 async function submitRamp(){
   if(ocrBusy()) return;
-  const mileR=getOcrValue('mile-ramp');
+  const mileR=getMileValue('mile-ramp');
   const hubR=getOcrValue('hub-ramp');
-  if(!mileR){alert('กรุณาถ่ายเลขไมล์ออกจากลานขากลับ');return;}
+  if(!mileR){alert('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
   if(!hubR){alert('กรุณาถ่ายเลขดุมล้อออกจากลานขากลับ');return;}
 
   const eChk=checkReading('ramp',mileR,hubR); if(eChk){alert(eChk);return;}
@@ -1169,9 +1254,9 @@ async function submitRamp(){
 
 function prepareFactory(){
   if(ocrBusy()) return;
-  const mileF=getOcrValue('mile-factory');
+  const mileF=getMileValue('mile-factory');
   const hubF=getOcrValue('hub-factory');
-  if(!mileF){alert('กรุณาถ่ายเลขไมล์หลังชั่งเสร็จ');return;}
+  if(!mileF){alert('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
   if(!hubF){alert('กรุณาถ่ายเลขดุมล้อหลังชั่งเสร็จ');return;}
 
   // ✅ เช็คทั้งไมล์+ดุมล้อ ต้องมากกว่าจุดก่อนหน้า (เท่ากัน/น้อยกว่า = ไม่ผ่าน)
