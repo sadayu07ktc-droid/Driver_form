@@ -797,12 +797,12 @@ function computeLoadSummary(){
   const pts=[];
   seq.forEach(k=>{
     const r=readings[k];
-    const hub=r?parseFloat(r.hub):NaN;
-    if(!isNaN(hub) && hub>0) pts.push({hub, load:getLoadState(k)});
+    const mile=r?parseFloat(r.mile):NaN;   // ✅ ใช้ไมล์สะสม GPS (ตรงกับที่ server คิด)
+    if(!isNaN(mile) && mile>0) pts.push({mile, load:getLoadState(k)});
   });
   let light=0, heavy=0;
   for(let i=0;i<pts.length-1;i++){
-    const d=pts[i+1].hub-pts[i].hub;
+    const d=pts[i+1].mile-pts[i].mile;
     if(d<=0) continue;
     if(pts[i].load==='หนัก') heavy+=d; else light+=d;
   }
