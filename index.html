@@ -970,7 +970,13 @@ async function postGASSilent(payload){
 }
 
 function onPhoto(input,boxId,lblId,key){
-  const file=input.files[0];if(!file) return;
+  const file=input.files[0];
+  if(!file) return;
+  if(!isFreshCapture(file)){
+    alert('⚠️ กรุณาถ่ายรูปสดเท่านั้น ห้ามเลือกรูปเก่าจากคลังภาพครับ');
+    input.value='';
+    return;
+  }
   const reader=new FileReader();
   reader.onload=e=>{
     photos[key]=e.target.result;
@@ -980,11 +986,24 @@ function onPhoto(input,boxId,lblId,key){
   reader.readAsDataURL(file);
 }
 
-async function onOcrPhoto(input, boxId, lblId, key, type){
-  const file=input.files[0];
-  if(!file) return;
-  const reader=new FileReader();
-  reader.onload=async function(e){
+// 🆕 ชั้น 1: กันแนบรูปเก่าจากคลัง — วางเป็นฟังก์ชันแยก (นอก onOcrPhoto)
+  const MAX_PHOTO_AGE_MS = 5 * 60 * 1000;   // ต้องถ่ายภายใน 5 นาที
+  function isFreshCapture(file){
+    if(!file || !file.lastModified) return true;   // อ่านเวลาไม่ได้ → ปล่อยผ่าน
+    return (Date.now() - file.lastModified) <= MAX_PHOTO_AGE_MS;
+  }
+  
+  async function onOcrPhoto(input, boxId, lblId, key, type){
+    const file=input.files[0];
+    if(!file) return;
+    if(!isFreshCapture(file)){                       // 🆕 เรียกใช้ตรงนี้
+      alert('⚠️ กรุณา "ถ่ายรูปสด" ด้วยกล้องเท่านั้น\nห้ามเลือกรูปเก่าจากคลังภาพครับ');
+      input.value='';
+      return;
+    }
+    const reader=new FileReader();
+    reader.onload=async function(e){
+    // ... ที่เหลือเหมือนเดิม ...
     const base64=e.target.result;
     photos[key]=base64;
     document.getElementById(boxId)?.classList.add('has-photo');
