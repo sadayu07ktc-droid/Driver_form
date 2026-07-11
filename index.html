@@ -325,9 +325,10 @@ function nextActionOf(o){
   // map: สถานะปัจจุบัน -> label ของ checkpoint ถัดไปที่ต้องกด
   let nextLabel;
   if(st==='รับงานแล้ว')            nextLabel='เริ่มงาน';
-  else if(st==='เริ่มงานแล้ว')      nextLabel = hr ? 'วางกระบะที่ลาน' : 'ถึงลูกค้า';
-  else if(st==='ถึงลานวางกระบะ')    nextLabel='ถึงลูกค้า';
-  else if(st==='ถึงลูกค้า')         nextLabel = hr ? 'กลับถึงลาน' : 'ถึงโรงงาน';
+  else if(st==='เริ่มงานแล้ว')      nextLabel = hr ? 'วางกระบะที่ลาน' : 'ออกจากลูกค้า';
+  else if(st==='ถึงลานวางกระบะ')    nextLabel='ออกจากลูกค้า';
+  else if(st==='ถึงลูกค้า')         nextLabel='ออกจากลูกค้า';        // GPS ถึงแล้ว → กรอกออกจากลูกค้า
+  else if(st==='ออกจากลูกค้า')      nextLabel = hr ? 'กลับถึงลาน' : 'ถึงโรงงาน';
   else if(st==='ถึงลานขากลับ'||st==='ถึงลาน') nextLabel='ถึงโรงงาน';
   else nextLabel='ทำงานต่อ';
   return nextLabel;
@@ -478,16 +479,17 @@ function getSteps(){
 function getActiveStepKey(status) {
   if (status === 'เสร็จงาน') return null;
   if (status === 'รับงานแล้ว') return 'start';
-  
+  if (status === 'ถึงลูกค้า') return 'client';  // 🆕 GPS เช็คอินถึงลูกค้า → เปิด step กรอก "ออกจากลูกค้า"
+
   if (hasRamp) {
     if (status === 'เริ่มงานแล้ว') return 'rampDrop';
     if (status === 'ถึงลานวางกระบะ') return 'client';
-    if (status === 'ถึงลูกค้า') return 'ramp';
+    if (status === 'ออกจากลูกค้า') return 'ramp';
     if (status === 'ถึงลานขากลับ' || status === 'ถึงลาน') return 'factory';
   } else {
     // ปาล์มเฉยๆ (ไม่แวะลาน) และ งานอื่นๆ
     if (status === 'เริ่มงานแล้ว') return 'client';
-    if (status === 'ถึงลูกค้า') return 'factory';
+    if (status === 'ออกจากลูกค้า') return 'factory';
   }
   return null;
 }
@@ -1294,7 +1296,7 @@ async function submitClient(){
 
   hubHistory.client=parseFloat(hubClient)||0;
   saveReading('client',mileClient,hubClient);
-  order['สถานะ']='ถึงลูกค้า';
+  order['สถานะ']='ออกจากลูกค้า';
   renderTimeline();
   alert('✅ บันทึกออกจากลูกค้าเรียบร้อย');
 }
