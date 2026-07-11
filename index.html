@@ -561,9 +561,10 @@ function renderTimeline(){
 
   // 🆕 auto-ดึงเลขไมล์ GPS ของจุดที่กำลัง active (ถ้ายังไม่เคยดึง)
   const activeKey=getActiveStepKey(order['สถานะ']);
-  if(activeKey && document.getElementById('mile-'+activeKey)){   // เฉพาะ step ที่มีช่องไมล์ (ไม่ยิง DTC ตอน step arrive)
+  if(activeKey){
     const mk='mile-'+activeKey;
-    if(gpsMile[mk]==null && !gpsFetching[mk]) fetchGpsMileage(mk);
+    // เฉพาะ step ที่มีบล็อกดึงไมล์จริง (ไม่ยิง DTC ตอน step arrive ที่ไม่มีบล็อก)
+    if(document.getElementById('gps-btn-'+mk) && gpsMile[mk]==null && !gpsFetching[mk]) fetchGpsMileage(mk);
   }
 }
 
