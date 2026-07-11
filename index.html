@@ -220,6 +220,7 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
 const LIFF_ID='2010274217-SozYWeE5';
 const MAINTENANCE=true;   // 🔧 true = ปิดปรับปรุง (คนขับเห็นหน้าปิดระบบ) — แก้เสร็จเปลี่ยนเป็น false
+const MAINT_ALLOW=['U242c178eb911a0cd494bc20a6878c93b'];   // UID ที่เข้าได้ตอนปิดปรับปรุง (เทส)
 let U={}, order=null, jobType='', hasRamp=false, photos={};
 let allOrders=[];
 let fuelRowCounter=0;
@@ -264,13 +265,14 @@ function showMaintenance(){
 }
 
 async function init(){
-  if(MAINTENANCE){ showMaintenance(); return; }
   buildPriceList();
   try{
     await liff.init({liffId:LIFF_ID});
     if(!liff.isLoggedIn()){liff.login();return;}
     const p=await liff.getProfile();
     U.userId=p.userId;
+    // ✅ ปิดปรับปรุง: ให้เฉพาะ UID ในลิสต์เข้าได้ ที่เหลือเห็นหน้าปิดระบบ
+    if(MAINTENANCE && !MAINT_ALLOW.includes(U.userId)){ showMaintenance(); return; }
     const[uRes,oRes]=await Promise.all([
       fetch(`${GAS_URL}?action=getUser&userId=${p.userId}`).then(r=>r.json()),
       fetch(`${GAS_URL}?action=getDriverOrder&userId=${p.userId}`).then(r=>r.json())
