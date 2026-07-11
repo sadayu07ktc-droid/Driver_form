@@ -456,7 +456,8 @@ function getSteps(){
     return [
       {key:'start',label:'🚀 ออกโรงงาน'},
       {key:'rampDrop',label:'📍 ถึงลานวางกระบะ'},
-      {key:'client',label:'🌴 ถึงลูกค้า'},
+      {key:'arrive',label:'🌴 ถึงลูกค้า (GPS)'},
+      {key:'client',label:'🚪 ออกจากลูกค้า'},
       {key:'ramp',label:'🏭 กลับถึงลาน'},
       {key:'factory',label:'🏁 ถึงโรงงาน'}
     ];
@@ -464,13 +465,15 @@ function getSteps(){
   if(jobType==='ปาล์ม'){
     return [
       {key:'start',label:'🚀 ออกโรงงาน'},
-      {key:'client',label:'🌴 ถึงลูกค้า'},
+      {key:'arrive',label:'🌴 ถึงลูกค้า (GPS)'},
+      {key:'client',label:'🚪 ออกจากลูกค้า'},
       {key:'factory',label:'🏁 ถึงโรงงาน'}
     ];
   }
   return [
     {key:'start',label:'🚀 ออกโรงงาน'},
-    {key:'client',label:'📦 ถึงลูกค้า'},
+    {key:'arrive',label:'📦 ถึงลูกค้า (GPS)'},
+    {key:'client',label:'🚪 ออกจากลูกค้า'},
     {key:'factory',label:'🏁 ถึงโรงงาน'}
   ];
 }
@@ -483,12 +486,12 @@ function getActiveStepKey(status) {
 
   if (hasRamp) {
     if (status === 'เริ่มงานแล้ว') return 'rampDrop';
-    if (status === 'ถึงลานวางกระบะ') return 'client';
+    if (status === 'ถึงลานวางกระบะ') return 'arrive';   // ไปหาลูกค้า → รอ GPS เช็คอิน
     if (status === 'ออกจากลูกค้า') return 'ramp';
     if (status === 'ถึงลานขากลับ' || status === 'ถึงลาน') return 'factory';
   } else {
     // ปาล์มเฉยๆ (ไม่แวะลาน) และ งานอื่นๆ
-    if (status === 'เริ่มงานแล้ว') return 'client';
+    if (status === 'เริ่มงานแล้ว') return 'arrive';       // ไปหาลูกค้า → รอ GPS เช็คอิน
     if (status === 'ออกจากลูกค้า') return 'factory';
   }
   return null;
@@ -514,6 +517,7 @@ function getStepTime(key){
   return {
     start:order['เวลาเริ่มงาน'],
     rampDrop:order['เวลาถึงลานวางกระบะ'],
+    arrive:order['เวลาถึงลูกค้า'],
     client:order['เวลาถึงลูกค้า'],
     ramp:order['เวลาถึงลานขากลับ'],
     factory:order['เวลาเสร็จงาน']
@@ -544,7 +548,7 @@ function renderTimeline(){
 
   // 🆕 auto-ดึงเลขไมล์ GPS ของจุดที่กำลัง active (ถ้ายังไม่เคยดึง)
   const activeKey=getActiveStepKey(order['สถานะ']);
-  if(activeKey){
+  if(activeKey && document.getElementById('mile-'+activeKey)){   // เฉพาะ step ที่มีช่องไมล์ (ไม่ยิง DTC ตอน step arrive)
     const mk='mile-'+activeKey;
     if(gpsMile[mk]==null && !gpsFetching[mk]) fetchGpsMileage(mk);
   }
@@ -560,6 +564,7 @@ function photoBox(id,label,key){
 function buildForm(key){
   if(key==='start') return formStart();
   if(key==='rampDrop') return formRampDrop();
+  if(key==='arrive') return formArrive();
   if(key==='client') return formClient();
   if(key==='ramp') return formRamp();
   if(key==='factory') return formFactory();
@@ -584,6 +589,28 @@ function formRampDrop(){
     </div>
     <button class="btn btn-brown" onclick="submitRampDrop()">📍 ยืนยันถึงลานวางกระบะ</button>
   `;
+}
+
+// หมุด GPS "ถึงลูกค้า" — ระบบเช็คอินอัตโนมัติ / มีปุ่มเช็คอินเองสำรอง
+function formArrive(){
+  return `
+    <div class="net-badge">
+      <div class="net-lbl">📡 รอเช็คอินอัตโนมัติ (GPS)</div>
+      <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
+        เมื่อรถถึงจุดรับ ระบบจะเช็คอิน "ถึงลูกค้า" ให้เอง<br>แล้วจะมี step "🚪 ออกจากลูกค้า" ให้กรอกข้อมูล
+      </div>
+    </div>
+    <button class="btn btn-green" onclick="manualCheckin()">📍 เช็คอินเอง (ถ้า GPS ไม่ขึ้น)</button>
+  `;
+}
+
+async function manualCheckin(){
+  if(!confirm('ยืนยันว่ารถถึงลูกค้าแล้ว?\n(ปกติระบบเช็คอินให้อัตโนมัติด้วย GPS)')) return;
+  const r=await postGAS({action:'driverCheckin',orderId:order['Order ID'],userId:U.userId},'📍 กำลังเช็คอิน...');
+  if(!r?.success){alert('❌ '+(r?.error||'เช็คอินไม่สำเร็จ'));return;}
+  order['สถานะ']='ถึงลูกค้า';
+  renderTimeline();
+  alert('✅ เช็คอินถึงลูกค้าแล้ว — กรอกข้อมูล "ออกจากลูกค้า" ต่อได้เลย');
 }
 
 function formClient(){
