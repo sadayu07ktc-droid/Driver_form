@@ -219,6 +219,7 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
 const LIFF_ID='2010274217-SozYWeE5';
+const MAINTENANCE=true;   // 🔧 true = ปิดปรับปรุง (คนขับเห็นหน้าปิดระบบ) — แก้เสร็จเปลี่ยนเป็น false
 let U={}, order=null, jobType='', hasRamp=false, photos={};
 let allOrders=[];
 let fuelRowCounter=0;
@@ -253,7 +254,17 @@ function initPriceSelect(el, onChangeFn){
   });
 }
 
+function showMaintenance(){
+  document.body.innerHTML = `
+    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;background:linear-gradient(135deg,#2D5A27,#4A7C3F);color:#fff;gap:16px;font-family:'Sarabun',sans-serif">
+      <div style="font-size:64px">🔧</div>
+      <h1 style="font-size:24px;font-weight:700">ระบบปิดปรับปรุงชั่วคราว</h1>
+      <p style="font-size:15px;opacity:.92;line-height:1.9">กำลังพัฒนาระบบให้ดีขึ้น<br>ขออภัยในความไม่สะดวกครับ 🙏<br><br>ระหว่างนี้แจ้งงานผ่านแอดมินก่อนนะครับ</p>
+    </div>`;
+}
+
 async function init(){
+  if(MAINTENANCE){ showMaintenance(); return; }
   buildPriceList();
   try{
     await liff.init({liffId:LIFF_ID});
