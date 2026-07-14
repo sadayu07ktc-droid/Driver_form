@@ -219,8 +219,8 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
 const LIFF_ID='2010274217-SozYWeE5';
-const MAINTENANCE=false;   // 🔧 true = ปิดปรับปรุง (คนขับเห็นหน้าปิดระบบ) — เปิดทดสอบแล้ว
-const MAINT_ALLOW=['U242c178eb911a0cd494bc20a6878c93b','U2206e7627de1cd1de2ffe4abc93fc312'];   // UID ที่เข้าได้ตอนปิดปรับปรุง (เทส)
+// 🔧 ปิด-เปิดปรับปรุง ย้ายไปคุมที่ Script Property MAINT_DRIVER (on/off) + MAINT_ALLOW_ROLES/UIDS
+//    เช็คผ่าน backend action=getMaintenance ใน init() แล้ว — ไม่ต้องแก้ไฟล์นี้อีก
 let U={}, order=null, jobType='', hasRamp=false, photos={};
 let allOrders=[];
 let fuelRowCounter=0;
@@ -272,7 +272,11 @@ async function init(){
     const p=await liff.getProfile();
     U.userId=p.userId;
     // ✅ ปิดปรับปรุง: ให้เฉพาะ UID ในลิสต์เข้าได้ ที่เหลือเห็นหน้าปิดระบบ
-    if(MAINTENANCE && !MAINT_ALLOW.includes(U.userId)){ showMaintenance(); return; }
+    // ปิดปรับปรุง: เช็คจาก backend (Script Property MAINT_DRIVER + ยกเว้นตามโรล/UID)
+    try {
+      const _m = await (await fetch(`${GAS_URL}?action=getMaintenance&page=driver&userId=${U.userId}`)).json();
+      if (_m && _m.closed) { showMaintenance(); return; }
+    } catch(e) { /* เช็คไม่ได้ (network) → ปล่อยผ่าน */ }
     const[uRes,oRes]=await Promise.all([
       fetch(`${GAS_URL}?action=getUser&userId=${p.userId}`).then(r=>r.json()),
       fetch(`${GAS_URL}?action=getDriverOrder&userId=${p.userId}`).then(r=>r.json())
