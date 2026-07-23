@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <style>
 :root{
   --g1:#2D5A27;--g2:#4A7C3F;--g3:#D6E8D0;--g4:#F0F7EE;
@@ -661,20 +661,32 @@ async function askFuelQR(){
 
 function _fuelRenderQR(qrText, token){
   const body = document.getElementById('fuel-qr-body');
-  body.innerHTML = `<div class="qr-canvas-wrap"><canvas id="fuel-qr-canvas"></canvas></div>
+  let qrHtml = '<div class="qr-hint">แสดง QR ไม่ได้ ให้ใช้รหัสด้านล่าง</div>';
+  try{
+    // qrcode-generator: สร้าง <img> เป็น data URI ในเครื่อง ไม่ยิง token ออกไปข้างนอก
+    const qr = qrcode(0, 'M');
+    qr.addData(qrText);
+    qr.make();
+    qrHtml = `<div class="qr-canvas-wrap">${qr.createImgTag(6, 2, 'QR เติมน้ำมัน')}</div>`;
+  }catch(e){
+    console.warn('QR render', e);   // ไลบรารีโหลดไม่ขึ้น → ยังใช้รหัสตัวอักษรแทนได้
+  }
+  body.innerHTML = `${qrHtml}
     <div class="qr-code">${token}</div>
     <div class="qr-exp" id="fuel-qr-exp"></div>
     <div class="qr-hint">ถ้าสแกนไม่ติด ให้พนักงานพิมพ์รหัสด้านบนแทนได้</div>`;
-  try{
-    QRCode.toCanvas(document.getElementById('fuel-qr-canvas'), qrText, {width:220, margin:1});
-  }catch(e){
-    // ไลบรารีโหลดไม่ขึ้น (เน็ตช้า) — ยังใช้รหัสตัวอักษรแทนได้ ไม่ต้องล้ม
-    console.warn('QR render', e);
-    document.getElementById('fuel-qr-canvas').replaceWith(
-      Object.assign(document.createElement('div'),{className:'qr-hint',textContent:'แสดง QR ไม่ได้ ให้ใช้รหัสด้านล่าง'}));
-  }
   _fuelCountdown();
   fuelTick = setInterval(_fuelCountdown, 1000);
+}
+
+// คั่นหลักพันให้อ่านง่าย ทศนิยม 2 ตำแหน่ง
+function _money(n){
+  const v = Number(n);
+  return isNaN(v) ? '0.00' : v.toLocaleString('th-TH',{minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function _num(n){
+  const v = Number(n);
+  return isNaN(v) ? '0' : v.toLocaleString('th-TH',{maximumFractionDigits:2});
 }
 
 function _fuelCountdown(){
@@ -742,8 +754,8 @@ function _fuelApply(r){
   if(body){
     body.innerHTML = `<div class="qr-done">
       <div class="qr-done-l">✅ ปั๊มส่งข้อมูลแล้ว</div>
-      <div class="qr-done-v">${r.liters} ลิตร</div>
-      <div class="qr-done-s">${r.price} บาท/ลิตร · รวม ${r.amount} บาท</div>
+      <div class="qr-done-v">${_num(r.liters)} ลิตร</div>
+      <div class="qr-done-s">${_money(r.price)} บาท/ลิตร · รวม ${_money(r.amount)} บาท</div>
     </div>${r.mismatch?`<div class="qr-warn">⚠️ ${r.mismatch}</div>`:''}`;
   }
 }
@@ -1376,7 +1388,7 @@ function calcFuelRoad(){
   });
   const badge=document.getElementById('fuel-road-total-badge');
   const span=document.getElementById('fuel-road-total');
-  if(badge&&span){badge.classList.toggle('hide',total===0);span.textContent=total.toFixed(2);}
+  if(badge&&span){badge.classList.toggle('hide',total===0);span.textContent=_money(total);}
 }
 
 function calcFuelFactory(){
@@ -1385,7 +1397,7 @@ function calcFuelFactory(){
   const total=l*p;
   const badge=document.getElementById('fuel-factory-total-badge');
   const span=document.getElementById('fuel-factory-total');
-  if(badge&&span){badge.classList.toggle('hide',total===0);span.textContent=total.toFixed(2);}
+  if(badge&&span){badge.classList.toggle('hide',total===0);span.textContent=_money(total);}
 }
 
 function addFuelRow(){
