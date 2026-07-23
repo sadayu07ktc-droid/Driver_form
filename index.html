@@ -115,6 +115,19 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .no-order{text-align:center;padding:48px 24px;color:var(--text-m)}
 .no-order .ni{font-size:48px;margin-bottom:12px}
 .sec-divider{height:1px;background:var(--border);margin:14px 0}
+.plate-box{background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:14px;text-align:center;margin-bottom:12px}
+.plate-load{color:var(--text-l);font-size:13px;padding:6px 0}
+.plate-cur{font-size:30px;font-weight:700;letter-spacing:1px;color:var(--text);line-height:1.25;word-break:break-word}
+.plate-cur.ok{color:var(--done)}
+.plate-ask{font-size:14px;color:var(--text-m);margin-top:6px}
+.plate-done{font-size:13px;color:var(--done);font-weight:600;margin-top:4px}
+.plate-warn{font-size:13px;color:var(--red);margin-top:6px}
+.plate-btns{display:flex;gap:8px;margin-top:12px}
+.plate-btns>button{flex:1}
+.plate-yes{background:var(--g2);color:#fff}
+.plate-no{background:var(--g3);color:var(--g1)}
+.plate-change{background:var(--pending-l);color:var(--text-m);margin-top:10px;width:100%}
+.plate-sel{width:100%;margin-top:10px;padding:12px;border-radius:10px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:16px;background:var(--white);color:var(--text)}
 .hide{display:none!important}.mt8{margin-top:8px}
 .err-msg{font-size:11px;color:var(--red);margin-top:4px}
 /* OCR result display — read-only value */
@@ -590,10 +603,108 @@ function buildForm(key){
 }
 
 function formStart(){
+  // โหลดข้อมูลทะเบียนแบบไม่บล็อกการวาดฟอร์ม แล้วค่อยเติมลงกล่องที่จองไว้
+  setTimeout(loadPlateCheck, 0);
   return `
+    <div class="sec-lbl">ทะเบียนรถที่ใช้วันนี้</div>
+    <div id="plate-box" class="plate-box">
+      <div class="plate-load">กำลังโหลดทะเบียน...</div>
+    </div>
     ${ocrMileHubBlock('start','รูปเลขไมล์เริ่ม','รูปเลขดุมล้อเริ่ม')}
     <button class="btn btn-green" onclick="submitStart()">🚀 ยืนยันออกโรงงาน</button>
   `;
+}
+
+// ── รีเช็คทะเบียนก่อนเริ่มงาน ──────────────────────────────
+// กดรับงานจากการ์ดใน LINE ระบบใส่ "คันประจำ" มาให้ ถ้าวันนี้เปลี่ยนคันแล้วไม่แก้
+// ต้นทุน/ค่าแรงทั้งเที่ยวจะไปลงคันที่ไม่ได้วิ่ง แก้ทีหลังไม่ได้เพราะค่าแรงล็อกตอนจบงาน
+let plateInfo   = null;    // ผลจาก getPlateCheck
+let plateOk     = false;   // คนขับยืนยันแล้วหรือยัง
+let plateLoaded = '';      // orderId ที่โหลดไปแล้ว
+
+async function loadPlateCheck(){
+  const box = document.getElementById('plate-box');
+  if(!box) return;
+  // renderTimeline() วาดใหม่ทั้งหน้าได้หลายครั้ง (ถ่ายรูป/OCR เสร็จ)
+  // ถ้าโหลดแล้วให้วาดจากค่าเดิม ไม่งั้น plateOk จะถูกรีเซ็ต คนขับต้องกดยืนยันซ้ำ
+  if(plateLoaded === order['Order ID'] && plateInfo){ renderPlateBox(); return; }
+  try{
+    const url = `${GAS_URL}?action=getPlateCheck&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`;
+    const r = await fetch(url, {redirect:'follow'}).then(x=>x.json());
+    if(!r || !r.ok) throw new Error(r && r.error || 'โหลดไม่สำเร็จ');
+    plateInfo = r;
+    plateOk = false;
+    plateLoaded = order['Order ID'];
+    renderPlateBox();
+  }catch(e){
+    console.error('loadPlateCheck', e);
+    // โหลดไม่ได้ก็ต้องทำงานต่อได้ ใช้ทะเบียนเดิมในออเดอร์ (ห้ามบล็อกงานคนขับ)
+    plateInfo = null; plateOk = true; plateLoaded = '';
+    box.innerHTML = `<div class="plate-cur">${order['ทะเบียนรถ']||'—'}</div>
+      <div class="plate-warn">เช็คทะเบียนไม่ได้ (เน็ตมีปัญหา) ใช้ทะเบียนเดิมต่อ</div>`;
+  }
+}
+
+function renderPlateBox(){
+  const box = document.getElementById('plate-box');
+  if(!box || !plateInfo) return;
+
+  if(plateInfo.locked){
+    box.innerHTML = `<div class="plate-cur">${plateInfo.current||'—'}</div>
+      <div class="plate-warn">งานนี้ ${plateInfo.status} แล้ว แก้ทะเบียนไม่ได้</div>`;
+    plateOk = true; return;
+  }
+
+  if(plateOk){
+    box.innerHTML = `<div class="plate-cur ok">${plateInfo.current||'—'}</div>
+      <div class="plate-done">✅ ยืนยันแล้ว</div>
+      <button class="btn-sm plate-change" onclick="openPlatePicker()">เปลี่ยนคัน</button>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="plate-cur">${plateInfo.current||'—'}</div>
+    <div class="plate-ask">วันนี้ขับคันนี้ใช่ไหมครับ</div>
+    <div class="plate-btns">
+      <button class="btn-sm plate-yes" onclick="confirmPlate()">ใช่ ถูกแล้ว</button>
+      <button class="btn-sm plate-no" onclick="openPlatePicker()">เปลี่ยนคัน</button>
+    </div>`;
+}
+
+// เลือกคันเดิม = ไม่ต้องยิงหลังบ้าน แค่ทำเครื่องหมายว่ารีเช็คแล้ว
+function confirmPlate(){
+  plateOk = true;
+  renderPlateBox();
+}
+
+function openPlatePicker(){
+  if(!plateInfo) return;
+  const list = plateInfo.plates || [];
+  if(!list.length){ alert('ไม่พบรายการทะเบียนในระบบ กรุณาแจ้งแอดมิน'); return; }
+  const opts = list.map(p =>
+    `<option value="${p.plate}"${p.plate===plateInfo.current?' selected':''}>${p.plate}${p.type?' — '+p.type:''}</option>`
+  ).join('');
+  const box = document.getElementById('plate-box');
+  box.innerHTML = `
+    <div class="plate-ask">เลือกทะเบียนคันที่ขับวันนี้</div>
+    <select id="plate-sel" class="plate-sel">${opts}</select>
+    <div class="plate-btns">
+      <button class="btn-sm plate-yes" onclick="savePlate()">บันทึก</button>
+      <button class="btn-sm plate-no" onclick="renderPlateBox()">ยกเลิก</button>
+    </div>`;
+}
+
+async function savePlate(){
+  const sel = document.getElementById('plate-sel');
+  if(!sel) return;
+  const plate = sel.value;
+  const r = await postGAS({action:'confirmPlate',userId:U.userId,orderId:order['Order ID'],plate},'🚗 กำลังบันทึกทะเบียน...');
+  if(!r || !r.success){ alert('❌ '+((r&&r.error)||'บันทึกทะเบียนไม่สำเร็จ')); renderPlateBox(); return; }
+  plateInfo.current = plate;
+  order['ทะเบียนรถ'] = plate;
+  plateOk = true;
+  renderPlateBox();
+  if(r.changed) alert('✅ เปลี่ยนเป็น '+plate+' แล้วครับ');
 }
 
 function formRampDrop(){
@@ -1268,6 +1379,12 @@ function ocrBusy(){
 
 async function submitStart(){
   if(ocrBusy()) return;
+  // ต้องรีเช็คทะเบียนก่อน — ผ่านจุดนี้ไปแล้วแก้ยาก ค่าแรงล็อกตอนจบงาน
+  if(!plateOk){
+    alert('กรุณายืนยันทะเบียนรถที่ใช้วันนี้ก่อนครับ');
+    document.getElementById('plate-box')?.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   const mileS=getMileValue('mile-start');
   const hubS=getOcrValue('hub-start');
   if(!mileS){alert('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเลขไมล์เริ่มเอง');return;}
