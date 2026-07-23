@@ -712,7 +712,8 @@ async function _fuelResume(){
     const url = `${GAS_URL}?action=fuelStatus&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`;
     const r = await fetch(url,{redirect:'follow'}).then(x=>x.json());
     if(!r || !r.ok) return;
-    if(r.filled){ _fuelApply(r); return; }
+    // วาดใหม่ = อย่าทับค่าที่คนขับแก้เอง (เผื่อปั๊มส่งเลขผิดแล้วคนขับแก้ให้ถูก)
+    if(r.filled){ _fuelApply(r, false); return; }
     if(r.hasToken && !r.expired){
       fuelExpMs = Number(r.expiresMs)||0;
       _fuelRenderQR(r.qrText, r.token);
@@ -735,12 +736,16 @@ function _fuelStartPoll(){
   }, 5000);
 }
 
-function _fuelApply(r){
+// live=true → ปั๊มเพิ่งส่งมาสด ๆ ให้เติมทับได้ (คนขับกำลังรออยู่)
+// live=false → แค่วาดฟอร์มใหม่ เติมเฉพาะตอนช่องยังว่าง ห้ามทับที่คนขับแก้เอง
+function _fuelApply(r, live = true){
   _fuelStop();
   const lit = document.getElementById('fuel-factory-liter');
   const pri = document.getElementById('fuel-factory-price');
-  if(lit) lit.value = r.liters;
-  if(pri){
+  const edited = lit && lit.value !== '' && Number(lit.value) !== Number(r.liters);
+  const fill = live || !lit || lit.value === '';
+  if(lit && fill) lit.value = r.liters;
+  if(pri && fill){
     // ราคาเป็น dropdown — ถ้าไม่มีตัวเลือกนี้ให้เพิ่มเข้าไปก่อน
     let found = false;
     for(let i=0;i<pri.options.length;i++){ if(Number(pri.options[i].value)===Number(r.price)){ found=true; break; } }
@@ -756,7 +761,8 @@ function _fuelApply(r){
       <div class="qr-done-l">✅ ปั๊มส่งข้อมูลแล้ว</div>
       <div class="qr-done-v">${_num(r.liters)} ลิตร</div>
       <div class="qr-done-s">${_money(r.price)} บาท/ลิตร · รวม ${_money(r.amount)} บาท</div>
-    </div>${r.mismatch?`<div class="qr-warn">⚠️ ${r.mismatch}</div>`:''}`;
+    </div>${r.mismatch?`<div class="qr-warn">⚠️ ${r.mismatch}</div>`:''}
+    ${edited?`<div class="qr-warn">คุณแก้จำนวนลิตรเองไว้ ระบบใช้ค่าที่คุณกรอกในช่องด้านล่าง</div>`:''}`;
   }
 }
 
