@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <style>
 :root{
   --g1:#2D5A27;--g2:#4A7C3F;--g3:#D6E8D0;--g4:#F0F7EE;
@@ -128,6 +129,20 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .plate-no{background:var(--g3);color:var(--g1)}
 .plate-change{background:var(--pending-l);color:var(--text-m);margin-top:10px;width:100%}
 .plate-sel{width:100%;margin-top:10px;padding:12px;border-radius:10px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:16px;background:var(--white);color:var(--text)}
+.qr-card{background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px}
+.qr-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--text-m)}
+.qr-btn{background:var(--g2);color:#fff;flex-shrink:0}
+.qr-body{text-align:center}
+.qr-hint{font-size:12px;color:var(--text-l);padding:8px 0 2px;line-height:1.6}
+.qr-canvas-wrap{background:#fff;padding:10px;border-radius:10px;display:inline-block;margin-top:10px}
+.qr-code{font-family:monospace;font-size:22px;font-weight:700;letter-spacing:3px;color:var(--text);margin-top:8px}
+.qr-exp{font-size:12px;color:var(--text-m);margin-top:4px}
+.qr-exp.hot{color:var(--red);font-weight:600}
+.qr-done{background:var(--done-l);border-radius:10px;padding:12px;margin-top:6px}
+.qr-done-l{font-size:12px;color:var(--done);font-weight:600}
+.qr-done-v{font-size:24px;font-weight:700;color:var(--text);margin-top:2px}
+.qr-done-s{font-size:12px;color:var(--text-m);margin-top:2px}
+.qr-warn{font-size:12px;color:var(--red);margin-top:6px}
 .hide{display:none!important}.mt8{margin-top:8px}
 .err-msg{font-size:11px;color:var(--red);margin-top:4px}
 /* OCR result display — read-only value */
@@ -615,6 +630,124 @@ function formStart(){
   `;
 }
 
+// ── QR เติมน้ำมันที่โรงงาน ─────────────────────────────────
+// คนขับกดขอ QR → พนักงานปั๊มสแกน จ่ายน้ำมัน แล้วแอปปั๊มยิงลิตรกลับมา
+// ฟอร์มถามสถานะเป็นระยะ พอปั๊มส่งมาแล้วจะเติมช่องลิตร/ราคาให้เอง คนขับไม่ต้องพิมพ์
+let fuelPoll = null, fuelTick = null, fuelExpMs = 0;
+
+function _fuelStop(){
+  if(fuelPoll){ clearInterval(fuelPoll); fuelPoll = null; }
+  if(fuelTick){ clearInterval(fuelTick); fuelTick = null; }
+}
+
+async function askFuelQR(){
+  const body = document.getElementById('fuel-qr-body');
+  const btn  = document.getElementById('fuel-qr-btn');
+  if(!body) return;
+  btn.disabled = true;
+  body.innerHTML = '<div class="qr-hint">กำลังขอรหัส...</div>';
+  try{
+    const r = await postGASSilent({action:'fuelToken',userId:U.userId,orderId:order['Order ID']});
+    if(!r || !r.ok) throw new Error((r&&r.error)||'ขอรหัสไม่สำเร็จ');
+    fuelExpMs = Number(r.expiresMs)||0;
+    _fuelRenderQR(r.qrText, r.token);
+    _fuelStartPoll();
+  }catch(e){
+    console.error('askFuelQR', e);
+    body.innerHTML = `<div class="qr-warn">${e.message||'ขอรหัสไม่สำเร็จ'}</div>
+      <div class="qr-hint">กรอกจำนวนลิตรเองด้านล่างได้ตามปกติ</div>`;
+  }finally{ btn.disabled = false; }
+}
+
+function _fuelRenderQR(qrText, token){
+  const body = document.getElementById('fuel-qr-body');
+  body.innerHTML = `<div class="qr-canvas-wrap"><canvas id="fuel-qr-canvas"></canvas></div>
+    <div class="qr-code">${token}</div>
+    <div class="qr-exp" id="fuel-qr-exp"></div>
+    <div class="qr-hint">ถ้าสแกนไม่ติด ให้พนักงานพิมพ์รหัสด้านบนแทนได้</div>`;
+  try{
+    QRCode.toCanvas(document.getElementById('fuel-qr-canvas'), qrText, {width:220, margin:1});
+  }catch(e){
+    // ไลบรารีโหลดไม่ขึ้น (เน็ตช้า) — ยังใช้รหัสตัวอักษรแทนได้ ไม่ต้องล้ม
+    console.warn('QR render', e);
+    document.getElementById('fuel-qr-canvas').replaceWith(
+      Object.assign(document.createElement('div'),{className:'qr-hint',textContent:'แสดง QR ไม่ได้ ให้ใช้รหัสด้านล่าง'}));
+  }
+  _fuelCountdown();
+  fuelTick = setInterval(_fuelCountdown, 1000);
+}
+
+function _fuelCountdown(){
+  const el = document.getElementById('fuel-qr-exp');
+  if(!el) { _fuelStop(); return; }
+  const left = Math.max(0, Math.floor((fuelExpMs - Date.now())/1000));
+  if(left <= 0){
+    el.textContent = 'รหัสหมดอายุแล้ว กดขอใหม่อีกครั้ง';
+    el.className = 'qr-exp hot';
+    _fuelStop();
+    return;
+  }
+  const m = Math.floor(left/60), s = left%60;
+  el.textContent = `ใช้ได้อีก ${m}:${String(s).padStart(2,'0')} นาที`;
+  el.className = 'qr-exp' + (left < 120 ? ' hot' : '');
+}
+
+// กู้สถานะตอนวาดฟอร์มใหม่ — ถ้าปั๊มส่งมาแล้วเติมค่าให้เลย ถ้ายังมี QR ค้างก็โชว์ต่อ
+async function _fuelResume(){
+  const body = document.getElementById('fuel-qr-body');
+  if(!body || !order || !order['Order ID']) return;
+  try{
+    const url = `${GAS_URL}?action=fuelStatus&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`;
+    const r = await fetch(url,{redirect:'follow'}).then(x=>x.json());
+    if(!r || !r.ok) return;
+    if(r.filled){ _fuelApply(r); return; }
+    if(r.hasToken && !r.expired){
+      fuelExpMs = Number(r.expiresMs)||0;
+      _fuelRenderQR(r.qrText, r.token);
+      _fuelStartPoll();
+    }
+  }catch(e){ /* โหลดไม่ได้ก็ปล่อย ให้กรอกเองได้ตามปกติ */ }
+}
+
+// ถามสถานะทุก 5 วินาที หยุดเองเมื่อได้ข้อมูลหรือหมดอายุ (กันยิงถี่ไม่จำเป็น)
+function _fuelStartPoll(){
+  if(fuelPoll) clearInterval(fuelPoll);
+  fuelPoll = setInterval(async ()=>{
+    if(!document.getElementById('fuel-qr-body')){ _fuelStop(); return; }   // ฟอร์มถูกวาดใหม่/ปิดไปแล้ว
+    if(fuelExpMs && Date.now() > fuelExpMs + 60000){ _fuelStop(); return; }
+    try{
+      const url = `${GAS_URL}?action=fuelStatus&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`;
+      const r = await fetch(url,{redirect:'follow'}).then(x=>x.json());
+      if(r && r.ok && r.filled) _fuelApply(r);
+    }catch(e){ /* เน็ตสะดุด ปล่อยให้รอบหน้าลองใหม่ */ }
+  }, 5000);
+}
+
+function _fuelApply(r){
+  _fuelStop();
+  const lit = document.getElementById('fuel-factory-liter');
+  const pri = document.getElementById('fuel-factory-price');
+  if(lit) lit.value = r.liters;
+  if(pri){
+    // ราคาเป็น dropdown — ถ้าไม่มีตัวเลือกนี้ให้เพิ่มเข้าไปก่อน
+    let found = false;
+    for(let i=0;i<pri.options.length;i++){ if(Number(pri.options[i].value)===Number(r.price)){ found=true; break; } }
+    if(!found){ const o=document.createElement('option'); o.value=r.price; o.textContent=r.price; pri.appendChild(o); }
+    pri.value = r.price;
+    if(pri.tomselect) pri.tomselect.setValue(String(r.price));
+  }
+  if(typeof calcFuelFactory === 'function') calcFuelFactory();
+
+  const body = document.getElementById('fuel-qr-body');
+  if(body){
+    body.innerHTML = `<div class="qr-done">
+      <div class="qr-done-l">✅ ปั๊มส่งข้อมูลแล้ว</div>
+      <div class="qr-done-v">${r.liters} ลิตร</div>
+      <div class="qr-done-s">${r.price} บาท/ลิตร · รวม ${r.amount} บาท</div>
+    </div>${r.mismatch?`<div class="qr-warn">⚠️ ${r.mismatch}</div>`:''}`;
+  }
+}
+
 // ── รีเช็คทะเบียนก่อนเริ่มงาน ──────────────────────────────
 // กดรับงานจากการ์ดใน LINE ระบบใส่ "คันประจำ" มาให้ ถ้าวันนี้เปลี่ยนคันแล้วไม่แก้
 // ต้นทุน/ค่าแรงทั้งเที่ยวจะไปลงคันที่ไม่ได้วิ่ง แก้ทีหลังไม่ได้เพราะค่าแรงล็อกตอนจบงาน
@@ -771,6 +904,8 @@ function formRamp(){
 }
 
 function formFactory(){
+  // renderTimeline() วาดใหม่ได้หลายครั้ง → กู้สถานะ QR กลับมา ไม่ให้คนขับสับสนว่าหาย
+  setTimeout(_fuelResume, 0);
   let html = `
     <div class="sec-lbl">⚖️ ใบชั่งลูกค้า (ที่โรงงาน)</div>
     ${ocrPhotoBox('factory-client-weight','รูปใบชั่งลูกค้า','weight-factory-client','ใบชั่งลูกค้า')}
@@ -790,6 +925,15 @@ function formFactory(){
     ${ocrMileHubBlock('factory','รูปเลขไมล์หลังชั่งเสร็จ','รูปเลขดุมล้อหลังชั่งเสร็จ')}
     <div class="sec-divider"></div>
     <div class="sec-lbl">⛽ เติมน้ำมันที่โรงงาน</div>
+    <div class="qr-card" id="fuel-qr-card">
+      <div class="qr-head">
+        <span>ให้พนักงานปั๊มสแกน</span>
+        <button class="btn-sm qr-btn" id="fuel-qr-btn" onclick="askFuelQR()">ขอ QR</button>
+      </div>
+      <div id="fuel-qr-body" class="qr-body">
+        <div class="qr-hint">กดขอ QR แล้วยื่นจอให้พนักงานสแกน จำนวนลิตรจะขึ้นเองอัตโนมัติ</div>
+      </div>
+    </div>
     <div class="exp-section" style="margin-top:0">
       <div class="row2">
         <div>
