@@ -636,7 +636,7 @@ function formStart(){
 let fuelPoll = null, fuelTick = null, fuelExpMs = 0;
 
 function _fuelStop(){
-  if(fuelPoll){ clearInterval(fuelPoll); fuelPoll = null; }
+  if(fuelPoll){ clearTimeout(fuelPoll); fuelPoll = null; }
   if(fuelTick){ clearInterval(fuelTick); fuelTick = null; }
 }
 
@@ -674,6 +674,7 @@ function _fuelRenderQR(qrText, token){
   body.innerHTML = `${qrHtml}
     <div class="qr-code">${token}</div>
     <div class="qr-exp" id="fuel-qr-exp"></div>
+    <button class="btn-sm plate-change" onclick="_fuelCheckOnce()">ตรวจสอบตอนนี้</button>
     <div class="qr-hint">ถ้าสแกนไม่ติด ให้พนักงานพิมพ์รหัสด้านบนแทนได้</div>`;
   _fuelCountdown();
   fuelTick = setInterval(_fuelCountdown, 1000);
@@ -722,18 +723,37 @@ async function _fuelResume(){
   }catch(e){ /* โหลดไม่ได้ก็ปล่อย ให้กรอกเองได้ตามปกติ */ }
 }
 
-// ถามสถานะทุก 5 วินาที หยุดเองเมื่อได้ข้อมูลหรือหมดอายุ (กันยิงถี่ไม่จำเป็น)
+// ถามสถานะเป็นระยะ — ถี่ตอนแรก แล้วค่อยห่างออก
+// ปกติพนักงานสแกนภายใน 1 นาที จ่ายเสร็จใน 2-5 นาที ไม่จำเป็นต้องถี่ตลอด 15 นาที
+// (ถี่ทุก 5 วิ ตลอด = ~180 ครั้ง/การเติม 1 ครั้ง กินโควต้าเปล่า)
+let fuelPollT0 = 0;
+function _fuelGap(){
+  const age = (Date.now() - fuelPollT0) / 1000;
+  if (age <  60) return 5000;    // นาทีแรก ตอบไว
+  if (age < 300) return 10000;   // 1-5 นาที กำลังจ่ายน้ำมัน
+  return 30000;                  // หลังจากนั้น เผื่อไว้เฉย ๆ
+}
+
+async function _fuelCheckOnce(){
+  try{
+    const url = `${GAS_URL}?action=fuelStatus&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`;
+    const r = await fetch(url,{redirect:'follow'}).then(x=>x.json());
+    if(r && r.ok && r.filled){ _fuelApply(r); return true; }
+  }catch(e){ /* เน็ตสะดุด ปล่อยให้รอบหน้าลองใหม่ */ }
+  return false;
+}
+
 function _fuelStartPoll(){
-  if(fuelPoll) clearInterval(fuelPoll);
-  fuelPoll = setInterval(async ()=>{
+  _fuelStop();
+  fuelPollT0 = Date.now();
+  const tick = async ()=>{
     if(!document.getElementById('fuel-qr-body')){ _fuelStop(); return; }   // ฟอร์มถูกวาดใหม่/ปิดไปแล้ว
     if(fuelExpMs && Date.now() > fuelExpMs + 60000){ _fuelStop(); return; }
-    try{
-      const url = `${GAS_URL}?action=fuelStatus&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`;
-      const r = await fetch(url,{redirect:'follow'}).then(x=>x.json());
-      if(r && r.ok && r.filled) _fuelApply(r);
-    }catch(e){ /* เน็ตสะดุด ปล่อยให้รอบหน้าลองใหม่ */ }
-  }, 5000);
+    if(document.hidden){ fuelPoll = setTimeout(tick, 5000); return; }      // พับหน้าจอไว้ = ยังไม่ต้องถาม
+    if(await _fuelCheckOnce()) return;                                     // ได้ข้อมูลแล้ว _fuelApply หยุดให้เอง
+    fuelPoll = setTimeout(tick, _fuelGap());
+  };
+  fuelPoll = setTimeout(tick, _fuelGap());
 }
 
 // live=true → ปั๊มเพิ่งส่งมาสด ๆ ให้เติมทับได้ (คนขับกำลังรออยู่)
