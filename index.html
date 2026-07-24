@@ -766,12 +766,17 @@ function _fuelApply(r){
   const pri = document.getElementById('fuel-factory-price');
   if(lit) lit.value = r.liters;
   if(pri){
-    // ราคาเป็น dropdown — ถ้าไม่มีตัวเลือกนี้ให้เพิ่มเข้าไปก่อน
+    // ดรอปดาวน์ราคาเก็บเป็นทศนิยม 2 ตำแหน่งเสมอ ("32.00") ต้องแปลงให้ตรงรูปแบบ
+    // ไม่งั้นราคาที่ลงท้ายด้วยศูนย์จะจับคู่ไม่เจอแล้วช่องว่างเงียบ ๆ
+    const pv = Number(r.price).toFixed(2);
     let found = false;
-    for(let i=0;i<pri.options.length;i++){ if(Number(pri.options[i].value)===Number(r.price)){ found=true; break; } }
-    if(!found){ const o=document.createElement('option'); o.value=r.price; o.textContent=r.price; pri.appendChild(o); }
-    pri.value = r.price;
-    if(pri.tomselect) pri.tomselect.setValue(String(r.price), true);
+    for(let i=0;i<pri.options.length;i++){ if(pri.options[i].value===pv){ found=true; break; } }
+    if(!found){ const o=document.createElement('option'); o.value=pv; o.textContent=pv; pri.appendChild(o); }
+    pri.value = pv;
+    if(pri.tomselect){
+      if(!pri.tomselect.options[pv]) pri.tomselect.addOption({value:pv, text:pv});
+      pri.tomselect.setValue(pv, true);
+    }
   }
   if(typeof calcFuelFactory === 'function') calcFuelFactory();
   _fuelLock();
