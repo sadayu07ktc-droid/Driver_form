@@ -143,6 +143,8 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .qr-done-v{font-size:24px;font-weight:700;color:var(--text);margin-top:2px}
 .qr-done-s{font-size:12px;color:var(--text-m);margin-top:2px}
 .qr-warn{font-size:12px;color:var(--red);margin-top:6px}
+.fuel-locked{background:var(--pending-l)!important;color:var(--text-m)!important;cursor:not-allowed}
+.fuel-locked+.ts-wrapper .ts-control{background:var(--pending-l)!important;color:var(--text-m)!important}
 .hide{display:none!important}.mt8{margin-top:8px}
 .err-msg{font-size:11px;color:var(--red);margin-top:4px}
 /* OCR result display — read-only value */
@@ -713,8 +715,8 @@ async function _fuelResume(){
     const url = `${GAS_URL}?action=fuelStatus&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`;
     const r = await fetch(url,{redirect:'follow'}).then(x=>x.json());
     if(!r || !r.ok) return;
-    // วาดใหม่ = อย่าทับค่าที่คนขับแก้เอง (เผื่อปั๊มส่งเลขผิดแล้วคนขับแก้ให้ถูก)
-    if(r.filled){ _fuelApply(r, false); return; }
+    // วาดฟอร์มใหม่ = ช่องถูกสร้างใหม่ ปลดล็อกไปแล้ว ต้องเติมค่า+ล็อกซ้ำ
+    if(r.filled){ _fuelApply(r); return; }
     if(r.hasToken && !r.expired){
       fuelExpMs = Number(r.expiresMs)||0;
       _fuelRenderQR(r.qrText, r.token);
@@ -756,24 +758,23 @@ function _fuelStartPoll(){
   fuelPoll = setTimeout(tick, _fuelGap());
 }
 
-// live=true → ปั๊มเพิ่งส่งมาสด ๆ ให้เติมทับได้ (คนขับกำลังรออยู่)
-// live=false → แค่วาดฟอร์มใหม่ เติมเฉพาะตอนช่องยังว่าง ห้ามทับที่คนขับแก้เอง
-function _fuelApply(r, live = true){
+// ปั๊มส่งข้อมูลมาแล้ว = หลักฐานการจ่ายจริง คนขับแก้ไม่ได้
+// เติมค่าลงช่องแล้วล็อกไว้ ถ้าเลขไม่ถูกต้องต้องให้แอดมินแก้ผ่านคำขอแก้ไขข้อมูล
+function _fuelApply(r){
   _fuelStop();
   const lit = document.getElementById('fuel-factory-liter');
   const pri = document.getElementById('fuel-factory-price');
-  const edited = lit && lit.value !== '' && Number(lit.value) !== Number(r.liters);
-  const fill = live || !lit || lit.value === '';
-  if(lit && fill) lit.value = r.liters;
-  if(pri && fill){
+  if(lit) lit.value = r.liters;
+  if(pri){
     // ราคาเป็น dropdown — ถ้าไม่มีตัวเลือกนี้ให้เพิ่มเข้าไปก่อน
     let found = false;
     for(let i=0;i<pri.options.length;i++){ if(Number(pri.options[i].value)===Number(r.price)){ found=true; break; } }
     if(!found){ const o=document.createElement('option'); o.value=r.price; o.textContent=r.price; pri.appendChild(o); }
     pri.value = r.price;
-    if(pri.tomselect) pri.tomselect.setValue(String(r.price));
+    if(pri.tomselect) pri.tomselect.setValue(String(r.price), true);
   }
   if(typeof calcFuelFactory === 'function') calcFuelFactory();
+  _fuelLock();
 
   const body = document.getElementById('fuel-qr-body');
   if(body){
@@ -782,7 +783,20 @@ function _fuelApply(r, live = true){
       <div class="qr-done-v">${_num(r.liters)} ลิตร</div>
       <div class="qr-done-s">${_money(r.price)} บาท/ลิตร · รวม ${_money(r.amount)} บาท</div>
     </div>${r.mismatch?`<div class="qr-warn">⚠️ ${r.mismatch}</div>`:''}
-    ${edited?`<div class="qr-warn">คุณแก้จำนวนลิตรเองไว้ ระบบใช้ค่าที่คุณกรอกในช่องด้านล่าง</div>`:''}`;
+    <div class="qr-hint">ค่านี้มาจากหัวจ่ายโดยตรง แก้ไขเองไม่ได้ ถ้าไม่ถูกต้องกรุณาแจ้งแอดมิน</div>`;
+  }
+}
+
+// ล็อกช่องลิตร/ราคา — tom select สร้างทีหลัง เลยต้องเผื่อรอ
+function _fuelLock(tries = 0){
+  const lit = document.getElementById('fuel-factory-liter');
+  const pri = document.getElementById('fuel-factory-price');
+  if(lit){ lit.readOnly = true; lit.classList.add('fuel-locked'); }
+  if(pri){
+    pri.classList.add('fuel-locked');
+    if(pri.tomselect) pri.tomselect.lock();
+    else if(tries < 20) { setTimeout(()=>_fuelLock(tries+1), 150); return; }
+    else pri.disabled = true;   // tom select ไม่ขึ้น ใช้ disabled แทน (getVal ยังอ่าน .value ได้)
   }
 }
 
