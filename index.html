@@ -296,6 +296,8 @@ function showMaintenance(){
 
 async function init(){
   buildPriceList();
+  _queueBadge();            // มีงานค้างจากครั้งก่อนไหม
+  if(navigator.onLine) _queueFlush();   // เปิดแอปแล้วมีเน็ต → ส่งที่ค้างเลย
   try{
     await liff.init({liffId:LIFF_ID});
     if(!liff.isLoggedIn()){liff.login();return;}
@@ -923,13 +925,20 @@ function formArrive(){
   `;
 }
 
+let _checkinBusy=false;
 async function manualCheckin(){
+  if(_checkinBusy) return;   // กันกดซ้ำระหว่างกำลังส่ง
   if(!confirm('ยืนยันว่ารถถึงลูกค้าแล้ว?\n(ปกติระบบเช็คอินให้อัตโนมัติด้วย GPS)')) return;
-  const r=await postGAS({action:'driverCheckin',orderId:order['Order ID'],userId:U.userId},'📍 กำลังเช็คอิน...');
-  if(!r?.success){alert('❌ '+(r?.error||'เช็คอินไม่สำเร็จ'));return;}
-  order['สถานะ']='ถึงลูกค้า';
-  renderTimeline();
-  alert('✅ เช็คอินถึงลูกค้าแล้ว — กรอกข้อมูล "ออกจากลูกค้า" ต่อได้เลย');
+  _checkinBusy=true;
+  try{
+    const r=await postGAS({action:'driverCheckin',orderId:order['Order ID'],userId:U.userId},'📍 กำลังเช็คอิน...');
+    if(!r?.success){alert('❌ '+(r?.error||'เช็คอินไม่สำเร็จ'));return;}
+    order['สถานะ']='ถึงลูกค้า';
+    renderTimeline();
+    alert(r.queued
+      ? '📡 ไม่มีสัญญาณตอนนี้\nระบบบันทึกไว้แล้ว จะเช็คอินให้อัตโนมัติเมื่อมีเน็ต\nไม่ต้องกดซ้ำครับ'
+      : '✅ เช็คอินถึงลูกค้าแล้ว — กรอกข้อมูล "ออกจากลูกค้า" ต่อได้เลย');
+  }finally{ _checkinBusy=false; }
 }
 
 function formClient(){
@@ -1309,11 +1318,55 @@ async function postGAS(payload, msg='กำลังบันทึก...'){
     try{return JSON.parse(text);}
     catch(e){console.warn('postGAS parse warn:',text.substring(0,200));return{success:true};}
   }catch(e){
-    console.error('postGAS error:',e);
-    try{fetch(GAS_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(payload)});}catch(_){}
-    return{success:true,_fallback:true};
+    // เน็ตหลุด (สวนไม่มีสัญญาณ) — เดิมโกหกว่าสำเร็จ ทำให้คนขับกดซ้ำรัว ๆ
+    // ตอนนี้: เก็บลงคิว จะส่งเองเมื่อมีเน็ต + บอกคนขับตรง ๆ ว่ารอสัญญาณ
+    console.warn('postGAS offline → queue:',e);
+    _queueAdd(payload);
+    return {success:true, queued:true};
   }finally{setLoading(false);}
 }
+
+// ── คิวออฟไลน์ — เก็บงานที่ส่งไม่ได้ไว้ใน localStorage แล้วส่งเองเมื่อเน็ตกลับมา ──
+// server มี dedup อยู่แล้ว ส่งซ้ำจึงปลอดภัย (ไม่แจ้งเตือนซ้ำ ไม่บันทึกเบิ้ล)
+const OFFLINE_KEY='ssb_offline_queue';
+function _queueRead(){ try{return JSON.parse(localStorage.getItem(OFFLINE_KEY)||'[]');}catch(e){return[];} }
+function _queueWrite(a){ try{localStorage.setItem(OFFLINE_KEY,JSON.stringify(a));}catch(e){} }
+function _queueAdd(payload){
+  const q=_queueRead();
+  q.push({payload, t:Date.now()});
+  _queueWrite(q);
+  _queueBadge();
+}
+function _queueBadge(){
+  const n=_queueRead().length;
+  let el=document.getElementById('offline-badge');
+  if(!el){
+    el=document.createElement('div'); el.id='offline-badge';
+    el.style.cssText='position:sticky;top:0;z-index:50;background:#B45309;color:#fff;text-align:center;padding:8px;font-size:13px;font-weight:600';
+    document.body.insertBefore(el, document.body.firstChild);
+  }
+  if(n>0){ el.style.display='block'; el.textContent=`📡 ไม่มีสัญญาณ — บันทึกไว้ ${n} รายการ รอส่งอัตโนมัติเมื่อมีเน็ต`; }
+  else el.style.display='none';
+}
+async function _queueFlush(){
+  let q=_queueRead();
+  if(!q.length) return;
+  const keep=[];
+  for(const item of q){
+    try{
+      const res=await fetch(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(item.payload)});
+      await res.text();   // ส่งผ่านแล้ว server จัดการเอง (มี dedup)
+    }catch(e){ keep.push(item); }   // ยังส่งไม่ได้ เก็บไว้รอบหน้า
+  }
+  _queueWrite(keep);
+  _queueBadge();
+  if(!keep.length && q.length){
+    const el=document.getElementById('offline-badge');
+    if(el){ el.style.background='#15803D'; el.textContent='✅ ส่งข้อมูลที่ค้างครบแล้ว'; setTimeout(()=>{el.style.display='none';el.style.background='#B45309';},4000); }
+  }
+}
+window.addEventListener('online', _queueFlush);
+setInterval(()=>{ if(navigator.onLine) _queueFlush(); }, 20000);
 
 // ── postGAS แบบเงียบ (ไม่เปิด overlay หมุนทั้งจอ) — ใช้กับ OCR ──
 async function postGASSilent(payload){
@@ -1603,7 +1656,9 @@ async function submitStart(){
 
   order['สถานะ']='เริ่มงานแล้ว';
   renderTimeline();
-  alert('✅ บันทึกออกโรงงานแล้วครับ');
+  alert(r?.queued
+    ? '📡 ไม่มีสัญญาณตอนนี้\nระบบบันทึกออกโรงงานไว้แล้ว จะส่งอัตโนมัติเมื่อมีเน็ต\nไม่ต้องกดซ้ำครับ'
+    : '✅ บันทึกออกโรงงานแล้วครับ');
 }
 
 async function submitRampDrop(){
