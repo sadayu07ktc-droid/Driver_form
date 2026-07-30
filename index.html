@@ -613,8 +613,11 @@ function renderTimeline(){
   const activeKey=getActiveStepKey(order['สถานะ']);
   if(activeKey){
     const mk='mile-'+activeKey;
+    // ⛔ ที่ step "เริ่มงาน": รอให้คนขับยืนยัน/เลือก "ทะเบียนคันที่ขับวันนี้" ก่อน
+    //    แล้วค่อยดึง GPS — กันดึงไมล์จาก "คันประจำเดิม" ทั้งที่วันนี้สลับคัน (ดึงแล้วมัน cache ไม่ดึงซ้ำ)
+    const waitPlate = (activeKey==='start' && !plateOk);
     // เฉพาะ step ที่มีบล็อกดึงไมล์จริง (ไม่ยิง DTC ตอน step arrive ที่ไม่มีบล็อก)
-    if(document.getElementById('gps-btn-'+mk) && gpsMile[mk]==null && !gpsFetching[mk]) fetchGpsMileage(mk);
+    if(!waitPlate && document.getElementById('gps-btn-'+mk) && gpsMile[mk]==null && !gpsFetching[mk]) fetchGpsMileage(mk);
   }
 }
 
@@ -881,6 +884,17 @@ function renderPlateBox(){
 function confirmPlate(){
   plateOk = true;
   renderPlateBox();
+  pullActiveGps(false);   // ยืนยันทะเบียนแล้ว → ดึงไมล์ GPS ของคันนี้
+}
+
+// 🆕 ดึงไมล์ GPS ของ step ที่ active อยู่ตอนนี้ (ใช้หลังยืนยัน/สลับทะเบียน)
+//    force=true → ล้างค่าที่เคยดึงด้วย "คันเก่า" ทิ้ง แล้วดึงใหม่ตามคันที่เพิ่งเลือก
+function pullActiveGps(force){
+  const activeKey=getActiveStepKey(order['สถานะ']);
+  if(!activeKey) return;
+  const mk='mile-'+activeKey;
+  if(force){ gpsMile[mk]=null; gpsFetching[mk]=false; }
+  if(document.getElementById('gps-btn-'+mk) && gpsMile[mk]==null && !gpsFetching[mk]) fetchGpsMileage(mk);
 }
 
 function openPlatePicker(){
@@ -910,6 +924,7 @@ async function savePlate(){
   order['ทะเบียนรถ'] = plate;
   plateOk = true;
   renderPlateBox();
+  pullActiveGps(!!r.changed);   // สลับคันแล้ว → ดึงไมล์ GPS ใหม่ตามคันที่เลือก (ล้างค่าคันเก่าทิ้ง)
   if(r.changed) alert('✅ เปลี่ยนเป็น '+plate+' แล้วครับ');
 }
 
@@ -1228,7 +1243,7 @@ async function fetchGpsMileage(mileKey){
   if(meta) meta.textContent='';
 
   try{
-    const r = await fetch(`${GAS_URL}?action=getGpsMileage&orderId=${encodeURIComponent(order['Order ID'])}`).then(x=>x.json());
+    const r = await fetch(`${GAS_URL}?action=getGpsMileage&orderId=${encodeURIComponent(order['Order ID'])}&plate=${encodeURIComponent(order['ทะเบียนรถ']||'')}`).then(x=>x.json());
     if(r && r.status==='ok'){
       gpsMile[mileKey]=r.mileage;
       if(valEl) valEl.textContent=Number(r.mileage).toLocaleString(undefined,{maximumFractionDigits:1})+' กม.';
