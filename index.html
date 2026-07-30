@@ -298,9 +298,9 @@ let loadStates={};  // 🆕 สภาพรถแต่ละจุด {start:'�
 const LOAD_DEFAULT={start:'เบา', rampDrop:'เบา', client:'หนัก', ramp:'หนัก', factory:'หนัก'};
 
 function buildPriceList(){
-  // ✅ สร้างชุดราคาน้ำมัน 30.01–50.00 (ทศนิยม 2 ตำแหน่ง) ไว้ป้อนให้ Tom Select
+  // ✅ สร้างชุดราคาน้ำมัน 25.00–50.00 (ทศนิยม 2 ตำแหน่ง) ไว้ป้อนให้ Tom Select
   priceOptions=[];
-  for(let p=3001;p<=5000;p++){const v=(p/100).toFixed(2);priceOptions.push({value:v,text:v});}
+  for(let p=2500;p<=5000;p++){const v=(p/100).toFixed(2);priceOptions.push({value:v,text:v});}
 }
 
 // ✅ แปลง <select> ราคาน้ำมัน เป็นช่องค้นหาแบบเดียวกับ "เลือกสวน" (Tom Select)
