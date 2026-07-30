@@ -17,7 +17,7 @@
   --done:#16A34A;--done-l:#DCFCE7;
   --active:#7C3AED;--active-l:#EDE9FE;
   --pending:#9CA3AF;--pending-l:#F3F4F6;
-  --red:#DC2626;--red-l:#FEE2E2;
+  --red:#DC2626;--red-l:#FEE2E2;--warn:#B45309;--warn-l:#FEF3C7;
   --text:#1F2937;--text-m:#6B7280;--text-l:#9CA3AF;
   --border:rgba(0,0,0,0.08);--white:#FFFFFF;--bg:#F5F5F0;
 }
@@ -91,6 +91,35 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #overlay p{font-size:14px;color:#fff;font-weight:500}
+/* ── Toast + Modal (แทน alert/confirm/prompt เดิม — เข้าธีมแอป) ── */
+#toastWrap{position:fixed;top:0;left:0;right:0;z-index:300;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 12px;pointer-events:none}
+.toast{pointer-events:auto;width:100%;max-width:440px;background:var(--white);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.16);display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-left:4px solid var(--text-m);animation:toastIn .25s ease;font-size:14px;line-height:1.5}
+.toast.out{animation:toastOut .2s ease forwards}
+.toast .ti{font-size:20px;flex-shrink:0;line-height:1.3}
+.toast .tx{flex:1;color:var(--text);white-space:pre-line;font-weight:500}
+.toast.ok{border-color:var(--done)}.toast.ok .ti{color:var(--done)}
+.toast.error{border-color:var(--red)}.toast.error .ti{color:var(--red)}
+.toast.warn{border-color:var(--warn)}.toast.warn .ti{color:var(--warn)}
+.toast.info{border-color:var(--s1)}.toast.info .ti{color:var(--s1)}
+@keyframes toastIn{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateY(-16px)}}
+#modal{display:none;position:fixed;inset:0;z-index:320;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:24px}
+#modal.show{display:flex}
+.modal-card{background:var(--white);border-radius:18px;width:100%;max-width:360px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.25);animation:modalIn .25s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+.modal-top{padding:22px 20px 0;text-align:center}
+.modal-ic{font-size:44px;line-height:1}
+.modal-title{font-size:17px;font-weight:700;color:var(--text);margin-top:10px}
+.modal-msg{font-size:13.5px;color:var(--text-m);line-height:1.6;margin-top:6px;white-space:pre-line}
+.modal-body{padding:14px 20px 0}
+.modal-body textarea{width:100%;min-height:88px;font-family:'Sarabun',sans-serif;font-size:14px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);outline:none;resize:vertical}
+.modal-body textarea:focus{border-color:var(--active);background:var(--white)}
+.modal-btns{display:flex;gap:10px;padding:18px 20px 20px}
+.modal-btns>button{flex:1;padding:12px;border-radius:12px;border:none;font-family:'Sarabun',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+.modal-btns>button:active{transform:scale(.98)}
+.mb-cancel{background:var(--pending-l);color:var(--text-m)}
+.mb-ok{background:var(--g2);color:#fff}
+.mb-ok.danger{background:var(--red)}
 #success{display:none;position:fixed;inset:0;background:linear-gradient(135deg,var(--g1),var(--g2));z-index:200;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;gap:14px;color:#fff}
 #success.show{display:flex}
 #success .si{font-size:72px}#success h2{font-size:24px;font-weight:700}
@@ -181,6 +210,8 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 </head>
 <body>
 <div id="overlay"><div class="spinner"></div><p id="overlay-msg">กำลังบันทึก...</p></div>
+<div id="toastWrap"></div>
+<div id="modal"></div>
 <div id="success">
   <div class="si">🏁</div><h2>เสร็จงานแล้ว!</h2>
   <p id="success-msg">ส่งข้อมูลให้ Admin และเจ้าของสวนแล้วครับ</p>
@@ -485,15 +516,15 @@ function backToList(){
 }
 
 async function cancelJob(orderId){
-  const reason=prompt('กรุณาระบุสาเหตุที่ขอยกเลิกงาน '+orderId+':');
+  const reason=await promptModal({icon:'🚫',title:'ขอยกเลิกงาน',msg:orderId,placeholder:'ระบุสาเหตุที่ขอยกเลิก...',okText:'ส่งคำขอ',cancelText:'ปิด'});
   if(reason===null) return;
-  if(!reason.trim()){alert('กรุณาระบุเหตุผล');return;}
+  if(!reason.trim()){toast('กรุณาระบุเหตุผล');return;}
   const r=await postGAS({action:'driverCancelRequest',orderId,userId:U.userId,reason},'📤 กำลังส่งคำขอ...');
   if(r?.success){
-    alert('📤 ส่งคำขอยกเลิกไปยัง Admin แล้วครับ\nรออนุมัติจาก Admin');
+    toast('📤 ส่งคำขอยกเลิกไปยัง Admin แล้วครับ\nรออนุมัติจาก Admin');
     await reloadOrders();   // ✅ รีเฟรชให้สถานะอัปเดตเป็น "รออนุมัติยกเลิก"
   }
-  else alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));
+  else toast('❌ '+(r?.error||'เกิดข้อผิดพลาด'));
 }
 
 function renderOrderBanner(){
@@ -900,7 +931,7 @@ function pullActiveGps(force){
 function openPlatePicker(){
   if(!plateInfo) return;
   const list = plateInfo.plates || [];
-  if(!list.length){ alert('ไม่พบรายการทะเบียนในระบบ กรุณาแจ้งแอดมิน'); return; }
+  if(!list.length){ toast('ไม่พบรายการทะเบียนในระบบ กรุณาแจ้งแอดมิน'); return; }
   const opts = list.map(p =>
     `<option value="${p.plate}"${p.plate===plateInfo.current?' selected':''}>${p.plate}${p.type?' — '+p.type:''}</option>`
   ).join('');
@@ -919,13 +950,13 @@ async function savePlate(){
   if(!sel) return;
   const plate = sel.value;
   const r = await postGAS({action:'confirmPlate',userId:U.userId,orderId:order['Order ID'],plate},'🚗 กำลังบันทึกทะเบียน...');
-  if(!r || !r.success){ alert('❌ '+((r&&r.error)||'บันทึกทะเบียนไม่สำเร็จ')); renderPlateBox(); return; }
+  if(!r || !r.success){ toast('❌ '+((r&&r.error)||'บันทึกทะเบียนไม่สำเร็จ')); renderPlateBox(); return; }
   plateInfo.current = plate;
   order['ทะเบียนรถ'] = plate;
   plateOk = true;
   renderPlateBox();
   pullActiveGps(!!r.changed);   // สลับคันแล้ว → ดึงไมล์ GPS ใหม่ตามคันที่เลือก (ล้างค่าคันเก่าทิ้ง)
-  if(r.changed) alert('✅ เปลี่ยนเป็น '+plate+' แล้วครับ');
+  if(r.changed) toast('✅ เปลี่ยนเป็น '+plate+' แล้วครับ');
 }
 
 function formRampDrop(){
@@ -957,14 +988,14 @@ function formArrive(){
 let _checkinBusy=false;
 async function manualCheckin(){
   if(_checkinBusy) return;   // กันกดซ้ำระหว่างกำลังส่ง
-  if(!confirm('ยืนยันว่ารถถึงลูกค้าแล้ว?\n(ปกติระบบเช็คอินให้อัตโนมัติด้วย GPS)')) return;
+  if(!(await confirmModal({icon:'📍',title:'รถถึงลูกค้าแล้วใช่ไหม?',msg:'ปกติระบบเช็คอินให้อัตโนมัติด้วย GPS',okText:'ถึงแล้ว',cancelText:'ยังไม่ถึง'}))) return;
   _checkinBusy=true;
   try{
     const r=await postGAS({action:'driverCheckin',orderId:order['Order ID'],userId:U.userId},'📍 กำลังเช็คอิน...');
-    if(!r?.success){alert('❌ '+(r?.error||'เช็คอินไม่สำเร็จ'));return;}
+    if(!r?.success){toast('❌ '+(r?.error||'เช็คอินไม่สำเร็จ'));return;}
     order['สถานะ']='ถึงลูกค้า';
     renderTimeline();
-    alert(r.queued
+    toast(r.queued
       ? '📡 ไม่มีสัญญาณตอนนี้\nระบบบันทึกไว้แล้ว จะเช็คอินให้อัตโนมัติเมื่อมีเน็ต\nไม่ต้องกดซ้ำครับ'
       : '✅ เช็คอินถึงลูกค้าแล้ว — กรอกข้อมูล "ออกจากลูกค้า" ต่อได้เลย');
   }finally{ _checkinBusy=false; }
@@ -1338,6 +1369,77 @@ function setLoading(on, msg='กำลังบันทึก...'){
   }
 }
 
+// ── toast() — แทน toast() เดิม (ไม่บล็อกจอ, การ์ดเข้าธีมแอป) ──
+//    เดา "ชนิด" จากข้อความอัตโนมัติ: ✅=สำเร็จ ❌=ผิดพลาด ⚠️=เตือน ที่เหลือ=ข้อมูล
+function _toastType(m){
+  m = String(m||'');
+  if(/❌|ไม่สำเร็จ|ผิดปกติ|ผิดพลาด|ไม่ได้|error/i.test(m)) return 'error';
+  if(/✅|เรียบร้อย|สำเร็จ|เปลี่ยนเป็น/.test(m))            return 'ok';
+  if(/⚠️|⏳|📡|กรุณา|ห้าม|รอ/.test(m))                     return 'warn';
+  return 'info';
+}
+function _toastKill(el){ if(!el||el._k)return; el._k=1; el.classList.add('out'); setTimeout(()=>el.remove(),220); }
+function toast(msg, type, ms){
+  msg = String(msg==null?'':msg);
+  type = type || _toastType(msg);
+  const wrap = document.getElementById('toastWrap');
+  if(!wrap){ return; }
+  const ic = ({ok:'✅',error:'❌',warn:'⚠️',info:'ℹ️'})[type] || 'ℹ️';
+  // ตัด emoji นำหน้าที่ซ้ำกับไอคอน ออกจากข้อความ
+  const clean = msg.replace(/^\s*(✅|❌|⚠️|ℹ️|📤|📡|⏳|📍|📊|📋)\s*/,'').trim() || msg;
+  const el = document.createElement('div');
+  el.className = 'toast '+type;
+  el.innerHTML = '<span class="ti"></span><span class="tx"></span>';
+  el.querySelector('.ti').textContent = ic;
+  el.querySelector('.tx').textContent = clean;
+  el.onclick = ()=>_toastKill(el);
+  wrap.appendChild(el);
+  setTimeout(()=>_toastKill(el), ms || (type==='error'?4200:type==='warn'?3200:2600));
+}
+
+// ── confirmModal()/promptModal() — แทน confirm()/prompt() เดิม (คืน Promise) ──
+function _esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _closeModal(){ const m=document.getElementById('modal'); if(m){ m.classList.remove('show'); m.innerHTML=''; } }
+function confirmModal(opt){
+  opt = opt||{};
+  return new Promise(res=>{
+    const m = document.getElementById('modal');
+    m.innerHTML =
+      '<div class="modal-card"><div class="modal-top">'
+      + '<div class="modal-ic">'+_esc(opt.icon||'❓')+'</div>'
+      + '<div class="modal-title">'+_esc(opt.title||'ยืนยัน')+'</div>'
+      + (opt.msg?'<div class="modal-msg">'+_esc(opt.msg)+'</div>':'')
+      + '</div><div class="modal-btns">'
+      + '<button class="mb-cancel" id="_mbC">'+_esc(opt.cancelText||'ยกเลิก')+'</button>'
+      + '<button class="mb-ok '+(opt.danger?'danger':'')+'" id="_mbO">'+_esc(opt.okText||'ตกลง')+'</button>'
+      + '</div></div>';
+    m.classList.add('show');
+    m.querySelector('#_mbC').onclick=()=>{ _closeModal(); res(false); };
+    m.querySelector('#_mbO').onclick=()=>{ _closeModal(); res(true); };
+  });
+}
+function promptModal(opt){
+  opt = opt||{};
+  return new Promise(res=>{
+    const m = document.getElementById('modal');
+    m.innerHTML =
+      '<div class="modal-card"><div class="modal-top">'
+      + '<div class="modal-ic">'+_esc(opt.icon||'📝')+'</div>'
+      + '<div class="modal-title">'+_esc(opt.title||'')+'</div>'
+      + (opt.msg?'<div class="modal-msg">'+_esc(opt.msg)+'</div>':'')
+      + '</div><div class="modal-body"><textarea id="_mbT" placeholder="'+_esc(opt.placeholder||'')+'"></textarea></div>'
+      + '<div class="modal-btns">'
+      + '<button class="mb-cancel" id="_mbC">'+_esc(opt.cancelText||'ยกเลิก')+'</button>'
+      + '<button class="mb-ok" id="_mbO">'+_esc(opt.okText||'ส่ง')+'</button>'
+      + '</div></div>';
+    m.classList.add('show');
+    const ta = m.querySelector('#_mbT');
+    setTimeout(()=>{ try{ta.focus();}catch(e){} },50);
+    m.querySelector('#_mbC').onclick=()=>{ _closeModal(); res(null); };
+    m.querySelector('#_mbO').onclick=()=>{ const v=ta.value; _closeModal(); res(v); };
+  });
+}
+
 // ── postGAS รับ msg ──
 async function postGAS(payload, msg='กำลังบันทึก...'){
   setLoading(true, msg);
@@ -1414,7 +1516,7 @@ function onPhoto(input,boxId,lblId,key){
   const file=input.files[0];
   if(!file) return;
   if(!isFreshCapture(file)){
-    alert('⚠️ กรุณาถ่ายรูปสดเท่านั้น ห้ามเลือกรูปเก่าจากคลังภาพครับ');
+    toast('⚠️ กรุณาถ่ายรูปสดเท่านั้น ห้ามเลือกรูปเก่าจากคลังภาพครับ');
     input.value='';
     return;
   }
@@ -1438,7 +1540,7 @@ function onPhoto(input,boxId,lblId,key){
     const file=input.files[0];
     if(!file) return;
     if(!isFreshCapture(file)){                       // 🆕 เรียกใช้ตรงนี้
-      alert('⚠️ กรุณา "ถ่ายรูปสด" ด้วยกล้องเท่านั้น\nห้ามเลือกรูปเก่าจากคลังภาพครับ');
+      toast('⚠️ กรุณา "ถ่ายรูปสด" ด้วยกล้องเท่านั้น\nห้ามเลือกรูปเก่าจากคลังภาพครับ');
       input.value='';
       return;
     }
@@ -1468,7 +1570,7 @@ function onPhoto(input,boxId,lblId,key){
 
     if(!res||!res.success){
       document.getElementById(lblId).textContent='⚠️ OCR ไม่สำเร็จ';
-      alert('OCR ไม่สำเร็จ: '+(res?.error||'ไม่ทราบสาเหตุ'));
+      toast('OCR ไม่สำเร็จ: '+(res?.error||'ไม่ทราบสาเหตุ'));
       return;
     }
 
@@ -1654,7 +1756,7 @@ function seedReadingsFromOrder(){
 // ✅ ถ้า OCR ยังอ่านไม่เสร็จ → เตือนแล้วบล็อกการกดส่ง (กันได้ค่าว่าง)
 function ocrBusy(){
   if(ocrPending>0){
-    alert('⏳ ระบบกำลังอ่านรูป (OCR) อยู่ กรุณารอสักครู่แล้วกดอีกครั้งครับ');
+    toast('⏳ ระบบกำลังอ่านรูป (OCR) อยู่ กรุณารอสักครู่แล้วกดอีกครั้งครับ');
     return true;
   }
   return false;
@@ -1664,19 +1766,19 @@ async function submitStart(){
   if(ocrBusy()) return;
   // ต้องรีเช็คทะเบียนก่อน — ผ่านจุดนี้ไปแล้วแก้ยาก ค่าแรงล็อกตอนจบงาน
   if(!plateOk){
-    alert('กรุณายืนยันทะเบียนรถที่ใช้วันนี้ก่อนครับ');
+    toast('กรุณายืนยันทะเบียนรถที่ใช้วันนี้ก่อนครับ');
     document.getElementById('plate-box')?.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
   const mileS=getMileValue('mile-start');
   const hubS=getOcrValue('hub-start');
-  if(!mileS){alert('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเลขไมล์เริ่มเอง');return;}
-  if(!hubS){alert('กรุณาถ่ายรูปเลขดุมล้อเริ่ม และตรวจสอบค่า OCR');return;}
+  if(!mileS){toast('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเลขไมล์เริ่มเอง');return;}
+  if(!hubS){toast('กรุณาถ่ายรูปเลขดุมล้อเริ่ม และตรวจสอบค่า OCR');return;}
 
-  const eChk=checkReading('start',mileS,hubS); if(eChk){alert(eChk);return;}
+  const eChk=checkReading('start',mileS,hubS); if(eChk){toast(eChk);return;}
 
   const r=await postGAS({action:'driverStartJob',orderId:order['Order ID'],userId:U.userId},'🚀 กำลังบันทึกออกโรงงาน...');
-  if(!r?.success){alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
+  if(!r?.success){toast('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
 
   hubHistory.start=parseFloat(hubS)||0;
   saveReading('start',mileS,hubS);
@@ -1685,7 +1787,7 @@ async function submitStart(){
 
   order['สถานะ']='เริ่มงานแล้ว';
   renderTimeline();
-  alert(r?.queued
+  toast(r?.queued
     ? '📡 ไม่มีสัญญาณตอนนี้\nระบบบันทึกออกโรงงานไว้แล้ว จะส่งอัตโนมัติเมื่อมีเน็ต\nไม่ต้องกดซ้ำครับ'
     : '✅ บันทึกออกโรงงานแล้วครับ');
 }
@@ -1698,10 +1800,10 @@ async function submitRampDrop(){
   const mileR = getMileValue('mile-rampDrop');
   const hubR = getOcrValue('hub-rampDrop');
   
-  if(!mileR){alert('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
-  if(!hubR){alert('กรุณาถ่ายรูปเลขดุมล้อถึงลานวางกระบะ');return;}
+  if(!mileR){toast('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
+  if(!hubR){toast('กรุณาถ่ายรูปเลขดุมล้อถึงลานวางกระบะ');return;}
 
-  const eChk=checkReading('rampDrop',mileR,hubR); if(eChk){alert(eChk);return;}
+  const eChk=checkReading('rampDrop',mileR,hubR); if(eChk){toast(eChk);return;}
 
   // ✅ แก้ไขชื่อ Key ตรง fields ให้ตรงกับหัวคอลัมน์ใน Google Sheet เป๊ะๆ
   const r = await postGAS({
@@ -1717,26 +1819,26 @@ async function submitRampDrop(){
     }
   }, '📍 กำลังบันทึกถึงลานวางกระบะ...');
 
-  if(!r?.success){alert('❌ บันทึกข้อมูลไม่สำเร็จ');return;}
+  if(!r?.success){toast('❌ บันทึกข้อมูลไม่สำเร็จ');return;}
 
   hubHistory.rampDrop = parseFloat(hubR) || 0;
   saveReading('rampDrop',mileR,hubR);
   order['สถานะ'] = 'ถึงลานวางกระบะ';
   renderTimeline();
-  alert('✅ บันทึกถึงลานวางกระบะเรียบร้อย');
+  toast('✅ บันทึกถึงลานวางกระบะเรียบร้อย');
 }
 
 async function submitClient(){
   if(ocrBusy()) return;
   const mileClient=getMileValue('mile-client');
   const hubClient=getOcrValue('hub-client');
-  if(!mileClient){alert('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
-  if(!hubClient){alert('กรุณาถ่ายเลขดุมล้อออกจากลูกค้า');return;}
+  if(!mileClient){toast('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
+  if(!hubClient){toast('กรุณาถ่ายเลขดุมล้อออกจากลูกค้า');return;}
 
-  const eChk=checkReading('client',mileClient,hubClient); if(eChk){alert(eChk);return;}
+  const eChk=checkReading('client',mileClient,hubClient); if(eChk){toast(eChk);return;}
 
   const r=await postGAS({action:'driverArrived',orderId:order['Order ID'],userId:U.userId},'🌴 กำลังบันทึกถึงลูกค้า...');
-  if(!r?.success){alert('❌ '+(r?.error||'อัปเดตสถานะลูกค้าไม่สำเร็จ'));return;}
+  if(!r?.success){toast('❌ '+(r?.error||'อัปเดตสถานะลูกค้าไม่สำเร็จ'));return;}
 
   await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลูกค้า',
     fields:{'เลขไมล์ลูกค้า':mileClient,'เลขดุมล้อลูกค้า':hubClient,'สภาพรถลูกค้า':getLoadState('client')}},'💾 กำลังบันทึกข้อมูล...');
@@ -1745,21 +1847,21 @@ async function submitClient(){
   saveReading('client',mileClient,hubClient);
   order['สถานะ']='ออกจากลูกค้า';
   renderTimeline();
-  alert('✅ บันทึกออกจากลูกค้าเรียบร้อย');
+  toast('✅ บันทึกออกจากลูกค้าเรียบร้อย');
 }
 
 async function submitRamp(){
   if(ocrBusy()) return;
   const mileR=getMileValue('mile-ramp');
   const hubR=getOcrValue('hub-ramp');
-  if(!mileR){alert('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
-  if(!hubR){alert('กรุณาถ่ายเลขดุมล้อออกจากลานขากลับ');return;}
+  if(!mileR){toast('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
+  if(!hubR){toast('กรุณาถ่ายเลขดุมล้อออกจากลานขากลับ');return;}
 
-  const eChk=checkReading('ramp',mileR,hubR); if(eChk){alert(eChk);return;}
+  const eChk=checkReading('ramp',mileR,hubR); if(eChk){toast(eChk);return;}
 
   const weightRamp=getWeightOcrData('weight-ramp');
   if(!weightRamp||!weightRamp.gross||!weightRamp.tare||!weightRamp.net){
-    alert('กรุณาถ่ายใบชั่งลานเท และตรวจสอบค่า OCR');return;
+    toast('กรุณาถ่ายใบชั่งลานเท และตรวจสอบค่า OCR');return;
   }
 
   // ✅ [แก้ตรงนี้ 1] ดึง fileUrl แบบลิงก์แทนข้อความ Base64
@@ -1777,34 +1879,34 @@ async function submitRamp(){
   saveReading('ramp',mileR,hubR);
   order['สถานะ']='ถึงลานขากลับ';
   renderTimeline();
-  alert('✅ บันทึกออกจากลานขากลับเรียบร้อย');
+  toast('✅ บันทึกออกจากลานขากลับเรียบร้อย');
 }
 
 function prepareFactory(){
   if(ocrBusy()) return;
   const mileF=getMileValue('mile-factory');
   const hubF=getOcrValue('hub-factory');
-  if(!mileF){alert('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
-  if(!hubF){alert('กรุณาถ่ายเลขดุมล้อหลังชั่งเสร็จ');return;}
+  if(!mileF){toast('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
+  if(!hubF){toast('กรุณาถ่ายเลขดุมล้อหลังชั่งเสร็จ');return;}
 
   // ✅ เช็คทั้งไมล์+ดุมล้อ ต้องมากกว่าจุดก่อนหน้า (เท่ากัน/น้อยกว่า = ไม่ผ่าน)
-  const eChk=checkReading('factory',mileF,hubF); if(eChk){alert(eChk);return;}
+  const eChk=checkReading('factory',mileF,hubF); if(eChk){toast(eChk);return;}
   saveReading('factory',mileF,hubF);
 
   const wClient=getWeightOcrData('weight-factory-client');
-  if(!wClient||!wClient.gross||!wClient.tare||!wClient.net){alert('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');return;}
+  if(!wClient||!wClient.gross||!wClient.tare||!wClient.net){toast('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');return;}
 
   // ✅ เช็คและบังคับถ่ายใบชั่งลาน "เฉพาะกรณีที่มีแวะลานเท่านั้น"
   let wRamp = null;
   if (hasRamp) {
     wRamp=getWeightOcrData('weight-factory-ramp');
-    if(!wRamp||!wRamp.gross||!wRamp.tare||!wRamp.net){alert('กรุณาถ่ายใบชั่งลานเทที่โรงงาน');return;}
+    if(!wRamp||!wRamp.gross||!wRamp.tare||!wRamp.net){toast('กรุณาถ่ายใบชั่งลานเทที่โรงงาน');return;}
   }
 
   const fLiter=getVal('fuel-factory-liter');
   const fPrice=getVal('fuel-factory-price');
-  if(!fLiter){alert('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
-  if(!fPrice){alert('กรุณากรอกราคาน้ำมันโรงงาน');return;}
+  if(!fLiter){toast('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
+  if(!fPrice){toast('กรุณากรอกราคาน้ำมันโรงงาน');return;}
 
   collectedData={};
   
@@ -1839,7 +1941,7 @@ function prepareFactory(){
     });
     // ✅ ระดับ 1: เลือก "มี" แล้วต้องกรอกลิตร+ราคา อย่างน้อย 1 บิล
     if(rows.length === 0){
-      alert('⚠️ เลือก "มี" น้ำมันระหว่างทาง\nกรุณากรอกจำนวนลิตร + ราคา ให้ครบอย่างน้อย 1 บิลครับ');
+      toast('⚠️ เลือก "มี" น้ำมันระหว่างทาง\nกรุณากรอกจำนวนลิตร + ราคา ให้ครบอย่างน้อย 1 บิลครับ');
       return;
     }
     collectedData.fuelRoad = rows;
@@ -2051,7 +2153,7 @@ async function confirmSubmit(){
   const r = await postGAS({action:'driverComplete',orderId:order['Order ID'],userId:U.userId},'✅ กำลังปิดงาน...');
   
   if(!r?.success){
-    alert('❌ ' + (r?.error || 'เกิดข้อผิดพลาด'));
+    toast('❌ ' + (r?.error || 'เกิดข้อผิดพลาด'));
     return;
   }
   
@@ -2060,15 +2162,15 @@ async function confirmSubmit(){
 }
 
 async function requestCancel(){
-  const reason=prompt('กรุณาระบุสาเหตุที่ขอยกเลิก:');
+  const reason=await promptModal({icon:'🚫',title:'ขอยกเลิกงาน',placeholder:'ระบุสาเหตุที่ขอยกเลิก...',okText:'ส่งคำขอ',cancelText:'ปิด'});
   if(reason===null) return;
   const r=await postGAS({action:'driverCancelRequest',orderId:order['Order ID'],userId:U.userId,reason},'📤 กำลังส่งคำขอ...');
   if(r?.success){
-    alert('📤 ส่งคำขอไปยัง Admin แล้วครับ');
+    toast('📤 ส่งคำขอไปยัง Admin แล้วครับ');
     backToList();           // ✅ กลับหน้ารายการ
     await reloadOrders();    // ✅ รีเฟรชสถานะ
   }
-  else alert('❌ '+(r?.error||'เกิดข้อผิดพลาด'));
+  else toast('❌ '+(r?.error||'เกิดข้อผิดพลาด'));
 }
 
 init();
