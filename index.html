@@ -379,9 +379,11 @@ function pickupMs(o){
 // ลำดับงานคนขับ: ทริปเดียวกัน (Route ID เดียวกัน) → เรียงตามลำดับขา route_seq (เช่น ส่งแมคโครก่อน → รับปาล์มขากลับ) · คนละทริป → เรียงตามเวลาไปรับ
 function jobOrder(a,b){
   const ra=String(a['Route ID']||'').trim(), rb=String(b['Route ID']||'').trim();
-  if(ra && ra===rb){
+  if(ra && ra===rb){                                            // ทริปเดียวกัน
     const sa=parseFloat(a['route_seq'])||0, sb=parseFloat(b['route_seq'])||0;
-    if(sa!==sb) return sa-sb;
+    if(sa||sb){ if(sa!==sb) return sa-sb; }                     // มี route_seq → ใช้ลำดับขา
+    const ar=/RL-/.test(String(a['Order ID']||'')), br=/RL-/.test(String(b['Order ID']||''));
+    if(ar!==br) return ar?1:-1;                                 // ยังไม่มี seq → ขารับปาล์มกลับ (ORD-RL) ไว้ท้าย, ขาส่งก่อน
   }
   return pickupMs(a)-pickupMs(b);
 }
