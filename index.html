@@ -349,7 +349,7 @@ async function init(){
       document.getElementById('drv-plate').textContent=uRes.plate||'—';
     }
     if(oRes.status==='ok'&&oRes.orders.length>0){
-      allOrders = oRes.orders.slice().sort((a,b)=> pickupMs(a) - pickupMs(b));  // เรียงตามเวลาที่ต้องไปรับ (มาก่อน=ทำก่อน)
+      allOrders = oRes.orders.slice().sort(jobOrder);  // ทริปเดียวกันเรียงตาม route_seq · คนละทริปเรียงตามเวลาไปรับ
       renderJobList();
     }else{
       document.getElementById('job-list').classList.add('hide');
@@ -375,6 +375,15 @@ function pickupMs(o){
   const tm=tRaw.match(/(\d{1,2}):(\d{2})/);
   base.setHours(tm?+tm[1]:0, tm?+tm[2]:0, 0, 0);
   return base.getTime();
+}
+// ลำดับงานคนขับ: ทริปเดียวกัน (Route ID เดียวกัน) → เรียงตามลำดับขา route_seq (เช่น ส่งแมคโครก่อน → รับปาล์มขากลับ) · คนละทริป → เรียงตามเวลาไปรับ
+function jobOrder(a,b){
+  const ra=String(a['Route ID']||'').trim(), rb=String(b['Route ID']||'').trim();
+  if(ra && ra===rb){
+    const sa=parseFloat(a['route_seq'])||0, sb=parseFloat(b['route_seq'])||0;
+    if(sa!==sb) return sa-sb;
+  }
+  return pickupMs(a)-pickupMs(b);
 }
 function fmtDate(v){
   if(!v) return '—';
@@ -443,7 +452,7 @@ async function reloadOrders(){
   try{
     const oRes = await fetch(`${GAS_URL}?action=getDriverOrder&userId=${U.userId}`).then(r=>r.json());
     if(oRes.status==='ok' && oRes.orders.length>0){
-      allOrders = oRes.orders.slice().sort((a,b)=> pickupMs(a) - pickupMs(b));  // เรียงตามเวลาที่ต้องไปรับ (มาก่อน=ทำก่อน)
+      allOrders = oRes.orders.slice().sort(jobOrder);  // ทริปเดียวกันเรียงตาม route_seq · คนละทริปเรียงตามเวลาไปรับ
       renderJobList();
     }else{
       document.getElementById('job-list').classList.add('hide');
