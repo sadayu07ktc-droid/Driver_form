@@ -244,6 +244,12 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
   <span class="drv-status">ติดงาน</span>
 </div>
 
+<!-- 🆕 กำลังโหลดงาน (spinner) -->
+<div id="job-loading" style="text-align:center;padding:34px 16px">
+  <div style="display:inline-block;width:28px;height:28px;border:3px solid #d8ecd8;border-top-color:var(--g2,#2f7d3a);border-radius:50%;animation:spin .7s linear infinite"></div>
+  <p style="margin-top:10px;font-size:14px;color:#5a6b5a">กำลังโหลดงาน...</p>
+</div>
+
 <!-- 🆕 หน้าจอรายการงาน -->
 <div class="jl-wrap hide" id="job-list"></div>
 
@@ -342,7 +348,7 @@ async function init(){
     U.userId=p.userId; U.displayName=p.displayName; _lsSet('ssb_drv_uid',p.userId);
     if(pre && cachedUid===p.userId){ await pre; }      // uid ตรง → ใช้ผลที่โหลดขนานไปแล้ว
     else { await loadDriver(p.userId); }                // uid เปลี่ยน/ไม่มี cache → โหลดด้วย uid จริง
-  }catch(e){ if(!pre) document.getElementById('drv-name').textContent='⚠️ โหลดไม่สำเร็จ'; }
+  }catch(e){ if(!pre){ document.getElementById('drv-name').textContent='⚠️ โหลดไม่สำเร็จ'; var _jl=document.getElementById('job-loading'); if(_jl) _jl.classList.add('hide'); } }
 }
 
 async function loadDriver(uid){
@@ -350,10 +356,11 @@ async function loadDriver(uid){
   // ยิง 3 fetch ขนานกัน (เดิม maintenance คั่น serial ก่อน user+order)
   const [m,uRes,oRes]=await Promise.all([
     fetch(`${GAS_URL}?action=getMaintenance&page=driver&userId=${uid}`).then(r=>r.json()).catch(()=>null),
-    fetch(`${GAS_URL}?action=getUser&userId=${uid}`).then(r=>r.json()),
-    fetch(`${GAS_URL}?action=getDriverOrder&userId=${uid}`).then(r=>r.json())
+    fetch(`${GAS_URL}?action=getUser&userId=${uid}`).then(r=>r.json()).catch(()=>({status:'err'})),
+    fetch(`${GAS_URL}?action=getDriverOrder&userId=${uid}`).then(r=>r.json()).catch(()=>({status:'err'}))
   ]);
   if(m && m.closed){ showMaintenance(); return; }       // ปิดปรับปรุง → หน้าปิดระบบ
+  var _jl=document.getElementById('job-loading'); if(_jl) _jl.classList.add('hide');   // 🆕 หยุด spinner
   if(uRes.status==='ok'){
     document.getElementById('drv-name').textContent=uRes.name||U.displayName||'';
     document.getElementById('drv-plate').textContent=uRes.plate||'—';
