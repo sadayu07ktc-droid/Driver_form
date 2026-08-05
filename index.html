@@ -325,37 +325,48 @@ function showMaintenance(){
     </div>`;
 }
 
+function _lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function _lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
 async function init(){
   buildPriceList();
   _queueBadge();            // มีงานค้างจากครั้งก่อนไหม
   if(navigator.onLine) _queueFlush();   // เปิดแอปแล้วมีเน็ต → ส่งที่ค้างเลย
+  // ⚡ จำ uid เดิม → ยิง maintenance+user+order ทันที (ขนานกับ LIFF init) ไม่ต้องรอ LINE เสร็จก่อน
+  const cachedUid=_lsGet('ssb_drv_uid');
+  let pre = cachedUid ? loadDriver(cachedUid) : null;
   try{
     await liff.init({liffId:LIFF_ID});
     if(!liff.isLoggedIn()){liff.login();return;}
     const p=await liff.getProfile();
-    U.userId=p.userId;
-    // ✅ ปิดปรับปรุง: ให้เฉพาะ UID ในลิสต์เข้าได้ ที่เหลือเห็นหน้าปิดระบบ
-    // ปิดปรับปรุง: เช็คจาก backend (Script Property MAINT_DRIVER + ยกเว้นตามโรล/UID)
-    try {
-      const _m = await (await fetch(`${GAS_URL}?action=getMaintenance&page=driver&userId=${U.userId}`)).json();
-      if (_m && _m.closed) { showMaintenance(); return; }
-    } catch(e) { /* เช็คไม่ได้ (network) → ปล่อยผ่าน */ }
-    const[uRes,oRes]=await Promise.all([
-      fetch(`${GAS_URL}?action=getUser&userId=${p.userId}`).then(r=>r.json()),
-      fetch(`${GAS_URL}?action=getDriverOrder&userId=${p.userId}`).then(r=>r.json())
-    ]);
-    if(uRes.status==='ok'){
-      document.getElementById('drv-name').textContent=uRes.name||p.displayName;
-      document.getElementById('drv-plate').textContent=uRes.plate||'—';
-    }
-    if(oRes.status==='ok'&&oRes.orders.length>0){
-      allOrders = oRes.orders.slice().sort(jobOrder);  // ทริปเดียวกันเรียงตาม route_seq · คนละทริปเรียงตามเวลาไปรับ
-      renderJobList();
-    }else{
-      document.getElementById('job-list').classList.add('hide');
-      document.getElementById('no-order').classList.remove('hide');
-    }
-  }catch(e){document.getElementById('drv-name').textContent='⚠️ โหลดไม่สำเร็จ';}
+    U.userId=p.userId; U.displayName=p.displayName; _lsSet('ssb_drv_uid',p.userId);
+    if(pre && cachedUid===p.userId){ await pre; }      // uid ตรง → ใช้ผลที่โหลดขนานไปแล้ว
+    else { await loadDriver(p.userId); }                // uid เปลี่ยน/ไม่มี cache → โหลดด้วย uid จริง
+  }catch(e){ if(!pre) document.getElementById('drv-name').textContent='⚠️ โหลดไม่สำเร็จ'; }
+}
+
+async function loadDriver(uid){
+  U.userId=uid;
+  // ยิง 3 fetch ขนานกัน (เดิม maintenance คั่น serial ก่อน user+order)
+  const [m,uRes,oRes]=await Promise.all([
+    fetch(`${GAS_URL}?action=getMaintenance&page=driver&userId=${uid}`).then(r=>r.json()).catch(()=>null),
+    fetch(`${GAS_URL}?action=getUser&userId=${uid}`).then(r=>r.json()),
+    fetch(`${GAS_URL}?action=getDriverOrder&userId=${uid}`).then(r=>r.json())
+  ]);
+  if(m && m.closed){ showMaintenance(); return; }       // ปิดปรับปรุง → หน้าปิดระบบ
+  if(uRes.status==='ok'){
+    document.getElementById('drv-name').textContent=uRes.name||U.displayName||'';
+    document.getElementById('drv-plate').textContent=uRes.plate||'—';
+  }
+  if(oRes.status==='ok'&&oRes.orders.length>0){
+    allOrders = oRes.orders.slice().sort(jobOrder);     // ทริปเดียวกันเรียงตาม route_seq · คนละทริปเรียงตามเวลาไปรับ
+    renderJobList();
+    document.getElementById('job-list').classList.remove('hide');
+    document.getElementById('no-order').classList.add('hide');
+  }else{
+    document.getElementById('job-list').classList.add('hide');
+    document.getElementById('no-order').classList.remove('hide');
+  }
 }
 
 // ⏱️ เวลาที่ "ต้องไปรับจริง" (วันที่ต้องการ + เวลา) → ใช้เรียงคิวงาน (มาก่อน = ทำก่อน)
