@@ -990,14 +990,24 @@ async function savePlate(){
 
 function formRampDrop(){
   return `
-    ${ocrMileHubBlock('rampDrop','รูปเลขไมล์ถึงลานวางกระบะ','รูปเลขดุมล้อถึงลานวางกระบะ')}
-    <div class="net-badge">
-      <div class="net-lbl">หมายเหตุ</div>
-      <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
-        จุดนี้วางกระบะที่ลานเทเท่านั้น<br>ไม่ต้องถ่ายใบชั่ง เพราะจะรู้สุทธิตอนขากลับ
+    <div class="net-badge" id="rampDropAsk">
+      <div style="font-size:15px;font-weight:800;color:var(--g1)">🏭 มีวางกระบะที่ลานไหม?</div>
+      <div style="font-size:12.5px;color:#777;margin:5px 0 12px;line-height:1.5">ถ้าไม่มีของให้วางที่ลาน กด "ไม่มี" ข้ามไปหาลูกค้าต่อได้เลย</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-brown" style="flex:1" onclick="document.getElementById('rampDropForm').style.display='block';document.getElementById('rampDropAsk').style.display='none'">✅ มี วางกระบะ</button>
+        <button class="btn" style="flex:1;background:#e6e6e6;color:#333" onclick="skipRampDrop()">⏭️ ไม่มี ข้ามไป</button>
       </div>
     </div>
-    <button class="btn btn-brown" onclick="submitRampDrop()">📍 ยืนยันถึงลานวางกระบะ</button>
+    <div id="rampDropForm" style="display:none">
+      ${ocrMileHubBlock('rampDrop','รูปเลขไมล์ถึงลานวางกระบะ','รูปเลขดุมล้อถึงลานวางกระบะ')}
+      <div class="net-badge">
+        <div class="net-lbl">หมายเหตุ</div>
+        <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
+          จุดนี้วางกระบะที่ลานเทเท่านั้น<br>ไม่ต้องถ่ายใบชั่ง เพราะจะรู้สุทธิตอนขากลับ
+        </div>
+      </div>
+      <button class="btn btn-brown" onclick="submitRampDrop()">📍 ยืนยันถึงลานวางกระบะ</button>
+    </div>
   `;
 }
 
@@ -1821,6 +1831,21 @@ async function submitStart(){
     : '✅ บันทึกออกโรงงานแล้วครับ');
 }
 
+// คนขับตอบ "ไม่มีวางกระบะ" → ข้ามแบบผ่านสถานะ (บันทึก 'ถึงลานวางกระบะ' ไม่มีไมล์ → wage ข้าม leg · GPS ถึงลูกค้าทำงานต่อ)
+async function skipRampDrop(){
+  const r = await postGAS({
+    action:'submitWeight',
+    orderId:order['Order ID'],
+    userId:U.userId,
+    jobType,
+    checkPoint:'ลานวางกระบะ',
+    fields:{ 'หมายเหตุลานวางกระบะ':'ไม่มีวางกระบะ (คนขับข้าม)' }
+  }, '⏭️ กำลังข้ามวางกระบะ...');
+  if(!r?.success){toast('❌ ไม่สำเร็จ ลองใหม่');return;}
+  order['สถานะ'] = 'ถึงลานวางกระบะ';
+  renderTimeline();
+  toast('✅ ข้ามวางกระบะแล้ว — ไปหาลูกค้าต่อได้เลย');
+}
 async function submitRampDrop(){
   if(ocrBusy()) return;
   console.log('submitRamp called');
