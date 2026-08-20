@@ -1480,10 +1480,56 @@ function promptModal(opt){
 }
 
 // ── postGAS รับ msg ──
+// ── ย่อรูปก่อนอัปโหลด — resize + JPEG → base64 (ลดขนาด 10–20 เท่า กันอัปช้า/ค้างบนสัญญาณอ่อน) ──
+function _rawReadDataURL(file){
+  return new Promise(function(resolve){
+    const r=new FileReader();
+    r.onload=e=>resolve(e.target.result);
+    r.onerror=()=>resolve('');
+    r.readAsDataURL(file);
+  });
+}
+function resizeToDataURL(file, maxDim, quality){
+  maxDim=maxDim||1280; quality=quality||0.7;
+  return new Promise(function(resolve){
+    try{
+      const url=URL.createObjectURL(file);
+      const img=new Image();
+      img.onload=function(){
+        try{
+          let w=img.naturalWidth, h=img.naturalHeight;
+          if(!w||!h){ URL.revokeObjectURL(url); return _rawReadDataURL(file).then(resolve); }
+          const scale=Math.min(1, maxDim/Math.max(w,h));
+          w=Math.max(1,Math.round(w*scale)); h=Math.max(1,Math.round(h*scale));
+          const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+          const ctx=cv.getContext('2d');
+          ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h);   // กันพื้นดำถ้าโปร่งใส
+          ctx.drawImage(img,0,0,w,h);
+          const out=cv.toDataURL('image/jpeg', quality);
+          URL.revokeObjectURL(url);
+          if(out && out.length>100) resolve(out); else _rawReadDataURL(file).then(resolve);
+        }catch(err){ URL.revokeObjectURL(url); _rawReadDataURL(file).then(resolve); }
+      };
+      img.onerror=function(){ URL.revokeObjectURL(url); _rawReadDataURL(file).then(resolve); };
+      img.src=url;
+    }catch(err){ _rawReadDataURL(file).then(resolve); }
+  });
+}
+
+// ── fetch ที่มี timeout — สัญญาณอืด/ค้างครึ่งๆ จะถูกตัด (ไม่ค้างแช่ตลอดกาล) ──
+const NET_TIMEOUT_MS = 60000;
+function fetchWithTimeout(url, opts, ms){
+  ms = ms || NET_TIMEOUT_MS;
+  if(typeof AbortController==='undefined') return fetch(url, opts);
+  const ctrl=new AbortController();
+  const t=setTimeout(()=>ctrl.abort(), ms);
+  return fetch(url, Object.assign({}, opts, {signal:ctrl.signal})).finally(()=>clearTimeout(t));
+}
+
 async function postGAS(payload, msg='กำลังบันทึก...'){
   setLoading(true, msg);
   try{
-    const res=await fetch(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
+    const res=await fetchWithTimeout(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
     const text=await res.text();
     try{return JSON.parse(text);}
     catch(e){console.warn('postGAS parse warn:',text.substring(0,200));return{success:true};}
@@ -1524,7 +1570,7 @@ async function _queueFlush(){
   const keep=[];
   for(const item of q){
     try{
-      const res=await fetch(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(item.payload)});
+      const res=await fetchWithTimeout(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(item.payload)});
       await res.text();   // ส่งผ่านแล้ว server จัดการเอง (มี dedup)
     }catch(e){ keep.push(item); }   // ยังส่งไม่ได้ เก็บไว้รอบหน้า
   }
@@ -1541,7 +1587,7 @@ setInterval(()=>{ if(navigator.onLine) _queueFlush(); }, 20000);
 // ── postGAS แบบเงียบ (ไม่เปิด overlay หมุนทั้งจอ) — ใช้กับ OCR ──
 async function postGASSilent(payload){
   try{
-    const res=await fetch(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
+    const res=await fetchWithTimeout(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
     const text=await res.text();
     try{return JSON.parse(text);}
     catch(e){console.warn('postGASSilent parse warn:',text.substring(0,200));return{success:true};}
@@ -1559,13 +1605,11 @@ function onPhoto(input,boxId,lblId,key){
     input.value='';
     return;
   }
-  const reader=new FileReader();
-  reader.onload=e=>{
-    photos[key]=e.target.result;
+  resizeToDataURL(file, 1280, 0.7).then(function(b64){   // ย่อรูปก่อนเก็บ (บิลน้ำมัน/ซ่อม ไม่ OCR)
+    photos[key]=b64;
     document.getElementById(boxId)?.classList.add('has-photo');
     const lbl=document.getElementById(lblId);if(lbl) lbl.textContent='✅ แนบรูปแล้ว';
-  };
-  reader.readAsDataURL(file);
+  });
 }
 
 // 🆕 ชั้น 1: กันแนบรูปเก่าจากคลัง — วางเป็นฟังก์ชันแยก (นอก onOcrPhoto)
@@ -1583,10 +1627,7 @@ function onPhoto(input,boxId,lblId,key){
       input.value='';
       return;
     }
-    const reader=new FileReader();
-    reader.onload=async function(e){
-    // ... ที่เหลือเหมือนเดิม ...
-    const base64=e.target.result;
+    const base64 = await resizeToDataURL(file, 1600, 0.85);   // ย่อรูปก่อน OCR/อัปโหลด (ใบชั่ง — ย่อเบากันเสีย OCR)
     photos[key]=base64;
     document.getElementById(boxId)?.classList.add('has-photo');
     document.getElementById(lblId).textContent='⏳ กำลังอ่าน OCR... (ถ่ายช่องอื่นต่อได้เลย)';
@@ -1641,8 +1682,6 @@ function onPhoto(input,boxId,lblId,key){
       const edit=document.getElementById('ocr-edit-'+key);
       if(edit) edit.value=res.value||'';
     }
-  };
-  reader.readAsDataURL(file); // ← นอก onload
 }
 
 // ── Fuel ──
