@@ -977,7 +977,7 @@ function pullActiveGps(force){
   if(document.getElementById('gps-btn-'+mk) && gpsMile[mk]==null && !gpsFetching[mk]) fetchGpsMileage(mk);
 }
 
-// 🆕 เลือกทะเบียนแบบ chips + "ระบุเอง" (เหมือนหน้าแอดมินเลือกทะเบียน)
+// 🆕 เลือกทะเบียนแบบ chips จากลิสต์ (เหมือนหน้าเลือกทะเบียนของแอดมิน · ไม่ให้พิมพ์เอง)
 function openPlatePicker(){
   if(!plateInfo) return;
   const list = plateInfo.plates || [];
