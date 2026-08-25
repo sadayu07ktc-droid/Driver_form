@@ -909,6 +909,7 @@ function _fuelLock(tries = 0){
 let plateInfo   = null;    // ผลจาก getPlateCheck
 let plateOk     = false;   // คนขับยืนยันแล้วหรือยัง
 let plateLoaded = '';      // orderId ที่โหลดไปแล้ว
+let pickedPlate = '';      // ทะเบียนที่เลือกในตัวเลือก chips (เหมือนหน้าแอดมิน)
 
 async function loadPlateCheck(){
   const box = document.getElementById('plate-box');
@@ -976,27 +977,42 @@ function pullActiveGps(force){
   if(document.getElementById('gps-btn-'+mk) && gpsMile[mk]==null && !gpsFetching[mk]) fetchGpsMileage(mk);
 }
 
+// 🆕 เลือกทะเบียนแบบ chips + "ระบุเอง" (เหมือนหน้าแอดมินเลือกทะเบียน)
 function openPlatePicker(){
   if(!plateInfo) return;
   const list = plateInfo.plates || [];
-  if(!list.length){ toast('ไม่พบรายการทะเบียนในระบบ กรุณาแจ้งแอดมิน'); return; }
-  const opts = list.map(p =>
-    `<option value="${p.plate}"${p.plate===plateInfo.current?' selected':''}>${p.plate}${p.type?' — '+p.type:''}</option>`
-  ).join('');
   const box = document.getElementById('plate-box');
+  const chips = list.map(p =>
+    `<span class="chip${p.plate===plateInfo.current?' on':''}" onclick="pickPlateChip(this,'${p.plate}')">${_esc(p.plate)}${p.type?' · '+_esc(p.type):''}</span>`
+  ).join('');
+  const custom = `<span class="chip" onclick="pickPlateChip(this,'__custom__')">✏️ ระบุเอง</span>`;
   box.innerHTML = `
     <div class="plate-ask">เลือกทะเบียนคันที่ขับวันนี้</div>
-    <select id="plate-sel" class="plate-sel">${opts}</select>
-    <div class="plate-btns">
+    <div class="chips">${chips}${custom}</div>
+    <input id="plate-custom-input" class="inp hide" style="margin-top:8px" placeholder="พิมพ์ทะเบียนรถ..." oninput="pickedPlate=this.value.trim()">
+    <div class="plate-btns" style="margin-top:10px">
       <button class="btn-sm plate-yes" onclick="savePlate()">บันทึก</button>
       <button class="btn-sm plate-no" onclick="renderPlateBox()">ยกเลิก</button>
     </div>`;
+  pickedPlate = plateInfo.current || (list[0] && list[0].plate) || '';
+}
+
+function pickPlateChip(el, plate){
+  const box = document.getElementById('plate-box');
+  box.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  const ci = document.getElementById('plate-custom-input');
+  if(plate === '__custom__'){
+    if(ci){ ci.classList.remove('hide'); ci.focus(); pickedPlate = ci.value.trim(); }
+  }else{
+    if(ci){ ci.classList.add('hide'); ci.value = ''; }
+    pickedPlate = plate;
+  }
 }
 
 async function savePlate(){
-  const sel = document.getElementById('plate-sel');
-  if(!sel) return;
-  const plate = sel.value;
+  const plate = (pickedPlate || '').trim();
+  if(!plate){ toast('กรุณาเลือกหรือพิมพ์ทะเบียนครับ'); return; }
   const r = await postGAS({action:'confirmPlate',userId:U.userId,orderId:order['Order ID'],plate},'🚗 กำลังบันทึกทะเบียน...');
   if(!r || !r.success){ toast('❌ '+((r&&r.error)||'บันทึกทะเบียนไม่สำเร็จ')); renderPlateBox(); return; }
   plateInfo.current = plate;
@@ -1093,8 +1109,8 @@ function setNoPalm(v){
   factoryNoPalm = !!v;
   const yes=document.getElementById('np-yes'), no=document.getElementById('np-no'),
         wrap=document.getElementById('fac-weigh-wrap'), note=document.getElementById('np-note');
-  if(yes) yes.classList.toggle('active', factoryNoPalm);
-  if(no)  no.classList.toggle('active', !factoryNoPalm);
+  if(yes) yes.classList.toggle('on', factoryNoPalm);
+  if(no)  no.classList.toggle('on', !factoryNoPalm);
   if(wrap) wrap.classList.toggle('hide', factoryNoPalm);   // ซ่อนช่องใบชั่งเมื่อวางกระบะเปล่า
   if(note) note.classList.toggle('hide', !factoryNoPalm);
 }
@@ -1106,7 +1122,7 @@ function formFactory(){
     <div class="field" style="background:var(--g3,#f0efe9);border-radius:12px;padding:12px 14px;margin-bottom:12px">
       <label class="lbl" style="margin-bottom:6px">🪧 งานนี้ไปวางกระบะเปล่าไหม?</label>
       <div class="chips">
-        <span class="chip active" id="np-no" onclick="setNoPalm(false)">🌴 มีปาล์ม (ปกติ)</span>
+        <span class="chip on" id="np-no" onclick="setNoPalm(false)">🌴 มีปาล์ม (ปกติ)</span>
         <span class="chip" id="np-yes" onclick="setNoPalm(true)">🪧 วางกระบะเปล่า (ไม่มีปาล์ม)</span>
       </div>
       <div id="np-note" class="hide" style="margin-top:8px;font-size:12.5px;color:var(--g1);background:#fff;border-radius:8px;padding:8px 10px">
