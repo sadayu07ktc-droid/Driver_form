@@ -512,9 +512,24 @@ function renderJobList(){
   list.innerHTML=html;
 }
 
-// 🆕 popup ยืนยันก่อนเริ่มวิ่งงาน (เลือกงานไหนก่อนก็ได้ ไม่บังคับคิว)
+// 🆕 popup ยืนยันก่อนเริ่มวิ่งงาน — เลือกงานไหนก่อนก็ได้ (ไม่บังคับลำดับคิว)
+//    แต่ทำทีละงาน: ถ้ามีงานอื่น "กำลังวิ่ง" (เริ่มแล้วยังไม่จบ) ต้องจบก่อน
+const RUNNING_STATUSES = ['เริ่มงานแล้ว','ถึงลานวางกระบะ','ถึงลูกค้า','ออกจากลูกค้า','ถึงลานขากลับ'];
 async function confirmStartJob(orderId){
   const o = allOrders.find(x=>x['Order ID']===orderId) || {};
+  // ⛔ กันเริ่มซ้อน — มีงานอื่นวิ่งค้างอยู่ ต้องทำให้จบก่อน
+  const running = allOrders.find(x =>
+    x['Order ID']!==orderId && RUNNING_STATUSES.includes(String(x['สถานะ']||'').trim()));
+  if(running){
+    await confirmModal({
+      icon:'⛔',
+      title:'มีงานกำลังวิ่งอยู่',
+      msg:`ทำงาน ${running['Order ID']} (${running['สถานะ']}) ให้จบก่อน ถึงจะเริ่มงานใหม่ได้ครับ`,
+      okText:'เข้าใจแล้ว',
+      cancelText:'ปิด'
+    });
+    return;
+  }
   const ok = await confirmModal({
     icon:'🚚',
     title:'ยืนยันวิ่งงานนี้?',
