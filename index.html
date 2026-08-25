@@ -548,6 +548,7 @@ function openJob(orderId){
   photos={}; ocrData={}; collectedData={}; hubHistory={start:0,client:0,ramp:0};
   gpsMile={}; gpsFetching={};   // 🆕 ล้างค่า GPS ของงานก่อนหน้า
   loadStates={};                // 🆕 ล้างสภาพรถของงานก่อนหน้า
+  factoryNoPalm=false;          // 🆕 รีเซ็ตโหมดวางกระบะเปล่า
   readings={}; seedReadingsFromOrder();
   document.getElementById('job-list').classList.add('hide');
   document.getElementById('job-form').classList.remove('hide');
@@ -1086,13 +1087,36 @@ function formRamp(){
   `;
 }
 
+// 🆕 โหมด "วางกระบะเปล่า" (ไม่มีปาล์ม/ไม่มีใบชั่ง) — เปิดที่สเต็ปถึงโรงงาน
+let factoryNoPalm = false;
+function setNoPalm(v){
+  factoryNoPalm = !!v;
+  const yes=document.getElementById('np-yes'), no=document.getElementById('np-no'),
+        wrap=document.getElementById('fac-weigh-wrap'), note=document.getElementById('np-note');
+  if(yes) yes.classList.toggle('active', factoryNoPalm);
+  if(no)  no.classList.toggle('active', !factoryNoPalm);
+  if(wrap) wrap.classList.toggle('hide', factoryNoPalm);   // ซ่อนช่องใบชั่งเมื่อวางกระบะเปล่า
+  if(note) note.classList.toggle('hide', !factoryNoPalm);
+}
+
 function formFactory(){
   // renderTimeline() วาดใหม่ได้หลายครั้ง → กู้สถานะ QR กลับมา ไม่ให้คนขับสับสนว่าหาย
   setTimeout(_fuelResume, 0);
   let html = `
-    <div class="sec-lbl">⚖️ ใบชั่งลูกค้า (ที่โรงงาน)</div>
-    ${ocrPhotoBox('factory-client-weight','รูปใบชั่งลูกค้า','weight-factory-client','ใบชั่งลูกค้า')}
-    <div class="sec-divider"></div>
+    <div class="field" style="background:var(--g3,#f0efe9);border-radius:12px;padding:12px 14px;margin-bottom:12px">
+      <label class="lbl" style="margin-bottom:6px">🪧 งานนี้ไปวางกระบะเปล่าไหม?</label>
+      <div class="chips">
+        <span class="chip active" id="np-no" onclick="setNoPalm(false)">🌴 มีปาล์ม (ปกติ)</span>
+        <span class="chip" id="np-yes" onclick="setNoPalm(true)">🪧 วางกระบะเปล่า (ไม่มีปาล์ม)</span>
+      </div>
+      <div id="np-note" class="hide" style="margin-top:8px;font-size:12.5px;color:var(--g1);background:#fff;border-radius:8px;padding:8px 10px">
+        โหมดวางกระบะเปล่า — ไม่ต้องถ่ายใบชั่ง/กรอกน้ำมันโรงงาน กดจบงานได้เลย (ยังต้องดึงเลขไมล์เพื่อคิดระยะ)
+      </div>
+    </div>
+    <div id="fac-weigh-wrap">
+      <div class="sec-lbl">⚖️ ใบชั่งลูกค้า (ที่โรงงาน)</div>
+      ${ocrPhotoBox('factory-client-weight','รูปใบชั่งลูกค้า','weight-factory-client','ใบชั่งลูกค้า')}
+      <div class="sec-divider"></div>
   `;
 
   // ✅ เช็คเพื่อซ่อนใบชั่งลานเท ถ้าไม่ได้แวะลาน
@@ -1103,6 +1127,7 @@ function formFactory(){
       <div class="sec-divider"></div>
     `;
   }
+  html += `</div>`;   // ปิด fac-weigh-wrap (ซ่อนได้เมื่อโหมดวางกระบะเปล่า)
 
   html += `
     ${ocrMileHubBlock('factory','รูปเลขไมล์หลังชั่งเสร็จ','รูปเลขดุมล้อหลังชั่งเสร็จ')}
@@ -2005,19 +2030,19 @@ function prepareFactory(){
   saveReading('factory',mileF,hubF);
 
   const wClient=getWeightOcrData('weight-factory-client');
-  if(!wClient||!wClient.gross||!wClient.tare||!wClient.net){toast('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');return;}
+  if(!factoryNoPalm && (!wClient||!wClient.gross||!wClient.tare||!wClient.net)){toast('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');return;}
 
-  // ✅ เช็คและบังคับถ่ายใบชั่งลาน "เฉพาะกรณีที่มีแวะลานเท่านั้น"
+  // ✅ เช็คและบังคับถ่ายใบชั่งลาน "เฉพาะกรณีที่มีแวะลานเท่านั้น" (ข้ามถ้าวางกระบะเปล่า)
   let wRamp = null;
-  if (hasRamp) {
+  if (hasRamp && !factoryNoPalm) {
     wRamp=getWeightOcrData('weight-factory-ramp');
     if(!wRamp||!wRamp.gross||!wRamp.tare||!wRamp.net){toast('กรุณาถ่ายใบชั่งลานเทที่โรงงาน');return;}
   }
 
   const fLiter=getVal('fuel-factory-liter');
   const fPrice=getVal('fuel-factory-price');
-  if(!fLiter){toast('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
-  if(!fPrice){toast('กรุณากรอกราคาน้ำมันโรงงาน');return;}
+  if(!factoryNoPalm && !fLiter){toast('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
+  if(!factoryNoPalm && !fPrice){toast('กรุณากรอกราคาน้ำมันโรงงาน');return;}
 
   collectedData={};
   
@@ -2027,14 +2052,19 @@ function prepareFactory(){
   collectedData.mileFactory=mileF;
   collectedData.hubFactory=hubF;
   
-  collectedData.weightFactClient={h:wClient.gross, l:wClient.tare, net:wClient.net, pricePerKg:wClient.pricePerKg||'', totalAmount:wClient.totalAmount||'', fileUrl: urlClient};
-  
-  // ✅ เก็บค่าลาน เฉพาะกรณีที่แวะลาน
-  if (hasRamp) {
+  collectedData.weightFactClient = (factoryNoPalm || !wClient)
+    ? {h:'', l:'', net:'', pricePerKg:'', totalAmount:'', fileUrl:''}   // วางกระบะเปล่า = ไม่มีน้ำหนัก
+    : {h:wClient.gross, l:wClient.tare, net:wClient.net, pricePerKg:wClient.pricePerKg||'', totalAmount:wClient.totalAmount||'', fileUrl: urlClient};
+  collectedData.noPalm = factoryNoPalm;   // มาร์คว่าเป็นงานวางกระบะเปล่า
+
+  // ✅ เก็บค่าลาน เฉพาะกรณีที่แวะลาน (ข้ามถ้าวางกระบะเปล่า)
+  if (hasRamp && !factoryNoPalm && wRamp) {
     collectedData.weightFactRamp={h:wRamp.gross, l:wRamp.tare, net:wRamp.net, fileUrl: urlRamp};
   }
 
-  collectedData.fuelFactory={liter:fLiter,price:fPrice,total:(parseFloat(fLiter)*parseFloat(fPrice)).toFixed(2)};
+  collectedData.fuelFactory = (fLiter && fPrice)
+    ? {liter:fLiter,price:fPrice,total:(parseFloat(fLiter)*parseFloat(fPrice)).toFixed(2)}
+    : {liter:'',price:'',total:'0'};
   
   // -- ค่าใช้จ่ายอื่น ๆ (เหมือนเดิม) --
   if(document.getElementById('exp-fuel-road') && !document.getElementById('exp-fuel-road').classList.contains('hide')){
@@ -2118,25 +2148,30 @@ function showDashboard(){
     rows.push({k:'📊 % วิ่งรถหนัก', v:`${ls.pct}%`, highlight:true});
   }
 
- rows.push({section:'⚖️ น้ำหนัก'});
-  if(d.weightFactClient){
-    rows.push({k:'ลูกค้า — รถหนัก', v:`${Number(d.weightFactClient.h).toLocaleString()} กก.`});
-    rows.push({k:'ลูกค้า — รถเบา',  v:`${Number(d.weightFactClient.l).toLocaleString()} กก.`});
-    rows.push({k:'สุทธิลูกค้า',     v:`${Math.round(d.weightFactClient.net).toLocaleString()} กก.`,highlight:true});
-    if(d.weightFactRamp){   // ✅ โชว์เฉพาะตอนแวะลาน
-      rows.push({k:'ลาน — รถหนัก',    v:`${Number(d.weightFactRamp.h).toLocaleString()} กก.`});
-      rows.push({k:'ลาน — รถเบา',     v:`${Number(d.weightFactRamp.l).toLocaleString()} กก.`});
-      rows.push({k:'สุทธิลาน',        v:`${Math.round(d.weightFactRamp.net).toLocaleString()} กก.`,highlight:true});
+  if(d.noPalm){
+    rows.push({section:'🪧 งานวางกระบะเปล่า'});
+    rows.push({k:'น้ำหนัก', v:'— (ไม่มีปาล์ม/ไม่ต้องชั่ง)', highlight:true});
+  }else{
+    rows.push({section:'⚖️ น้ำหนัก'});
+    if(d.weightFactClient){
+      rows.push({k:'ลูกค้า — รถหนัก', v:`${Number(d.weightFactClient.h).toLocaleString()} กก.`});
+      rows.push({k:'ลูกค้า — รถเบา',  v:`${Number(d.weightFactClient.l).toLocaleString()} กก.`});
+      rows.push({k:'สุทธิลูกค้า',     v:`${Math.round(d.weightFactClient.net).toLocaleString()} กก.`,highlight:true});
+      if(d.weightFactRamp){   // ✅ โชว์เฉพาะตอนแวะลาน
+        rows.push({k:'ลาน — รถหนัก',    v:`${Number(d.weightFactRamp.h).toLocaleString()} กก.`});
+        rows.push({k:'ลาน — รถเบา',     v:`${Number(d.weightFactRamp.l).toLocaleString()} กก.`});
+        rows.push({k:'สุทธิลาน',        v:`${Math.round(d.weightFactRamp.net).toLocaleString()} กก.`,highlight:true});
+      }
+    }else if(d.weightFactory){
+      rows.push({k:'รถหนัก',         v:`${Number(d.weightFactory.h).toLocaleString()} กก.`});
+      rows.push({k:'รถเบา',          v:`${Number(d.weightFactory.l).toLocaleString()} กก.`});
+      rows.push({k:'สุทธิปลายทาง',  v:`${Math.round(d.weightFactory.net).toLocaleString()} กก.`,highlight:true});
     }
-  }else if(d.weightFactory){
-    rows.push({k:'รถหนัก',         v:`${Number(d.weightFactory.h).toLocaleString()} กก.`});
-    rows.push({k:'รถเบา',          v:`${Number(d.weightFactory.l).toLocaleString()} กก.`});
-    rows.push({k:'สุทธิปลายทาง',  v:`${Math.round(d.weightFactory.net).toLocaleString()} กก.`,highlight:true});
   }
   rows.push({k:'เจ้าของใบ',v:order['ชื่อในบิล']||order['ชื่อสวน']||'—'});
 
   rows.push({section:'💰 ค่าใช้จ่าย'});
-  rows.push({k:'⛽ น้ำมันโรงงาน',v:`${d.fuelFactory.liter} ลิตร × ${d.fuelFactory.price} = ${d.fuelFactory.total} บาท`});
+  if(d.fuelFactory && d.fuelFactory.liter) rows.push({k:'⛽ น้ำมันโรงงาน',v:`${d.fuelFactory.liter} ลิตร × ${d.fuelFactory.price} = ${d.fuelFactory.total} บาท`});
   if(d.fuelRoad&&d.fuelRoad.length>0) d.fuelRoad.forEach((row,i)=>rows.push({k:`⛽ น้ำมันทาง บิล${i+1}`,v:`${row.liter} ลิตร × ${row.price} = ${row.total} บาท`}));
   if(d.toll)   rows.push({k:'🛣️ ค่าทางด่วน',v:`${Number(d.toll).toLocaleString()} บาท`});
   if(d.repair) rows.push({k:'🔧 ค่าซ่อมนอก',v:`${Number(d.repair.cost).toLocaleString()} บาท${d.repair.note?' ('+d.repair.note+')':''}`});
