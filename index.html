@@ -982,14 +982,14 @@ function openPlatePicker(){
   if(!plateInfo) return;
   const list = plateInfo.plates || [];
   const box = document.getElementById('plate-box');
-  const chips = list.map(p =>
-    `<span class="chip${p.plate===plateInfo.current?' on':''}" onclick="pickPlateChip(this,'${p.plate}')">${_esc(p.plate)}${p.type?' · '+_esc(p.type):''}</span>`
-  ).join('');
-  const custom = `<span class="chip" onclick="pickPlateChip(this,'__custom__')">✏️ ระบุเอง</span>`;
+  const chips = list.length
+    ? list.map(p =>
+        `<span class="chip${p.plate===plateInfo.current?' on':''}" onclick="pickPlateChip(this,'${p.plate}')">${_esc(p.plate)}${p.type?' · '+_esc(p.type):''}</span>`
+      ).join('')
+    : `<div class="plate-warn">ไม่พบทะเบียนในระบบ กรุณาแจ้งแอดมินเพิ่มคันครับ</div>`;
   box.innerHTML = `
     <div class="plate-ask">เลือกทะเบียนคันที่ขับวันนี้</div>
-    <div class="chips">${chips}${custom}</div>
-    <input id="plate-custom-input" class="inp hide" style="margin-top:8px" placeholder="พิมพ์ทะเบียนรถ..." oninput="pickedPlate=this.value.trim()">
+    <div class="chips">${chips}</div>
     <div class="plate-btns" style="margin-top:10px">
       <button class="btn-sm plate-yes" onclick="savePlate()">บันทึก</button>
       <button class="btn-sm plate-no" onclick="renderPlateBox()">ยกเลิก</button>
@@ -1001,13 +1001,7 @@ function pickPlateChip(el, plate){
   const box = document.getElementById('plate-box');
   box.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
   el.classList.add('on');
-  const ci = document.getElementById('plate-custom-input');
-  if(plate === '__custom__'){
-    if(ci){ ci.classList.remove('hide'); ci.focus(); pickedPlate = ci.value.trim(); }
-  }else{
-    if(ci){ ci.classList.add('hide'); ci.value = ''; }
-    pickedPlate = plate;
-  }
+  pickedPlate = plate;
 }
 
 async function savePlate(){
