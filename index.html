@@ -885,6 +885,7 @@ function _fuelApply(r){
       <div class="qr-done-l">✅ ปั๊มส่งข้อมูลแล้ว</div>
       <div class="qr-done-v">${_num(r.liters)} ลิตร</div>
       <div class="qr-done-s">${_money(r.price)} บาท/ลิตร · รวม ${_money(r.amount)} บาท</div>
+      ${(r.meterStart!=null&&r.meterEnd!=null)?`<div class="qr-done-s">มิเตอร์หัวจ่าย ${_num(r.meterStart)} → ${_num(r.meterEnd)}</div>`:''}
     </div>${r.mismatch?`<div class="qr-warn">⚠️ ${r.mismatch}</div>`:''}
     <div class="qr-hint">ค่านี้มาจากหัวจ่ายโดยตรง แก้ไขเองไม่ได้ ถ้าไม่ถูกต้องกรุณาแจ้งแอดมิน</div>`;
   }
