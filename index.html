@@ -423,10 +423,20 @@ function fmtDateTime(v){
   if(isNaN(d)) return v;
   return fmtDate(v) + ' ' + fmtTime(v);
 }
+// 🆕 คนขับ "ฐานไกล" (เริ่มงานที่จุดรับ เอาปาล์มมาส่งโรงงาน แล้วตีรถกลับ เช่น สนิท-คลองหาด)
+// → ฟอร์มแยกเฉพาะ user นี้ (guard บนสุดทุกฟังก์ชัน คนขับปกติไม่แตะ)
+const FAR_BASE_UIDS = ['Uc48f5b90387a3dfb6a3fe935b02ab64b'];  // สนิท วรสุข (คลองหาด)
+function isFarBase(){ try{ return !!(U && FAR_BASE_UIDS.indexOf(U.userId)!==-1); }catch(e){ return false; } }
+
 // คำนวณสเต็ปของ "งานนั้น" โดยตรง (ไม่พึ่ง global jobType/hasRamp)
 function stepsOf(o){
   const jt = o['ประเภทงาน']||'ปาล์ม';
   const hr = !!(o['จุดรับเพิ่ม']);
+  if(isFarBase()) return [          // 🆕 ฟอร์มสนิท: คลองหาด → โรงงาน(ชั่ง+น้ำมัน) → กลับคลองหาด
+    {key:'start',  label:'ออกจากคลองหาด (มีปาล์ม)'},
+    {key:'client', label:'ถึงโรงงาน (ชั่ง + เติมน้ำมัน)'},
+    {key:'factory',label:'กลับถึงคลองหาด'}
+  ];
   if(hr) return [
     {key:'start',label:'ออกโรงงาน'},
     {key:'rampDrop',label:'วางกระบะที่ลาน'},
@@ -708,6 +718,11 @@ function photoBox(id,label,key){
 }
 
 function buildForm(key){
+  if(isFarBase()){                                   // 🆕 ฟอร์มสนิท (คนอื่นข้าม)
+    if(key==='client')  return formFB_factory();     // ถึงโรงงาน = คอลัมน์ลูกค้า + ชั่ง + น้ำมัน
+    if(key==='factory') return formFB_return();       // กลับคลองหาด = คอลัมน์ปลายทาง ถ่ายแค่ดุมล้อ
+    // key==='start' → ใช้ formStart() ปกติด้านล่าง (ออกจากคลองหาด, เลือกสภาพรถ=หนัก)
+  }
   if(key==='start') return formStart();
   if(key==='rampDrop') return formRampDrop();
   if(key==='arrive') return formArrive();
@@ -2027,6 +2042,123 @@ async function submitRamp(){
   order['สถานะ']='ถึงลานขากลับ';
   renderTimeline();
   toast('✅ บันทึกออกจากลานขากลับเรียบร้อย');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ * 🆕 ฟอร์มคนขับฐานไกล (สนิท) — แยกต่างหาก ไม่แตะ path ปกติ
+ *   สเต็บ: start(คลองหาด,หนัก) → client=โรงงาน(ชั่ง+น้ำมัน) → factory=กลับคลองหาด(ดุมล้อ)
+ *   คอลัมน์เดิม: client→ลูกค้า, factory→ปลายทาง · ค่าแรงได้ 2 ขา (หนัก+เบา)
+ * ══════════════════════════════════════════════════════════════════ */
+// สเต็บ "ถึงโรงงาน" = คอลัมน์ลูกค้า + ใบชั่ง + เติมน้ำมัน (ยกบล็อกน้ำมัน/ใบชั่งมาจาก formFactory)
+function formFB_factory(){
+  setTimeout(_fuelResume, 0);   // กู้สถานะ QR ตอน renderTimeline วาดใหม่
+  return `
+    ${ocrMileHubBlock('client','รูปเลขไมล์ถึงโรงงาน','รูปเลขดุมล้อถึงโรงงาน')}
+    <div class="sec-divider"></div>
+    <div class="sec-lbl">⚖️ ใบชั่งลูกค้า (ที่โรงงาน)</div>
+    ${ocrPhotoBox('factory-client-weight','รูปใบชั่งลูกค้า','weight-factory-client','ใบชั่งลูกค้า')}
+    <div class="sec-divider"></div>
+    <div class="sec-lbl">⛽ เติมน้ำมันที่โรงงาน</div>
+    <div class="qr-card" id="fuel-qr-card">
+      <div class="qr-head">
+        <span>ให้พนักงานปั๊มสแกน</span>
+        <button class="btn-sm qr-btn" id="fuel-qr-btn" onclick="askFuelQR()">ขอ QR</button>
+      </div>
+      <div id="fuel-qr-body" class="qr-body">
+        <div class="qr-hint">กดขอ QR แล้วยื่นจอให้พนักงานสแกน จำนวนลิตรจะขึ้นเองอัตโนมัติ</div>
+      </div>
+    </div>
+    <div class="exp-section" style="margin-top:0">
+      <div class="row2">
+        <div>
+          <label class="lbl">จำนวนลิตร <span class="req">*</span></label>
+          <input class="inp" type="number" id="fuel-factory-liter" placeholder="0" oninput="calcFuelFactory()">
+        </div>
+        <div>
+          <label class="lbl">ราคา/ลิตร <span class="req">*</span></label>
+          <select class="inp" id="fuel-factory-price"></select>
+        </div>
+      </div>
+      <label class="lbl mt8">รูปใบเติมน้ำมัน</label>
+      ${photoBox('fuel-factory-photo','แนบรูปใบเติมน้ำมัน','fuel-factory')}
+      <div class="net-badge hide" id="fuel-factory-total-badge">
+        <div class="net-lbl">ยอดรวมน้ำมันโรงงาน</div>
+        <div><span class="net-val" id="fuel-factory-total">0</span> <span class="net-unit">บาท</span></div>
+      </div>
+    </div>
+    <button class="btn btn-green" onclick="submitFB_client()">🏭 ยืนยันถึงโรงงาน (ชั่ง + เติมน้ำมัน)</button>
+  `;
+}
+
+// สเต็บ "กลับถึงคลองหาด" = คอลัมน์ปลายทาง ถ่ายแค่ดุมล้อ/ไมล์ แล้วจบงาน
+function formFB_return(){
+  return `
+    ${ocrMileHubBlock('factory','รูปเลขไมล์กลับคลองหาด','รูปเลขดุมล้อกลับคลองหาด')}
+    <div class="net-badge">
+      <div class="net-lbl">หมายเหตุ</div>
+      <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
+        ตีรถเบากลับถึงคลองหาด — ถ่ายดุมล้อ/ดึงเลขไมล์ แล้วกดจบงานได้เลย
+      </div>
+    </div>
+    <button class="btn btn-brown" onclick="submitFB_return()">🏁 จบงาน (กลับถึงคลองหาด)</button>
+  `;
+}
+
+// submit "ถึงโรงงาน" — เขียนคอลัมน์ลูกค้า + ใบชั่ง + น้ำมันโรงงาน (order-level)
+async function submitFB_client(){
+  if(ocrBusy()) return;
+  const mile=getMileValue('mile-client'), hub=getOcrValue('hub-client');
+  if(!mile){toast('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
+  if(!hub){toast('กรุณาถ่ายเลขดุมล้อถึงโรงงาน');return;}
+  const eChk=checkReading('client',mile,hub); if(eChk){toast(eChk);return;}
+
+  const w=getWeightOcrData('weight-factory-client');
+  if(!w||!w.gross||!w.tare||!w.net){toast('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน และตรวจค่า OCR');return;}
+  const fLiter=getVal('fuel-factory-liter'), fPrice=getVal('fuel-factory-price');
+  if(!fLiter){toast('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
+  if(!fPrice){toast('กรุณากรอกราคาน้ำมันโรงงาน');return;}
+
+  const ra=await postGAS({action:'driverArrived',orderId:order['Order ID'],userId:U.userId},'🏭 กำลังบันทึกถึงโรงงาน...');
+  if(!ra?.success){toast('❌ '+(ra?.error||'บันทึกถึงโรงงานไม่สำเร็จ'));return;}
+
+  const wUrl = ocrData['weight-factory-client'] ? ocrData['weight-factory-client'].fileUrl : '';
+  const fields={
+    'เลขไมล์ลูกค้า':mile,'เลขดุมล้อลูกค้า':hub,'สภาพรถลูกค้า':getLoadState('client'),
+    'น้ำหนักหนักลูกค้า':w.gross,'น้ำหนักเบาลูกค้า':w.tare,'สุทธิลูกค้า':w.net,
+    'ราคาต่อกก.':w.pricePerKg||'','ยอดรวมเงิน':w.totalAmount||'','รูปใบชั่งลูกค้า':wUrl,
+    'ลิตรน้ำมัน(โรงงาน)':fLiter,'ราคาน้ำมัน(โรงงาน)':fPrice
+  };
+  if(photos['fuel-factory']){
+    const up=await postGAS({action:'uploadImage',orderId:order['Order ID'],userId:U.userId,imageBase64:photos['fuel-factory'],prefix:'FUEL_FAC'},'⛽ กำลังอัปโหลดบิลน้ำมัน...');
+    if(up&&up.success) fields['รูปน้ำมัน(โรงงาน)']=up.fileUrl;
+  }
+  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลูกค้า',fields},'💾 กำลังบันทึกข้อมูล...');
+
+  hubHistory.client=parseFloat(hub)||0;
+  saveReading('client',mile,hub);
+  order['สถานะ']='ออกจากลูกค้า';
+  renderTimeline();
+  toast('✅ บันทึกถึงโรงงาน (ชั่ง + เติมน้ำมัน) เรียบร้อย');
+}
+
+// submit "กลับถึงคลองหาด" — เขียนคอลัมน์ปลายทาง แล้วปิดงาน (คิดค่าแรง)
+async function submitFB_return(){
+  if(ocrBusy()) return;
+  const mile=getMileValue('mile-factory'), hub=getOcrValue('hub-factory');
+  if(!mile){toast('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
+  if(!hub){toast('กรุณาถ่ายเลขดุมล้อกลับคลองหาด');return;}
+  const eChk=checkReading('factory',mile,hub); if(eChk){toast(eChk);return;}
+
+  const billName=order['ชื่อในบิล']||order['ชื่อสวน']||'';
+  const fields={'เลขไมล์ปลายทาง':mile,'เลขดุมล้อปลายทาง':hub,'สภาพรถปลายทาง':getLoadState('factory')};
+  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ปลายทาง',notifyOwner:true,billName,fields},'📊 กำลังส่งข้อมูลสรุป...');
+  const r=await postGAS({action:'driverComplete',orderId:order['Order ID'],userId:U.userId},'✅ กำลังปิดงาน...');
+  if(!r?.success){toast('❌ '+(r?.error||'ปิดงานไม่สำเร็จ'));return;}
+
+  hubHistory.factory=parseFloat(hub)||0;
+  saveReading('factory',mile,hub);
+  document.getElementById('success-msg').innerHTML=`📋 ${order['Order ID']}<br>จบงานเรียบร้อย (กลับถึงคลองหาด) ✅`;
+  document.getElementById('success').classList.add('show');
 }
 
 function prepareFactory(){
