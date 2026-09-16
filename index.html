@@ -443,8 +443,7 @@ function fmtDateTime(v){
 }
 // 🆕 คนขับ "ฐานไกล" (เริ่มงานที่จุดรับ เอาปาล์มมาส่งโรงงาน แล้วตีรถกลับ เช่น สนิท-คลองหาด)
 // → ฟอร์มแยกเฉพาะ user นี้ (guard บนสุดทุกฟังก์ชัน คนขับปกติไม่แตะ)
-const FAR_BASE_UIDS = ['Uc48f5b90387a3dfb6a3fe935b02ab64b',   // สนิท วรสุข (คลองหาด)
-  'U242c178eb911a0cd494bc20a6878c93b'];                       // 🧪 คุณน้อง Test (ชั่วคราว-เทส · ถอดออกหลังเทสเสร็จ)
+const FAR_BASE_UIDS = ['Uc48f5b90387a3dfb6a3fe935b02ab64b'];  // สนิท วรสุข (คลองหาด) — คนขับ far-base จริง
 function isFarBase(){ try{ return !!(U && FAR_BASE_UIDS.indexOf(U.userId)!==-1); }catch(e){ return false; } }
 
 // คำนวณสเต็ปของ "งานนั้น" โดยตรง (ไม่พึ่ง global jobType/hasRamp)
