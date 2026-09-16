@@ -353,6 +353,18 @@ async function init(){
 
 async function loadDriver(uid){
   U.userId=uid;
+  // 🆕 แคช: โชว์ออเดอร์ล่าสุดจากครั้งก่อน "ทันที" แล้วค่อยรีเฟรชเบื้องหลัง (เปิดปุ๊บเห็นเลย ไม่ต้องรอ GAS)
+  let hadCache=false;
+  try{
+    const cRaw=_lsGet('ssb_drv_orders_'+uid);
+    if(cRaw){ const c=JSON.parse(cRaw); if(c&&c.length){
+      allOrders=c.slice().sort(jobOrder); renderJobList();
+      document.getElementById('job-list').classList.remove('hide');
+      document.getElementById('no-order').classList.add('hide');
+      const _jl0=document.getElementById('job-loading'); if(_jl0)_jl0.classList.add('hide');
+      hadCache=true;
+    }}
+  }catch(e){}
   // ยิง 3 fetch ขนานกัน (เดิม maintenance คั่น serial ก่อน user+order)
   const [m,uRes,oRes]=await Promise.all([
     fetch(`${GAS_URL}?action=getMaintenance&page=driver&userId=${uid}`).then(r=>r.json()).catch(()=>null),
@@ -365,12 +377,18 @@ async function loadDriver(uid){
     document.getElementById('drv-name').textContent=uRes.name||U.displayName||'';
     document.getElementById('drv-plate').textContent=uRes.plate||'—';
   }
-  if(oRes.status==='ok'&&oRes.orders.length>0){
+  if(oRes.status==='ok'){
     allOrders = oRes.orders.slice().sort(jobOrder);     // ทริปเดียวกันเรียงตาม route_seq · คนละทริปเรียงตามเวลาไปรับ
-    renderJobList();
-    document.getElementById('job-list').classList.remove('hide');
-    document.getElementById('no-order').classList.add('hide');
-  }else{
+    try{ _lsSet('ssb_drv_orders_'+uid, JSON.stringify(oRes.orders)); }catch(e){}   // 🆕 เก็บแคชไว้ครั้งหน้า
+    if(oRes.orders.length>0){
+      renderJobList();
+      document.getElementById('job-list').classList.remove('hide');
+      document.getElementById('no-order').classList.add('hide');
+    }else{
+      document.getElementById('job-list').classList.add('hide');
+      document.getElementById('no-order').classList.remove('hide');
+    }
+  }else if(!hadCache){   // fetch พัง + ไม่มีแคช → โชว์ no-order · ถ้ามีแคชคงของเดิมไว้ (ไม่จอเปล่า)
     document.getElementById('job-list').classList.add('hide');
     document.getElementById('no-order').classList.remove('hide');
   }
