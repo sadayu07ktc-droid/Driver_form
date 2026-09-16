@@ -1774,6 +1774,18 @@ function onPhoto(input,boxId,lblId,key){
       ocrValEl.textContent=res.value||'';
       const edit=document.getElementById('ocr-edit-'+key);
       if(edit) edit.value=res.value||'';
+
+      // 🧹 ดุมล้ออ่านไม่ได้ (ฝุ่น/แสง/เบลอ) → แจ้งคนขับเจาะจง ให้เช็ด/ถ่ายใหม่ หรือกรอกเอง
+      if(type==='ดุมล้อ' && !res.value){
+        const q=res.quality||'';
+        const msg = q==='dust'  ? '🧹 หน้าปัดดุมล้อมีฝุ่นหนา อ่านเลขไม่ได้\nเช็ดฝุ่นแล้วถ่ายใหม่ หรือกรอกเลขเอง'
+                  : q==='glare' ? '☀️ แสงสะท้อนบังตัวเลขดุมล้อ อ่านไม่ได้\nเปลี่ยนมุม/บังแดดแล้วถ่ายใหม่ หรือกรอกเลขเอง'
+                  : q==='blur'  ? '📷 ภาพดุมล้อไม่ชัด อ่านไม่ได้\nถ่ายใหม่ให้เต็มกรอบ นิ่งๆ หรือกรอกเลขเอง'
+                  :               '⚠️ อ่านเลขดุมล้อไม่ได้\nเช็ดหน้าปัด+ถ่ายใหม่ให้ชัด หรือกรอกเลขเอง';
+        document.getElementById(lblId).textContent='⚠️ อ่านดุมล้อไม่ได้ — กรอกเลขเองได้';
+        toast(msg,'warn',6000);
+        if(edit) edit.focus();
+      }
     }
 }
 
