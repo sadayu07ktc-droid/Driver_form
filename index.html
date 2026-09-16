@@ -1294,19 +1294,24 @@ function formFactory(){
 // ── OCR photo box — ซ่อน ocr-edit สำหรับใบชั่ง, โชว์เฉพาะ ไมล์/ดุมล้อ ──
 function ocrPhotoBox(id, label, key, type){
   const isWeight = (type === 'ใบชั่งลูกค้า' || type === 'ใบชั่งลาน');
+  // 🆕 กู้ค่าที่ "อ่าน OCR แล้ว" จาก ocrData → กันเลขหายตอน renderTimeline วาดฟอร์มใหม่ (เดิมรีเซ็ตเป็น "—" ต้องถ่ายซ้ำ)
+  const saved = (typeof ocrData !== 'undefined' && ocrData) ? ocrData[key] : null;
+  const has = !!saved;
+  const valHtml = has ? (isWeight ? buildWeightEditFields(key, type, saved) : (saved.value || '—')) : '—';
+  const editVal = (has && !isWeight) ? String(saved.value || '').replace(/"/g, '&quot;') : '';
   return `
     <div class="field">
       <label class="lbl">${label} <span class="req">*</span></label>
-      <label class="photo-box" id="box-${id}" for="inp-${id}">
+      <label class="photo-box ${has ? 'has-photo' : ''}" id="box-${id}" for="inp-${id}">
         <input type="file" id="inp-${id}" accept="image/*" capture="environment"
                onchange="onOcrPhoto(this,'box-${id}','lbl-${id}','${key}','${type}')">
         <div class="ph-icon">📷</div>
-        <div class="ph-lbl" id="lbl-${id}">ถ่ายรูปเพื่ออ่าน OCR</div>
+        <div class="ph-lbl" id="lbl-${id}">${has ? '✅ อ่าน OCR แล้ว (ถ่ายใหม่ได้ถ้าต้องการ)' : 'ถ่ายรูปเพื่ออ่าน OCR'}</div>
       </label>
-      <div class="net-badge hide" id="ocr-${key}">
+      <div class="net-badge ${has ? '' : 'hide'}" id="ocr-${key}">
         <div class="net-lbl">ค่าที่ OCR อ่านได้</div>
-        <div id="ocr-val-${key}" class="ocr-val-display">—</div>
-        ${isWeight ? '' : `<input class="inp mt8" id="ocr-edit-${key}" placeholder="แก้ไขตัวเลขได้ถ้า OCR ผิด">`}
+        <div id="ocr-val-${key}" class="ocr-val-display">${valHtml}</div>
+        ${isWeight ? '' : `<input class="inp mt8" id="ocr-edit-${key}" value="${editVal}" placeholder="แก้ไขตัวเลขได้ถ้า OCR ผิด" oninput="if(!ocrData['${key}'])ocrData['${key}']={value:'',fileUrl:''};ocrData['${key}'].value=this.value">`}
       </div>
     </div>
   `;
