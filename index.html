@@ -1618,20 +1618,32 @@ function fetchWithTimeout(url, opts, ms){
   return fetch(url, Object.assign({}, opts, {signal:ctrl.signal})).finally(()=>clearTimeout(t));
 }
 
-async function postGAS(payload, msg='กำลังบันทึก...'){
-  setLoading(true, msg);
+// ยิง 1 payload — ไม่แตะ overlay (ใช้ร่วมทั้ง postGAS เดี่ยว และ postGASParallel) · เน็ตหลุด → เก็บคิวส่งเอง
+async function _postOne(payload){
   try{
     const res=await fetchWithTimeout(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
     const text=await res.text();
     try{return JSON.parse(text);}
     catch(e){console.warn('postGAS parse warn:',text.substring(0,200));return{success:true};}
   }catch(e){
-    // เน็ตหลุด (สวนไม่มีสัญญาณ) — เดิมโกหกว่าสำเร็จ ทำให้คนขับกดซ้ำรัว ๆ
-    // ตอนนี้: เก็บลงคิว จะส่งเองเมื่อมีเน็ต + บอกคนขับตรง ๆ ว่ารอสัญญาณ
+    // เน็ตหลุด (สวนไม่มีสัญญาณ) — เก็บลงคิว จะส่งเองเมื่อมีเน็ต ไม่ให้คนขับกดซ้ำรัว ๆ
     console.warn('postGAS offline → queue:',e);
     _queueAdd(payload);
     return {success:true, queued:true};
-  }finally{setLoading(false);}
+  }
+}
+async function postGAS(payload, msg='กำลังบันทึก...'){
+  setLoading(true, msg);
+  try{ return await _postOne(payload); }
+  finally{ setLoading(false); }
+}
+// ⚡ ยิงหลาย payload "พร้อมกัน" ใต้ overlay เดียว — เร็วขึ้น ~เท่าตัว
+//    ใช้เฉพาะจุดที่แต่ละ payload เขียนคนละที่ ไม่ทับกัน (เช่น สถานะ→orders + submitWeight→ชีต LOG_WEIGHT)
+//    ⚠️ ห้ามใช้กับ "จบงาน" (driverComplete ต้องรอ submitWeight เขียนก่อนเพื่อคิดค่าแรง)
+async function postGASParallel(payloads, msg='กำลังบันทึก...'){
+  setLoading(true, msg);
+  try{ return await Promise.all(payloads.map(_postOne)); }
+  finally{ setLoading(false); }
 }
 
 // ── คิวออฟไลน์ — เก็บงานที่ส่งไม่ได้ไว้ใน localStorage แล้วส่งเองเมื่อเน็ตกลับมา ──
@@ -1959,13 +1971,16 @@ async function submitStart(){
 
   const eChk=checkReading('start',mileS,hubS); if(eChk){toast(eChk);return;}
 
-  const r=await postGAS({action:'driverStartJob',orderId:order['Order ID'],userId:U.userId},'🚀 กำลังบันทึกออกโรงงาน...');
+  // ⚡ ยิงพร้อมกัน: สถานะ (orders) + บันทึกไมล์/ดุม (ชีต LOG_WEIGHT) — คนละที่ ไม่ทับกัน
+  const [r]=await postGASParallel([
+    {action:'driverStartJob',orderId:order['Order ID'],userId:U.userId},
+    {action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'เริ่ม',
+      fields:{'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS,'สภาพรถเริ่ม':getLoadState('start')}}
+  ],'🚀 กำลังบันทึกออกโรงงาน...');
   if(!r?.success){toast('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
 
   hubHistory.start=parseFloat(hubS)||0;
   saveReading('start',mileS,hubS);
-  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'เริ่ม',
-    fields:{'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS,'สภาพรถเริ่ม':getLoadState('start')}},'💾 กำลังบันทึกข้อมูล...');
 
   order['สถานะ']='เริ่มงานแล้ว';
   renderTimeline();
@@ -2034,11 +2049,13 @@ async function submitClient(){
 
   const eChk=checkReading('client',mileClient,hubClient); if(eChk){toast(eChk);return;}
 
-  const r=await postGAS({action:'driverArrived',orderId:order['Order ID'],userId:U.userId},'🌴 กำลังบันทึกถึงลูกค้า...');
+  // ⚡ ยิงพร้อมกัน: สถานะถึงลูกค้า (orders) + บันทึกไมล์/ดุม (ชีต LOG_WEIGHT) — คนละที่ ไม่ทับกัน
+  const [r]=await postGASParallel([
+    {action:'driverArrived',orderId:order['Order ID'],userId:U.userId},
+    {action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลูกค้า',
+      fields:{'เลขไมล์ลูกค้า':mileClient,'เลขดุมล้อลูกค้า':hubClient,'สภาพรถลูกค้า':getLoadState('client')}}
+  ],'🌴 กำลังบันทึกถึงลูกค้า...');
   if(!r?.success){toast('❌ '+(r?.error||'อัปเดตสถานะลูกค้าไม่สำเร็จ'));return;}
-
-  await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลูกค้า',
-    fields:{'เลขไมล์ลูกค้า':mileClient,'เลขดุมล้อลูกค้า':hubClient,'สภาพรถลูกค้า':getLoadState('client')}},'💾 กำลังบันทึกข้อมูล...');
 
   hubHistory.client=parseFloat(hubClient)||0;
   saveReading('client',mileClient,hubClient);
