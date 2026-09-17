@@ -365,17 +365,34 @@ async function loadDriver(uid){
       hadCache=true;
     }}
   }catch(e){}
-  // ยิง 3 fetch ขนานกัน (เดิม maintenance คั่น serial ก่อน user+order)
-  const [m,uRes,oRes]=await Promise.all([
-    fetch(`${GAS_URL}?action=getMaintenance&page=driver&userId=${uid}`).then(r=>r.json()).catch(()=>null),
-    fetch(`${GAS_URL}?action=getUser&userId=${uid}`).then(r=>r.json()).catch(()=>({status:'err'})),
-    fetch(`${GAS_URL}?action=getDriverOrder&userId=${uid}`).then(r=>r.json()).catch(()=>({status:'err'}))
-  ]);
+  // 🆕 แคชชื่อ/ทะเบียน → header ขึ้นทันที (ไม่ต้องรอ getUser)
+  try{
+    const uRaw=_lsGet('ssb_drv_user_'+uid);
+    if(uRaw){ const cu=JSON.parse(uRaw); if(cu){
+      if(cu.name) document.getElementById('drv-name').textContent=cu.name;
+      if(cu.plate) document.getElementById('drv-plate').textContent=cu.plate;
+    }}
+  }catch(e){}
+
+  // 🔗 รวมเป็น 1 call (bundle) แทน 3 call · fallback ไป 3 call ถ้า bundle พัง
+  let m,uRes,oRes;
+  try{
+    const b=await fetch(`${GAS_URL}?action=getDriverFormBundle&userId=${uid}`).then(r=>r.json());
+    if(!b || !b.user) throw new Error('bundle ไม่สมบูรณ์');
+    m=b.maintenance; uRes=b.user; oRes=b.driverOrder||{status:'err'};
+  }catch(e){
+    [m,uRes,oRes]=await Promise.all([
+      fetch(`${GAS_URL}?action=getMaintenance&page=driver&userId=${uid}`).then(r=>r.json()).catch(()=>null),
+      fetch(`${GAS_URL}?action=getUser&userId=${uid}`).then(r=>r.json()).catch(()=>({status:'err'})),
+      fetch(`${GAS_URL}?action=getDriverOrder&userId=${uid}`).then(r=>r.json()).catch(()=>({status:'err'}))
+    ]);
+  }
   if(m && m.closed){ showMaintenance(); return; }       // ปิดปรับปรุง → หน้าปิดระบบ
   var _jl=document.getElementById('job-loading'); if(_jl) _jl.classList.add('hide');   // 🆕 หยุด spinner
   if(uRes.status==='ok'){
     document.getElementById('drv-name').textContent=uRes.name||U.displayName||'';
     document.getElementById('drv-plate').textContent=uRes.plate||'—';
+    try{ _lsSet('ssb_drv_user_'+uid, JSON.stringify({name:uRes.name||U.displayName||'', plate:uRes.plate||''})); }catch(e){}   // 🆕 เก็บแคชชื่อ/ทะเบียน ครั้งหน้าขึ้นทันที
   }
   if(oRes.status==='ok'){
     allOrders = oRes.orders.slice().sort(jobOrder);     // ทริปเดียวกันเรียงตาม route_seq · คนละทริปเรียงตามเวลาไปรับ
