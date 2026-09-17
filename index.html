@@ -241,6 +241,7 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 <div class="drv-card">
   <div class="drv-avatar">🚛</div>
   <div><div class="drv-name" id="drv-name">กำลังโหลด...</div><div class="drv-plate" id="drv-plate">—</div></div>
+  <span id="drv-spin" style="width:15px;height:15px;border:2px solid #d8ecd8;border-top-color:var(--g2,#2f7d3a);border-radius:50%;animation:spin .7s linear infinite;flex:none;align-self:center;margin-left:2px"></span>
   <span class="drv-status">ติดงาน</span>
 </div>
 
@@ -389,21 +390,27 @@ async function loadDriver(uid){
   }
   if(m && m.closed){ showMaintenance(); return; }       // ปิดปรับปรุง → หน้าปิดระบบ
   var _jl=document.getElementById('job-loading'); if(_jl) _jl.classList.add('hide');   // 🆕 หยุด spinner
+  var _sp=document.getElementById('drv-spin'); if(_sp) _sp.style.display='none';        // 🆕 ซ่อนสปินเนอร์ชื่อ/ทะเบียน (โหลดเสร็จ)
   if(uRes.status==='ok'){
     document.getElementById('drv-name').textContent=uRes.name||U.displayName||'';
     document.getElementById('drv-plate').textContent=uRes.plate||'—';
     try{ _lsSet('ssb_drv_user_'+uid, JSON.stringify({name:uRes.name||U.displayName||'', plate:uRes.plate||''})); }catch(e){}   // 🆕 เก็บแคชชื่อ/ทะเบียน ครั้งหน้าขึ้นทันที
   }
   if(oRes.status==='ok'){
-    allOrders = oRes.orders.slice().sort(jobOrder);     // ทริปเดียวกันเรียงตาม route_seq · คนละทริปเรียงตามเวลาไปรับ
+    allOrders = oRes.orders.slice().sort(jobOrder);     // อัปเดตข้อมูลเสมอ (เงียบ) · ทริปเดียวกันเรียงตาม route_seq
     try{ _lsSet('ssb_drv_orders_'+uid, JSON.stringify(oRes.orders)); }catch(e){}   // 🆕 เก็บแคชไว้ครั้งหน้า
-    if(oRes.orders.length>0){
-      renderJobList();
-      document.getElementById('job-list').classList.remove('hide');
-      document.getElementById('no-order').classList.add('hide');
-    }else{
-      document.getElementById('job-list').classList.add('hide');
-      document.getElementById('no-order').classList.remove('hide');
+    // ⚠️ ถ้าคนขับ "เข้างานไปแล้ว" (job-form โชว์) → อย่า render list ทับ = กันเด้งกลับหน้าหลัก
+    //    (ข้อมูล allOrders อัปเดตแล้ว · กด "กลับไปรายการงาน" จะเห็นลิสต์ล่าสุดเอง)
+    const _inJob = !document.getElementById('job-form').classList.contains('hide');
+    if(!_inJob){
+      if(oRes.orders.length>0){
+        renderJobList();
+        document.getElementById('job-list').classList.remove('hide');
+        document.getElementById('no-order').classList.add('hide');
+      }else{
+        document.getElementById('job-list').classList.add('hide');
+        document.getElementById('no-order').classList.remove('hide');
+      }
     }
   }else if(!hadCache){   // fetch พัง + ไม่มีแคช → โชว์ no-order · ถ้ามีแคชคงของเดิมไว้ (ไม่จอเปล่า)
     document.getElementById('job-list').classList.add('hide');
