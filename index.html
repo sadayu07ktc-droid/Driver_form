@@ -1712,7 +1712,23 @@ async function _queueFlush(){
 window.addEventListener('online', _queueFlush);
 setInterval(()=>{ if(navigator.onLine) _queueFlush(); }, 20000);
 
-// ── postGAS แบบเงียบ (ไม่เปิด overlay หมุนทั้งจอ) — ใช้กับ OCR ──
+// ── OCR: ยิงแยก (ไม่ใช้ postGASSilent) — ตอบไม่ใช่ JSON/หมดเวลา = ล้มเหลวชั่วคราว (transient) ให้อ่านซ้ำได้ · 2026-10-09 ──
+//    OCR ไม่มีผลข้างเคียงนอกจากรูปซ้ำใน Drive → ยิงซ้ำปลอดภัย
+const OCR_TIMEOUT_MS = 90000;
+const ocrSeq = {};   // เลขรอบต่อช่อง — ถ่ายใหม่ระหว่างรอ ผลรอบเก่าที่มาทีหลังจะถูกทิ้ง
+async function postOcr(payload){
+  try{
+    const res=await fetchWithTimeout(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)}, OCR_TIMEOUT_MS);
+    const text=await res.text();
+    try{return JSON.parse(text);}
+    catch(e){console.warn('OCR non-JSON:',text.substring(0,200));return{success:false,transient:true,error:'เซิร์ฟเวอร์ตอบผิดรูปแบบ'};}
+  }catch(e){
+    console.error('OCR fetch error:',e);
+    return{success:false,transient:true,error:(e&&e.name==='AbortError')?'รอนานเกินไป (สัญญาณช้า)':'เชื่อมต่อไม่ได้'};
+  }
+}
+
+// ── postGAS แบบเงียบ (ไม่เปิด overlay หมุนทั้งจอ) ──
 async function postGASSilent(payload){
   try{
     const res=await fetchWithTimeout(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
@@ -1755,6 +1771,7 @@ function onPhoto(input,boxId,lblId,key){
       input.value='';
       return;
     }
+    const seq=(ocrSeq[key]||0)+1; ocrSeq[key]=seq;
     const base64 = await resizeToDataURL(file, 1600, 0.85);   // ย่อรูปก่อน OCR/อัปโหลด (ใบชั่ง — ย่อเบากันเสีย OCR)
     photos[key]=base64;
     document.getElementById(boxId)?.classList.add('has-photo');
@@ -1764,25 +1781,38 @@ function onPhoto(input,boxId,lblId,key){
     ocrPending++;
     let res;
     try{
-      res=await postGASSilent({
-        action:'ocrImage',
-        userId:U.userId,
-        orderId:order['Order ID'],
-        imageKey:key,
-        imageType:type,
-        imageBase64:base64
-      });
+      for(let n=1;n<=2;n++){   // ล้มเหลวชั่วคราว (เน็ต/GAS ตอบผิดรูปแบบ) → อ่านซ้ำอัตโนมัติ 1 ครั้ง
+        res=await postOcr({
+          action:'ocrImage',
+          userId:U.userId,
+          orderId:order['Order ID'],
+          imageKey:key,
+          imageType:type,
+          imageBase64:base64
+        });
+        if(ocrSeq[key]!==seq) return;   // ถ่ายรูปใหม่แล้ว → ทิ้งผลรอบนี้
+        if((res&&res.success)||!(res&&res.transient)||n===2) break;
+        const l=document.getElementById(lblId); if(l) l.textContent='⏳ สัญญาณไม่ดี กำลังอ่านซ้ำ...';
+        await new Promise(r=>setTimeout(r,1500));
+      }
     } finally {
       ocrPending--;
     }
-
-    if(!res||!res.success){
-      document.getElementById(lblId).textContent='⚠️ OCR ไม่สำเร็จ';
-      toast('OCR ไม่สำเร็จ: '+(res?.error||'ไม่ทราบสาเหตุ'));
-      return;
-    }
+    if(ocrSeq[key]!==seq) return;
 
     const isWeight=(type==='ใบชั่งลูกค้า'||type==='ใบชั่งลาน');
+
+    if(!res||!res.success){
+      // เปิดช่องให้กรอกเลขเองได้ทันที (เดิมช่องถูกซ่อน ต้องถ่ายใหม่วนไป) · มีค่าเดิมอยู่แล้วไม่ล้าง
+      if(!ocrData[key]) ocrData[key]=isWeight?{gross:'',tare:'',net:'',pricePerKg:'',totalAmount:'',fileUrl:''}:{value:'',fileUrl:''};
+      document.getElementById(lblId).textContent='⚠️ อ่าน OCR ไม่สำเร็จ — กรอกเลขเองด้านล่าง หรือถ่ายใหม่';
+      document.getElementById('ocr-'+key)?.classList.remove('hide');
+      const vEl=document.getElementById('ocr-val-'+key);
+      if(vEl){ if(isWeight) vEl.innerHTML=buildWeightEditFields(key,type,ocrData[key]); else vEl.textContent=ocrData[key].value||'—'; }
+      toast('OCR ไม่สำเร็จ: '+(res?.error||'ไม่ทราบสาเหตุ')+'\nกรอกเลขเองในช่องด้านล่างได้เลย หรือถ่ายใหม่','warn',6000);
+      if(!isWeight) document.getElementById('ocr-edit-'+key)?.focus();
+      return;
+    }
 
     if(isWeight){
       ocrData[key]={
@@ -1816,7 +1846,7 @@ function onPhoto(input,boxId,lblId,key){
         const msg = q==='dust'  ? '🧹 หน้าปัดดุมล้อมีฝุ่นหนา อ่านเลขไม่ได้\nเช็ดฝุ่นแล้วถ่ายใหม่ หรือกรอกเลขเอง'
                   : q==='glare' ? '☀️ แสงสะท้อนบังตัวเลขดุมล้อ อ่านไม่ได้\nเปลี่ยนมุม/บังแดดแล้วถ่ายใหม่ หรือกรอกเลขเอง'
                   : q==='blur'  ? '📷 ภาพดุมล้อไม่ชัด อ่านไม่ได้\nถ่ายใหม่ให้เต็มกรอบ นิ่งๆ หรือกรอกเลขเอง'
-                  :               '⚠️ อ่านเลขดุมล้อไม่ได้\nเช็ดหน้าปัด+ถ่ายใหม่ให้ชัด หรือกรอกเลขเอง';
+                  :               '⚠️ AI ไม่มั่นใจตัวเลขดุมล้อ\nถ่ายใหม่ให้ชัด เต็มกรอบ หรือกรอกเลขเอง';
         document.getElementById(lblId).textContent='⚠️ อ่านดุมล้อไม่ได้ — กรอกเลขเองได้';
         toast(msg,'warn',6000);
         if(edit) edit.focus();
