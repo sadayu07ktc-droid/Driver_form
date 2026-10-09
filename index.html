@@ -989,7 +989,6 @@ function _fuelLock(tries = 0){
 let plateInfo   = null;    // ผลจาก getPlateCheck
 let plateOk     = false;   // คนขับยืนยันแล้วหรือยัง
 let plateLoaded = '';      // orderId ที่โหลดไปแล้ว
-let pickedPlate = '';      // ทะเบียนที่เลือกในตัวเลือก chips (เหมือนหน้าแอดมิน)
 
 async function loadPlateCheck(){
   const box = document.getElementById('plate-box');
@@ -1056,44 +1055,132 @@ function pullActiveGps(force){
   if(document.getElementById('gps-btn-'+mk) && gpsMile[mk]==null && !gpsFetching[mk]) fetchGpsMileage(mk);
 }
 
-// 🆕 เลือกทะเบียนแบบ chips จากลิสต์ (เหมือนหน้าเลือกทะเบียนของแอดมิน · ไม่ให้พิมพ์เอง)
+// 🚗 เปลี่ยนคัน — แบบเดียวกับแอดมินมอบหมายงาน (Order_form) / คนขับรับงาน (Order_Jobs) · 2026-10-09
+//   รถพ่วง (ทะเบียนประจำ "แม่,ลูก"): แม่+ลูก (ค่าเริ่ม) · เฉพาะแม่ · แม่+ลูกคันอื่น · ยืมรถคันอื่น
+//   รถเดี่ยว: รถตัวเอง · ยืมรถคันอื่น · ระบุเอง
+//   เดิมเป็นปุ่มทะเบียนทั้งคู่จากตารางรถ → เลือกเฉพาะแม่/ลูกคันอื่นไม่ได้ · หลังบ้านเช็คทีละป้าย (plate.gs + Edge driver-actions)
+//   รายการหางว่าง/รถว่าง: Edge driver-form getPlateOptions → ถอยไป GAS getAvailableTrailerChildren + getAvailableVehicles
+let plMode='', plPlain='', PLATE_EX=null, PLATE_EX_P=null;
+const _plParts = s => String(s||'').split(',').map(x=>x.trim()).filter(Boolean);
+function loadPlateOptions(){
+  if(PLATE_EX_P) return PLATE_EX_P;
+  PLATE_EX_P = (async()=>{
+    if(_drvEdgeOn()){
+      try{
+        const ac=(typeof AbortController!=='undefined')?new AbortController():null;
+        const tm=ac?setTimeout(()=>ac.abort(),10000):null;
+        const r=await fetch(EDGE_DRV_URL+'?action=getPlateOptions', ac?{signal:ac.signal}:{});
+        if(tm) clearTimeout(tm);
+        if(r.ok){ const j=await r.json(); if(j&&j.ok) return (PLATE_EX={children:j.children||[],groups:j.groups||[]}); }
+      }catch(e){ console.warn('getPlateOptions Edge → GAS', e); }
+    }
+    const g = a => fetch(GAS_URL+'?action='+a,{redirect:'follow'}).then(r=>r.json()).catch(()=>({}));
+    const rs = await Promise.all([g('getAvailableTrailerChildren'), g('getAvailableVehicles')]);
+    if(!rs[0].success && !rs[1].success) PLATE_EX_P=null;   // พังทั้งคู่ → เปิดใหม่ลองโหลดอีก
+    return (PLATE_EX={children:rs[0].children||[],groups:rs[1].groups||[]});
+  })();
+  return PLATE_EX_P;
+}
+function _plChip(mode,label,val){
+  return `<span class="chip pl-chip" data-mode="${mode}"${val?` data-val="${_esc(val)}"`:''} onclick="pickPlateMode(this)">${_esc(label)}</span>`;
+}
+function _plFill(id,first,items){   // items = [[value,label]]
+  const el=document.getElementById(id); if(!el) return;
+  el.innerHTML='<option value="">'+_esc(first)+'</option>'+items.map(it=>`<option value="${_esc(it[0])}">${_esc(it[1])}</option>`).join('');
+}
 function openPlatePicker(){
   if(!plateInfo) return;
-  const list = plateInfo.plates || [];
-  const box = document.getElementById('plate-box');
-  const chips = list.length
-    ? list.map(p =>
-        `<span class="chip${p.plate===plateInfo.current?' on':''}" onclick="pickPlateChip(this,'${p.plate}')">${_esc(p.plate)}${p.type?' · '+_esc(p.type):''}</span>`
-      ).join('')
-    : `<div class="plate-warn">ไม่พบทะเบียนในระบบ กรุณาแจ้งแอดมินเพิ่มคันครับ</div>`;
-  box.innerHTML = `
-    <div class="plate-ask">เลือกทะเบียนคันที่ขับวันนี้</div>
-    <div class="chips">${chips}</div>
-    <div class="plate-btns" style="margin-top:10px">
+  const box=document.getElementById('plate-box');
+  const P=_plParts(plateInfo.registered), cur=String(plateInfo.current||'').trim();
+  let chips='';
+  if(P.length>=2){
+    chips=_plChip('pair','🔗 แม่+ลูก ('+P[0]+','+P[1]+')')+_plChip('mother','🚚 เฉพาะแม่ ('+P[0]+')')+
+          _plChip('otherChild','🔄 แม่+ลูกคันอื่น')+_plChip('borrow','🔄 ยืมรถคันอื่น');
+    plMode = cur===P[0] ? 'mother' : 'pair';
+  }else{
+    chips=(P.length?_plChip('plain',P[0]+' (รถตัวเอง)',P[0]):'')+_plChip('borrow','🔄 ยืมรถคันอื่น')+_plChip('custom','ระบุเอง');
+    plMode = P.length ? 'plain' : 'borrow'; plPlain = P[0]||'';
+  }
+  box.innerHTML=`
+    <div class="plate-ask">เลือกรถที่ขับวันนี้</div>
+    <div class="plate-ask" style="font-size:12.5px;margin-top:2px">ในงานตอนนี้: <b>${_esc(cur||'—')}</b></div>
+    <div class="chips" style="justify-content:center;margin-top:10px">${chips}</div>
+    <select id="pl-child" class="plate-sel hide"></select>
+    <select id="pl-borrow-type" class="plate-sel hide" onchange="onPlBorrowType()"></select>
+    <select id="pl-borrow-veh" class="plate-sel hide"></select>
+    <select id="pl-custom" class="plate-sel hide"></select>
+    <div id="pl-borrow-note" class="plate-ask hide" style="font-size:12.5px;color:#B45309">🔄 ยืมรถคันอื่น — GPS/ต้นทุนจะอ้างทะเบียนคันนี้</div>
+    <div class="plate-btns" style="margin-top:12px">
       <button class="btn-sm plate-yes" onclick="savePlate()">บันทึก</button>
       <button class="btn-sm plate-no" onclick="renderPlateBox()">ยกเลิก</button>
     </div>`;
-  pickedPlate = plateInfo.current || (list[0] && list[0].plate) || '';
+  const first=box.querySelector('.pl-chip[data-mode="'+plMode+'"]');
+  if(first) pickPlateMode(first);
+  loadPlateOptions();   // โหลดรายการหางว่าง/รถว่างไว้ล่วงหน้า
 }
-
-function pickPlateChip(el, plate){
-  const box = document.getElementById('plate-box');
-  box.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+async function pickPlateMode(el){
+  const box=document.getElementById('plate-box');
+  box.querySelectorAll('.pl-chip').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
-  pickedPlate = plate;
+  const mode=el.dataset.mode; plMode=mode;
+  if(mode==='plain') plPlain=el.dataset.val||'';
+  const $=id=>document.getElementById(id);
+  $('pl-child').classList.toggle('hide',mode!=='otherChild');
+  $('pl-borrow-type').classList.toggle('hide',mode!=='borrow');
+  $('pl-borrow-note').classList.toggle('hide',mode!=='borrow');
+  $('pl-custom').classList.toggle('hide',mode!=='custom');
+  if(mode!=='borrow') $('pl-borrow-veh').classList.add('hide');
+  if(['otherChild','borrow','custom'].indexOf(mode)<0) return;
+  const target = mode==='otherChild'?'pl-child':mode==='borrow'?'pl-borrow-type':'pl-custom';
+  if(!PLATE_EX) _plFill(target,'กำลังโหลดรายการรถ…',[]);
+  const ex=await loadPlateOptions();
+  if(plMode!==mode || !document.getElementById(target)) return;   // กดโหมดอื่น/ปิดตัวเลือกไปแล้วระหว่างรอ
+  if(mode==='otherChild'){
+    const own=_plParts(plateInfo&&plateInfo.registered)[1]||'';
+    _plFill('pl-child','-- เลือกลูกคันอื่น --', ex.children.filter(c=>c.child!==own).map(c=>[c.child, c.child+' ('+(c.ownerName||'—')+')']));
+  }else if(mode==='borrow'){
+    _plFill('pl-borrow-type','-- เลือกประเภทรถที่ยืม --', ex.groups.map(g=>[g.type, g.type+' (ว่าง '+g.vehicles.length+' คัน)']));
+  }else{
+    const seen={}, items=[];
+    const add=p=>_plParts(p).forEach(x=>{ if(!seen[x]){ seen[x]=1; items.push([x,x]); } });
+    (plateInfo&&plateInfo.plates||[]).forEach(p=>add(p.plate));
+    ex.groups.forEach(g=>g.vehicles.forEach(v=>add(v.plate)));
+    items.sort((a,b)=>a[0].localeCompare(b[0],'th'));
+    _plFill('pl-custom','-- เลือกทะเบียน --', items);
+  }
+}
+function onPlBorrowType(){
+  const type=document.getElementById('pl-borrow-type').value, veh=document.getElementById('pl-borrow-veh');
+  const g=(PLATE_EX&&PLATE_EX.groups||[]).find(x=>x.type===type);
+  if(!type||!g){ veh.classList.add('hide'); return; }
+  _plFill('pl-borrow-veh','-- เลือกคันที่ยืม --', g.vehicles.map(v=>[v.plate, v.plate+' ('+(v.ownerName||'—')+')']));   // อาจเป็น "หัว,ลูก"
+  veh.classList.remove('hide');
+}
+// ทะเบียนที่จะบันทึก → { plate } หรือ { error }
+function resolvePlate(){
+  const P=_plParts(plateInfo&&plateInfo.registered), v=id=>(document.getElementById(id)||{}).value||'';
+  if(plMode==='pair')       return { plate:P[0]+','+P[1] };
+  if(plMode==='mother')     return { plate:P[0] };
+  if(plMode==='otherChild') return v('pl-child') ? { plate:P[0]+','+v('pl-child') } : { error:'กรุณาเลือกลูกคันอื่นครับ' };
+  if(plMode==='borrow')     return v('pl-borrow-veh') ? { plate:v('pl-borrow-veh') } : { error:'กรุณาเลือกประเภท + คันที่ยืมครับ' };
+  if(plMode==='custom')     return v('pl-custom') ? { plate:v('pl-custom') } : { error:'กรุณาเลือกทะเบียนครับ' };
+  if(plMode==='plain')      return plPlain ? { plate:plPlain } : { error:'กรุณาเลือกทะเบียนรถครับ' };
+  return { error:'กรุณาเลือกรถที่ขับครับ' };
 }
 
 async function savePlate(){
-  const plate = (pickedPlate || '').trim();
-  if(!plate){ toast('กรุณาเลือกหรือพิมพ์ทะเบียนครับ'); return; }
+  const rp = resolvePlate();
+  if(rp.error){ toast(rp.error); return; }
+  const plate = String(rp.plate||'').trim();
   const r = await postGAS({action:'confirmPlate',userId:U.userId,orderId:order['Order ID'],plate},'🚗 กำลังบันทึกทะเบียน...');
   if(!r || !r.success){ toast('❌ '+((r&&r.error)||'บันทึกทะเบียนไม่สำเร็จ')); renderPlateBox(); return; }
-  plateInfo.current = plate;
-  order['ทะเบียนรถ'] = plate;
+  const saved = r.plate || plate;
+  plateInfo.current = saved;
+  order['ทะเบียนรถ'] = saved;
   plateOk = true;
   renderPlateBox();
   pullActiveGps(!!r.changed);   // สลับคันแล้ว → ดึงไมล์ GPS ใหม่ตามคันที่เลือก (ล้างค่าคันเก่าทิ้ง)
-  if(r.changed) toast('✅ เปลี่ยนเป็น '+plate+' แล้วครับ');
+  if(r.changed) toast('✅ เปลี่ยนเป็น '+saved+' แล้วครับ');
 }
 
 function formRampDrop(){
