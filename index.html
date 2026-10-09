@@ -1763,11 +1763,45 @@ function onPhoto(input,boxId,lblId,key){
     return (Date.now() - file.lastModified) <= MAX_PHOTO_AGE_MS;
   }
   
+  /* วันเวลาถ่ายจาก EXIF (DateTimeOriginal → DateTime) ของไฟล์ JPEG — ไม่มี/อ่านไม่ได้ = null */
+  async function exifTakenAt(file){
+    try{
+      const b=new DataView(await file.slice(0, 256*1024).arrayBuffer());
+      if(b.getUint16(0)!==0xFFD8) return null;
+      let p=2;
+      while(p+4<b.byteLength){
+        const mk=b.getUint16(p), len=b.getUint16(p+2);
+        if(mk===0xFFE1 && b.getUint32(p+4)===0x45786966){   // 'Exif'
+          const T=p+10, le=b.getUint16(T)===0x4949;
+          const u16=o=>b.getUint16(T+o,le), u32=o=>b.getUint32(T+o,le);
+          const str=(o,n)=>{let s='';for(let i=0;i<n-1;i++)s+=String.fromCharCode(b.getUint8(T+o+i));return s;};
+          const scan=(ifd,want)=>{const n=u16(ifd);const out={};for(let i=0;i<n;i++){const e=ifd+2+i*12,tag=u16(e);if(want.indexOf(tag)>=0)out[tag]=tag===0x8769?u32(e+8):str(u32(e+8),u32(e+4));}return out;};
+          const ifd0=u32(4), a=scan(ifd0,[0x0132,0x8769]);
+          const ex=a[0x8769]?scan(a[0x8769],[0x9003]):{};
+          const s=ex[0x9003]||a[0x0132]; const m=s&&s.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+          return m?new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]):null;
+        }
+        if((mk&0xFF00)!==0xFF00) return null;
+        p+=2+len;
+      }
+    }catch(e){}
+    return null;
+  }
+  const MAX_EXIF_AGE_MS = 30 * 60 * 1000;
+  const fmtTH = d => d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+
   async function onOcrPhoto(input, boxId, lblId, key, type){
     const file=input.files[0];
     if(!file) return;
     if(!isFreshCapture(file)){                       // 🆕 เรียกใช้ตรงนี้
       toast('⚠️ กรุณา "ถ่ายรูปสด" ด้วยกล้องเท่านั้น\nห้ามเลือกรูปเก่าจากคลังภาพครับ');
+      input.value='';
+      return;
+    }
+    // 🕰️ ชั้น 1: วันที่ถ่ายใน EXIF เก่ากว่า 30 นาที = รูปเก่า (อ่านก่อนย่อ เพราะย่อแล้ว EXIF หาย)
+    const taken = await exifTakenAt(file);
+    if(taken && Date.now()-taken.getTime() > MAX_EXIF_AGE_MS){
+      toast('⚠️ รูปนี้ถ่ายไว้ตั้งแต่ '+fmtTH(taken)+'\nไม่ใช่รูปปัจจุบัน — กรุณาถ่ายใหม่ตอนนี้','warn',6000);
       input.value='';
       return;
     }
@@ -1802,6 +1836,9 @@ function onPhoto(input,boxId,lblId,key){
 
     const isWeight=(type==='ใบชั่งลูกค้า'||type==='ใบชั่งลาน');
 
+    if(res&&res.success&&res.stale){   // 🕰️ ชั้น 2: ลายน้ำวันเวลาบนรูปเก่า (ocr.gs) → ไม่รับค่า
+      res={success:false,error:'รูปนี้มีวันที่ '+(res.stamp||'')+' ไม่ใช่รูปปัจจุบัน — ถ่ายใหม่ตอนนี้'};
+    }
     if(!res||!res.success){
       // เปิดช่องให้กรอกเลขเองได้ทันที (เดิมช่องถูกซ่อน ต้องถ่ายใหม่วนไป) · มีค่าเดิมอยู่แล้วไม่ล้าง
       if(!ocrData[key]) ocrData[key]=isWeight?{gross:'',tare:'',net:'',pricePerKg:'',totalAmount:'',fileUrl:''}:{value:'',fileUrl:''};
