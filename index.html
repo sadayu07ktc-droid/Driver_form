@@ -287,6 +287,29 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
 const LIFF_ID='2010274217-SozYWeE5';
+// ⚡ ส่วน "อ่านข้อมูล" ย้ายไป Supabase Edge driver-form (ผลเหมือน GAS ทุกช่อง · เร็วกว่า ~10 เท่า · ไม่กินโควต้า GAS) · 2026-10-09
+//    Edge ล่ม/ช้า/ตอบ 5xx → ถอยไป GAS เอง · เปิดหน้าด้วย ?edger=0 = ใช้ GAS อย่างเดียว (จำในเครื่อง) · ?edger=1 = กลับมาใช้ Edge
+//    ฝั่งบันทึก (ส่งข้อมูล/สถานะ/OCR/รูป/QR น้ำมัน) ยังยิง GAS เหมือนเดิม
+const EDGE_DRV_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/driver-form';
+function _drvEdgeOn(){
+  try{
+    const q=new URLSearchParams(location.search).get('edger');
+    if(q==='0'||q==='1') localStorage.setItem('ssb_drv_edge_reads',q);
+    return localStorage.getItem('ssb_drv_edge_reads')!=='0';
+  }catch(e){ return true; }
+}
+async function drvGet(qs, ms){
+  if(_drvEdgeOn()){
+    try{
+      const ac=(typeof AbortController!=='undefined')?new AbortController():null;
+      const tm=ac?setTimeout(()=>ac.abort(), ms||10000):null;
+      const r=await fetch(EDGE_DRV_URL+'?'+qs, ac?{signal:ac.signal}:{});
+      if(tm) clearTimeout(tm);
+      if(r.ok) return await r.json();
+    }catch(e){ console.warn('driver-form Edge → GAS', e); }
+  }
+  return fetch(GAS_URL+'?'+qs,{redirect:'follow'}).then(r=>r.json());
+}
 // 🔧 ปิด-เปิดปรับปรุง ย้ายไปคุมที่ Script Property MAINT_DRIVER (on/off) + MAINT_ALLOW_ROLES/UIDS
 //    เช็คผ่าน backend action=getMaintenance ใน init() แล้ว — ไม่ต้องแก้ไฟล์นี้อีก
 let U={}, order=null, jobType='', hasRamp=false, photos={};
@@ -378,7 +401,7 @@ async function loadDriver(uid){
   // 🔗 รวมเป็น 1 call (bundle) แทน 3 call · fallback ไป 3 call ถ้า bundle พัง
   let m,uRes,oRes;
   try{
-    const b=await fetch(`${GAS_URL}?action=getDriverFormBundle&userId=${uid}`).then(r=>r.json());
+    const b=await drvGet(`action=getDriverFormBundle&userId=${encodeURIComponent(uid)}`);
     if(!b || !b.user) throw new Error('bundle ไม่สมบูรณ์');
     m=b.maintenance; uRes=b.user; oRes=b.driverOrder||{status:'err'};
   }catch(e){
@@ -522,7 +545,7 @@ function jobTypeBadge(o){
 // ✅ โหลดงานใหม่จาก server (ใช้หลังส่งคำขอยกเลิก เพื่อให้สถานะอัปเดต)
 async function reloadOrders(){
   try{
-    const oRes = await fetch(`${GAS_URL}?action=getDriverOrder&userId=${U.userId}`).then(r=>r.json());
+    const oRes = await drvGet(`action=getDriverOrder&userId=${encodeURIComponent(U.userId)}`);
     if(oRes.status==='ok' && oRes.orders.length>0){
       allOrders = oRes.orders.slice().sort(jobOrder);  // ทริปเดียวกันเรียงตาม route_seq · คนละทริปเรียงตามเวลาไปรับ
       renderJobList();
@@ -867,8 +890,7 @@ async function _fuelResume(){
   const body = document.getElementById('fuel-qr-body');
   if(!body || !order || !order['Order ID']) return;
   try{
-    const url = `${GAS_URL}?action=fuelStatus&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`;
-    const r = await fetch(url,{redirect:'follow'}).then(x=>x.json());
+    const r = await drvGet(`action=fuelStatus&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`);
     if(!r || !r.ok) return;
     // วาดฟอร์มใหม่ = ช่องถูกสร้างใหม่ ปลดล็อกไปแล้ว ต้องเติมค่า+ล็อกซ้ำ
     if(r.filled){ _fuelApply(r); return; }
@@ -893,8 +915,7 @@ function _fuelGap(){
 
 async function _fuelCheckOnce(){
   try{
-    const url = `${GAS_URL}?action=fuelStatus&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`;
-    const r = await fetch(url,{redirect:'follow'}).then(x=>x.json());
+    const r = await drvGet(`action=fuelStatus&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`);
     if(r && r.ok && r.filled){ _fuelApply(r); return true; }
   }catch(e){ /* เน็ตสะดุด ปล่อยให้รอบหน้าลองใหม่ */ }
   return false;
@@ -976,8 +997,7 @@ async function loadPlateCheck(){
   // ถ้าโหลดแล้วให้วาดจากค่าเดิม ไม่งั้น plateOk จะถูกรีเซ็ต คนขับต้องกดยืนยันซ้ำ
   if(plateLoaded === order['Order ID'] && plateInfo){ renderPlateBox(); return; }
   try{
-    const url = `${GAS_URL}?action=getPlateCheck&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`;
-    const r = await fetch(url, {redirect:'follow'}).then(x=>x.json());
+    const r = await drvGet(`action=getPlateCheck&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`);
     if(!r || !r.ok) throw new Error(r && r.error || 'โหลดไม่สำเร็จ');
     plateInfo = r;
     plateOk = false;
@@ -1416,7 +1436,7 @@ function gpsMileBlock(mileKey){
   `;
 }
 
-// 🆕 ยิงไปดึงเลขไมล์ GPS จาก GAS (action=getGpsMileage)
+// 🆕 ดึงเลขไมล์ GPS (action=getGpsMileage · Edge ก่อน ถอยไป GAS)
 async function fetchGpsMileage(mileKey){
   if(gpsFetching[mileKey]) return;       // กำลังดึงอยู่ อย่ายิงซ้ำ
   gpsFetching[mileKey]=true;
@@ -1429,7 +1449,7 @@ async function fetchGpsMileage(mileKey){
   if(meta) meta.textContent='';
 
   try{
-    const r = await fetch(`${GAS_URL}?action=getGpsMileage&orderId=${encodeURIComponent(order['Order ID'])}&plate=${encodeURIComponent(order['ทะเบียนรถ']||'')}`).then(x=>x.json());
+    const r = await drvGet(`action=getGpsMileage&orderId=${encodeURIComponent(order['Order ID'])}&plate=${encodeURIComponent(order['ทะเบียนรถ']||'')}`, 25000);   // Edge ลองต่อ GPS ซ้ำได้ 2 รอบ
     if(r && r.status==='ok'){
       gpsMile[mileKey]=r.mileage;
       if(valEl) valEl.textContent=Number(r.mileage).toLocaleString(undefined,{maximumFractionDigits:1})+' กม.';
