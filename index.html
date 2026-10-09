@@ -2589,7 +2589,7 @@ function showDashboard(){
   // 🆕 สรุปสภาพรถ เบา/หนัก (preview — ค่าจริงคิดที่ server)
   const ls=computeLoadSummary();
   if(ls.light+ls.heavy>0){
-    rows.push({section:'🚚 สัดส่วนวิ่งรถเบา/หนัก'});
+    rows.push({section:'🚚 สัดส่วนวิ่งรถเบา/หนัก (จากเลขไมล์ GPS)'});   // คำนวณจากเลขไมล์ GPS แต่ละจุด ไม่ใช่ดุมล้อ (server weight.gs _computeLoadDistanceObj)
     rows.push({k:'🟢 ระยะวิ่งรถเบา', v:`${ls.light.toLocaleString()} กม.`});
     rows.push({k:'🟠 ระยะวิ่งรถหนัก', v:`${ls.heavy.toLocaleString()} กม.`});
     rows.push({k:'📊 % วิ่งรถหนัก', v:`${ls.pct}%`, highlight:true});
@@ -2690,15 +2690,16 @@ async function confirmSubmit(){
     });
   }
 
+  // ⚡ รูปทุกใบ (น้ำมันโรงงาน / น้ำมันทาง / ซ่อม) อัปโหลด "พร้อมกัน" ทีเดียว — เดิมทีละใบต่อกัน · 2026-10-09
+  const uploads = [];   // [{field, payload}]
   // --- 2. จัดการ น้ำมันโรงงาน + อัปโหลดรูปใบเสร็จโรงงาน ---
   if(d.fuelFactory){
     fields['ลิตรน้ำมัน(โรงงาน)'] = d.fuelFactory.liter;
     fields['ราคาน้ำมัน(โรงงาน)'] = d.fuelFactory.price;
-    
+
     // อัปโหลดรูปน้ำมันโรงงานเข้า Drive (ถ้าคนขับมีการถ่ายรูปไว้)
     if(photos['fuel-factory']){
-      const upRes = await postGAS({action:'uploadImage', orderId:order['Order ID'], userId:U.userId, imageBase64:photos['fuel-factory'], prefix:'FUEL_FAC'}, '⛽ กำลังอัปโหลดบิลน้ำมันโรงงาน...');
-      if(upRes && upRes.success) fields['รูปน้ำมัน(โรงงาน)'] = upRes.fileUrl;
+      uploads.push({field:'รูปน้ำมัน(โรงงาน)', payload:{action:'uploadImage', orderId:order['Order ID'], userId:U.userId, imageBase64:photos['fuel-factory'], prefix:'FUEL_FAC'}});
     }
   }
 
@@ -2720,8 +2721,7 @@ async function confirmSubmit(){
     
     // ✅ อัปโหลดรูประหว่างทาง (ถ้ามี)
     if (firstPhotoBase64) {
-      const upRes = await postGAS({action:'uploadImage', orderId:order['Order ID'], userId:U.userId, imageBase64:firstPhotoBase64, prefix:'FUEL'}, '⛽ กำลังอัปโหลดบิลน้ำมัน...');
-      if(upRes && upRes.success) fields['รูปน้ำมัน(ทาง)'] = upRes.fileUrl;
+      uploads.push({field:'รูปน้ำมัน(ทาง)', payload:{action:'uploadImage', orderId:order['Order ID'], userId:U.userId, imageBase64:firstPhotoBase64, prefix:'FUEL'}});
     }
   }
 
@@ -2733,13 +2733,17 @@ async function confirmSubmit(){
     fields['หมายเหตุค่าใช้จ่าย'] = d.repair.note; 
     // ✅ อัปโหลดรูปซ่อมรถ (ถ้ามี)
     if(photos['repair']){
-      const upRes = await postGAS({action:'uploadImage', orderId:order['Order ID'], userId:U.userId, imageBase64:photos['repair'], prefix:'REPAIR'}, '🔧 กำลังอัปโหลดรูปบิลซ่อม...');
-      if(upRes && upRes.success) fields['รูปค่าซ่อมนอก'] = upRes.fileUrl;
+      uploads.push({field:'รูปค่าซ่อมนอก', payload:{action:'uploadImage', orderId:order['Order ID'], userId:U.userId, imageBase64:photos['repair'], prefix:'REPAIR'}});
     }
   }
-  
+
   if(d.unloadCost) fields['ค่าลงของ'] = d.unloadCost;
   if(d.helperCost) fields['ค่าจ้างเด็กลงสินค้านอก'] = d.helperCost;
+
+  if(uploads.length){
+    const ups = await postGASParallel(uploads.map(u=>u.payload), '📤 กำลังอัปโหลดรูป ('+uploads.length+' ใบ)...');
+    ups.forEach((upRes,i)=>{ if(upRes && upRes.success && upRes.fileUrl) fields[uploads[i].field] = upRes.fileUrl; });
+  }
 
   // --- 5. ยิง API ส่งข้อมูลทั้งหมด ---
   await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ปลายทาง',notifyOwner:true,billName,fields},'📊 กำลังส่งข้อมูลสรุป...');
