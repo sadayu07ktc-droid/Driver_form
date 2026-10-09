@@ -821,6 +821,27 @@ function _fuelStop(){
   if(fuelTick){ clearInterval(fuelTick); fuelTick = null; }
 }
 
+// ⛽ ขอ QR — Edge driver-actions ก่อน (เร็ว · ขอซ้ำได้: ได้รหัสเดิมถ้ายังไม่หมดอายุ) → ล่ม/ช้า → GAS
+//    GAS บางทีสร้างรหัสแล้วแต่ตอบเป็นหน้า HTML (หน้าเว็บเคยขึ้น "ขอรหัสไม่สำเร็จ" ทั้งที่มีรหัส) → ไปดูรหัสที่ค้างอยู่จาก fuelStatus แทน · 2026-10-09
+async function _fuelTokenReq(){
+  const p={action:'fuelToken',userId:U.userId,orderId:order['Order ID']};
+  if(_drvEdgeOn()){
+    try{
+      const res=await fetchWithTimeout(EDGE_ACT_URL,{method:'POST',body:JSON.stringify(p)},15000);
+      const j=await res.json().catch(()=>null);
+      if(j && res.ok) return j;   // ok:true หรือ error เชิงข้อมูล (เช่น ไม่ใช่งานของคุณ) → ใช้ผลนี้เลย
+    }catch(e){ console.warn('fuelToken Edge → GAS', e); }
+  }
+  let r=await postGASSilent(p);
+  if(r && r.ok) return r;
+  try{
+    const s=await drvGet('action=fuelStatus&userId='+encodeURIComponent(U.userId)+'&orderId='+encodeURIComponent(order['Order ID']));
+    if(s && s.ok && s.filled) return {ok:true, filledAlready:s};
+    if(s && s.ok && s.hasToken && !s.expired) return {ok:true, token:s.token, qrText:s.qrText, expiresMs:s.expiresMs};
+  }catch(e){}
+  return r;
+}
+
 async function askFuelQR(){
   const body = document.getElementById('fuel-qr-body');
   const btn  = document.getElementById('fuel-qr-btn');
@@ -828,8 +849,9 @@ async function askFuelQR(){
   btn.disabled = true;
   body.innerHTML = '<div class="qr-hint">กำลังขอรหัส...</div>';
   try{
-    const r = await postGASSilent({action:'fuelToken',userId:U.userId,orderId:order['Order ID']});
+    const r = await _fuelTokenReq();
     if(!r || !r.ok) throw new Error((r&&r.error)||'ขอรหัสไม่สำเร็จ');
+    if(r.filledAlready){ _fuelApply(r.filledAlready); return; }   // ปั๊มส่งข้อมูลมาแล้ว
     fuelExpMs = Number(r.expiresMs)||0;
     _fuelRenderQR(r.qrText, r.token);
     _fuelStartPoll();
