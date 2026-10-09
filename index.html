@@ -404,6 +404,7 @@ async function loadDriver(uid){
     const b=await drvGet(`action=getDriverFormBundle&userId=${encodeURIComponent(uid)}`);
     if(!b || !b.user) throw new Error('bundle ไม่สมบูรณ์');
     m=b.maintenance; uRes=b.user; oRes=b.driverOrder||{status:'err'};
+    window._drvWritesVia=b.writesVia||'gas';   // app_config DRIVER_WRITES_VIA (มาจาก GAS = ไม่มีค่า = gas)
   }catch(e){
     [m,uRes,oRes]=await Promise.all([
       fetch(`${GAS_URL}?action=getMaintenance&page=driver&userId=${uid}`).then(r=>r.json()).catch(()=>null),
@@ -1662,11 +1663,41 @@ function fetchWithTimeout(url, opts, ms){
   return fetch(url, Object.assign({}, opts, {signal:ctrl.signal})).finally(()=>clearTimeout(t));
 }
 
+// ⚡ ปุ่มสถานะ (เริ่มงาน/ถึงลูกค้า/เช็คอิน/ขอยกเลิก/เปลี่ยนทะเบียน) → Supabase Edge driver-actions · 2026-10-09
+//    เปิด/ปิดทั้งระบบ: app_config DRIVER_WRITES_VIA = edge|gas · เปิดหน้าด้วย ?edgew=1 / ?edgew=0 = บังคับเฉพาะเครื่องนี้ (จำไว้)
+//    Edge พังก่อนเขียน (safeRetry) → ส่งต่อ GAS · พังหลังเขียนแล้ว → ไม่ส่งซ้ำ แจ้งคนขับ · เน็ตหลุด → เข้าคิวเหมือนเดิม
+//    ส่งข้อมูลจุด (submitWeight) / จบงาน / OCR / รูป / QR น้ำมัน ยังยิง GAS
+const EDGE_ACT_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/driver-actions';
+const DRV_EDGE_ACTIONS={driverStartJob:1,driverArrived:1,driverCheckin:1,driverCancelRequest:1,confirmPlate:1};
+function _drvWritesEdge(){
+  try{
+    const q=new URLSearchParams(location.search).get('edgew');
+    if(q==='0'||q==='1') localStorage.setItem('ssb_drv_edge_writes',q);
+    const f=localStorage.getItem('ssb_drv_edge_writes');
+    if(f==='1') return true;
+    if(f==='0') return false;
+  }catch(e){}
+  return window._drvWritesVia==='edge';
+}
+// ส่ง 1 payload คืนข้อความคำตอบ · เน็ตหลุด/หมดเวลา → throw (ผู้เรียกเก็บลงคิว)
+async function _sendRaw(payload){
+  if(DRV_EDGE_ACTIONS[payload.action] && _drvWritesEdge()){
+    const res=await fetchWithTimeout(EDGE_ACT_URL,{method:'POST',body:JSON.stringify(payload)});
+    const text=await res.text();
+    if(res.ok) return text;
+    let j=null; try{ j=JSON.parse(text); }catch(e){}
+    if(!j) return JSON.stringify({success:false,error:'ระบบตอบผิดพลาด ('+res.status+') กรุณาลองใหม่'});
+    if(!j.safeRetry) return text;                       // เขียนไปแล้วบางส่วน → ห้ามส่งซ้ำ
+    console.warn('driver-actions Edge → GAS', text.slice(0,200));
+  }
+  const res=await fetchWithTimeout(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
+  return await res.text();
+}
+
 // ยิง 1 payload — ไม่แตะ overlay (ใช้ร่วมทั้ง postGAS เดี่ยว และ postGASParallel) · เน็ตหลุด → เก็บคิวส่งเอง
 async function _postOne(payload){
   try{
-    const res=await fetchWithTimeout(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
-    const text=await res.text();
+    const text=await _sendRaw(payload);
     try{return JSON.parse(text);}
     catch(e){console.warn('postGAS parse warn:',text.substring(0,200));return{success:true};}
   }catch(e){
@@ -1718,8 +1749,7 @@ async function _queueFlush(){
   const keep=[];
   for(const item of q){
     try{
-      const res=await fetchWithTimeout(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(item.payload)});
-      await res.text();   // ส่งผ่านแล้ว server จัดการเอง (มี dedup)
+      await _sendRaw(item.payload);   // ส่งผ่านแล้ว server จัดการเอง (มี dedup) · ปุ่มสถานะไป Edge ตามสวิตช์
     }catch(e){ keep.push(item); }   // ยังส่งไม่ได้ เก็บไว้รอบหน้า
   }
   _queueWrite(keep);
