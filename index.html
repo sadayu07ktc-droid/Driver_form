@@ -1795,9 +1795,9 @@ function fetchWithTimeout(url, opts, ms){
 //    Edge พังก่อนเขียน (safeRetry) → ส่งต่อ GAS · พังหลังเขียนแล้ว → ไม่ส่งซ้ำ แจ้งคนขับ · เน็ตหลุด → เข้าคิวเหมือนเดิม
 //    + ส่งข้อมูลจุด submitWeight (ยกเว้นปลายทาง) · จบงาน / ปลายทาง / OCR / รูป / QR น้ำมัน ยังยิง GAS
 const EDGE_ACT_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/driver-actions';
-const DRV_EDGE_ACTIONS={driverStartJob:1,driverArrived:1,driverCheckin:1,driverCancelRequest:1,confirmPlate:1,submitWeight:1};
-// submitWeight จุด "ปลายทาง" ยังไป GAS (คิดค่าแรง writeTripWage ต่อทันที) · จุดอื่นไป Edge · 2026-10-09
-const _drvToEdge=p=>!!DRV_EDGE_ACTIONS[p.action] && !(p.action==='submitWeight' && String(p.checkPoint||'').trim()==='ปลายทาง');
+const DRV_EDGE_ACTIONS={driverStartJob:1,driverArrived:1,driverCheckin:1,driverCancelRequest:1,confirmPlate:1,submitWeight:1,driverComplete:1};
+// ทุกจุดรวม "ปลายทาง" + ปิดงาน ไป Edge — ปลายทาง: Edge ส่งการ์ดผลชั่งแล้วสั่ง GAS คิดค่าแรงเบื้องหลัง คนขับไม่ต้องรอ · 2026-10-09
+const _drvToEdge=p=>!!DRV_EDGE_ACTIONS[p.action];
 function _drvWritesEdge(){
   try{
     const q=new URLSearchParams(location.search).get('edgew');
