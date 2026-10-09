@@ -1753,9 +1753,11 @@ function fetchWithTimeout(url, opts, ms){
 // ⚡ ปุ่มสถานะ (เริ่มงาน/ถึงลูกค้า/เช็คอิน/ขอยกเลิก/เปลี่ยนทะเบียน) → Supabase Edge driver-actions · 2026-10-09
 //    เปิด/ปิดทั้งระบบ: app_config DRIVER_WRITES_VIA = edge|gas · เปิดหน้าด้วย ?edgew=1 / ?edgew=0 = บังคับเฉพาะเครื่องนี้ (จำไว้)
 //    Edge พังก่อนเขียน (safeRetry) → ส่งต่อ GAS · พังหลังเขียนแล้ว → ไม่ส่งซ้ำ แจ้งคนขับ · เน็ตหลุด → เข้าคิวเหมือนเดิม
-//    ส่งข้อมูลจุด (submitWeight) / จบงาน / OCR / รูป / QR น้ำมัน ยังยิง GAS
+//    + ส่งข้อมูลจุด submitWeight (ยกเว้นปลายทาง) · จบงาน / ปลายทาง / OCR / รูป / QR น้ำมัน ยังยิง GAS
 const EDGE_ACT_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/driver-actions';
-const DRV_EDGE_ACTIONS={driverStartJob:1,driverArrived:1,driverCheckin:1,driverCancelRequest:1,confirmPlate:1};
+const DRV_EDGE_ACTIONS={driverStartJob:1,driverArrived:1,driverCheckin:1,driverCancelRequest:1,confirmPlate:1,submitWeight:1};
+// submitWeight จุด "ปลายทาง" ยังไป GAS (คิดค่าแรง writeTripWage ต่อทันที) · จุดอื่นไป Edge · 2026-10-09
+const _drvToEdge=p=>!!DRV_EDGE_ACTIONS[p.action] && !(p.action==='submitWeight' && String(p.checkPoint||'').trim()==='ปลายทาง');
 function _drvWritesEdge(){
   try{
     const q=new URLSearchParams(location.search).get('edgew');
@@ -1768,7 +1770,7 @@ function _drvWritesEdge(){
 }
 // ส่ง 1 payload คืนข้อความคำตอบ · เน็ตหลุด/หมดเวลา → throw (ผู้เรียกเก็บลงคิว)
 async function _sendRaw(payload){
-  if(DRV_EDGE_ACTIONS[payload.action] && _drvWritesEdge()){
+  if(_drvToEdge(payload) && _drvWritesEdge()){
     const res=await fetchWithTimeout(EDGE_ACT_URL,{method:'POST',body:JSON.stringify(payload)});
     const text=await res.text();
     if(res.ok) return text;
