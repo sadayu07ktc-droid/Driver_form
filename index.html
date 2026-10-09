@@ -1475,8 +1475,25 @@ function ocrMileHubBlock(key, mileLabel, hubLabel){
     <div class="sec-lbl">📍 เลขไมล์ (GPS) + ถ่ายดุมล้อ</div>
     ${gpsMileBlock('mile-'+key)}
     ${ocrPhotoBox(key+'-hub', hubLabel, 'hub-'+key, 'ดุมล้อ')}
-    ${loadStateChip(key)}
+    ${key==='factory' ? '' : loadStateChip(key)}
+    ${key==='start' ? startScaleBox() : ''}
   `;
+}
+// สภาพรถ "ปลายทาง" ไม่ใช้คิดอะไร (ระยะเบา/หนัก + ค่าแรง ดูสภาพรถ ณ จุดเริ่มของแต่ละช่วง) → ไม่ให้เลือก · ส่งค่าเริ่มต้น 'หนัก' ตามเดิม · 2026-10-09
+
+// 🆕 ออกโรงงานแบบ "รถหนัก" ต้องแนบรูปใบชั่ง — หลักฐานกันทุจริต (เก็บเฉย ๆ ไม่ส่งแจ้งใคร) · 2026-10-09
+//    ฟอร์มฐานไกล (คลองหาด) ไม่บังคับ — ต้นทางไม่มีตาชั่ง
+const START_SCALE_REQUIRED = () => !isFarBase();
+function startScaleBox(){
+  const heavy = getLoadState('start') === 'หนัก';
+  const has = !!photos['scale-start'];
+  return `<div class="field ${heavy ? '' : 'hide'}" id="start-scale-wrap">
+      <label class="lbl">รูปใบชั่ง (รถหนัก) ${START_SCALE_REQUIRED() ? '<span class="req">*</span>' : ''}</label>
+      <label class="photo-box ${has ? 'has-photo' : ''}" id="box-start-scale" for="inp-start-scale">
+        <input type="file" id="inp-start-scale" accept="image/*" capture="environment" onchange="onPhoto(this,'box-start-scale','lbl-start-scale','scale-start')">
+        <div class="ph-icon">📷</div><div class="ph-lbl" id="lbl-start-scale">${has ? '✅ แนบรูปแล้ว' : 'ถ่ายรูปใบชั่งตอนออกจากโรงงาน'}</div>
+      </label>
+    </div>`;
 }
 
 // 🆕 ปุ่มเลือกสภาพรถ เบา/หนัก — ตั้ง default อัตโนมัติ คนขับแตะเปลี่ยนได้
@@ -1498,6 +1515,7 @@ function pickLoadState(key, val, el){
   const box=document.getElementById('load-chips-'+key);
   if(box) box.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
+  if(key==='start'){ const w=document.getElementById('start-scale-wrap'); if(w) w.classList.toggle('hide', val!=='หนัก'); }   // รถหนัก → โชว์ช่องใบชั่ง
 }
 function getLoadState(key){
   return loadStates[key] || LOAD_DEFAULT[key] || 'เบา';
@@ -2223,12 +2241,34 @@ async function submitStart(){
 
   const eChk=checkReading('start',mileS,hubS); if(eChk){toast(eChk);return;}
 
+  // รถหนักออกจากโรงงาน → ต้องมีรูปใบชั่ง (กันทุจริต)
+  const startHeavy = getLoadState('start')==='หนัก';
+  if(startHeavy && START_SCALE_REQUIRED() && !photos['scale-start']){
+    toast('รถหนัก ต้องถ่ายรูปใบชั่งก่อนออกโรงงานครับ');
+    document.getElementById('start-scale-wrap')?.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  const startFields={'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS,'สภาพรถเริ่ม':getLoadState('start')};
+
   // ⚡ ยิงพร้อมกัน: สถานะ (orders) + บันทึกไมล์/ดุม (ชีต LOG_WEIGHT) — คนละที่ ไม่ทับกัน
-  const [r]=await postGASParallel([
-    {action:'driverStartJob',orderId:order['Order ID'],userId:U.userId},
-    {action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'เริ่ม',
-      fields:{'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS,'สภาพรถเริ่ม':getLoadState('start')}}
-  ],'🚀 กำลังบันทึกออกโรงงาน...');
+  //    รถหนัก+มีรูปใบชั่ง → อัปโหลดรูปพร้อมเปลี่ยนสถานะ แล้วค่อยบันทึกไมล์/ดุม+ลิงก์รูป
+  let r;
+  if(startHeavy && photos['scale-start']){
+    const [rs, up]=await postGASParallel([
+      {action:'driverStartJob',orderId:order['Order ID'],userId:U.userId},
+      {action:'uploadImage',orderId:order['Order ID'],userId:U.userId,imageBase64:photos['scale-start'],prefix:'SCALE_START'}
+    ],'🚀 กำลังบันทึกออกโรงงาน...');
+    r=rs;
+    if(r?.success){
+      if(up && up.success && up.fileUrl) startFields['รูปใบชั่งเริ่ม']=up.fileUrl;
+      await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'เริ่ม',fields:startFields},'🚀 กำลังบันทึกออกโรงงาน...');
+    }
+  }else{
+    [r]=await postGASParallel([
+      {action:'driverStartJob',orderId:order['Order ID'],userId:U.userId},
+      {action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'เริ่ม',fields:startFields}
+    ],'🚀 กำลังบันทึกออกโรงงาน...');
+  }
   if(!r?.success){toast('❌ '+(r?.error||'เกิดข้อผิดพลาด'));return;}
 
   hubHistory.start=parseFloat(hubS)||0;
