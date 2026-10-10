@@ -1808,8 +1808,19 @@ function _drvWritesEdge(){
   }catch(e){}
   return window._drvWritesVia==='edge';
 }
+// 📷 อัปโหลดรูป (บิลน้ำมัน/ซ่อม/ใบชั่งเริ่ม) → Supabase Storage ผ่าน Edge driver-photo · พัง/ไม่สำเร็จ → GAS (Drive) เหมือนเดิม · 2026-10-11
+//    ใช้สวิตช์ฝั่งอ่าน (?edger=0 ปิด) เพราะอัปซ้ำได้ ไม่ส่ง LINE
+const EDGE_PHOTO_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/driver-photo';
 // ส่ง 1 payload คืนข้อความคำตอบ · เน็ตหลุด/หมดเวลา → throw (ผู้เรียกเก็บลงคิว)
 async function _sendRaw(payload){
+  if(payload.action==='uploadImage' && _drvEdgeOn()){
+    try{
+      const res=await fetchWithTimeout(EDGE_PHOTO_URL,{method:'POST',body:JSON.stringify(payload)},30000);
+      const text=await res.text(); let j=null; try{ j=JSON.parse(text); }catch(e){}
+      if(res.ok && j && j.success) return text;
+      console.warn('driver-photo → GAS', text.slice(0,200));
+    }catch(e){ console.warn('driver-photo → GAS', e); }
+  }
   if(_drvToEdge(payload) && _drvWritesEdge()){
     const res=await fetchWithTimeout(EDGE_ACT_URL,{method:'POST',body:JSON.stringify(payload)});
     const text=await res.text();
