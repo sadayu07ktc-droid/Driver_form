@@ -405,6 +405,7 @@ async function loadDriver(uid){
     if(!b || !b.user) throw new Error('bundle ไม่สมบูรณ์');
     m=b.maintenance; uRes=b.user; oRes=b.driverOrder||{status:'err'};
     window._drvWritesVia=b.writesVia||'gas';   // app_config DRIVER_WRITES_VIA (มาจาก GAS = ไม่มีค่า = gas)
+    window._drvOcrVia=b.ocrVia||'gas';         // app_config OCR_VIA (edge = OCR ผ่าน Edge driver-photo)
   }catch(e){
     [m,uRes,oRes]=await Promise.all([
       fetch(`${GAS_URL}?action=getMaintenance&page=driver&userId=${uid}`).then(r=>r.json()).catch(()=>null),
@@ -1906,7 +1907,27 @@ setInterval(()=>{ if(navigator.onLine) _queueFlush(); }, 20000);
 //    OCR ไม่มีผลข้างเคียงนอกจากรูปซ้ำใน Drive → ยิงซ้ำปลอดภัย
 const OCR_TIMEOUT_MS = 90000;
 const ocrSeq = {};   // เลขรอบต่อช่อง — ถ่ายใหม่ระหว่างรอ ผลรอบเก่าที่มาทีหลังจะถูกทิ้ง
+// ⚡ OCR ผ่าน Edge driver-photo (รูปลง Supabase Storage + Gemini) · 2026-10-11
+//    สวิตช์ app_config OCR_VIA=edge · ต่อเครื่อง ?edgeo=1/0 · Edge พัง/ไม่มีสิทธิ์/Gemini พัง (fallback) → GAS เดิม
+function _drvOcrEdge(){
+  try{
+    const q=new URLSearchParams(location.search).get('edgeo');
+    if(q==='0'||q==='1') localStorage.setItem('ssb_drv_edge_ocr',q);
+    const f=localStorage.getItem('ssb_drv_edge_ocr');
+    if(f==='1') return true;
+    if(f==='0') return false;
+  }catch(e){}
+  return window._drvOcrVia==='edge';
+}
 async function postOcr(payload){
+  if(_drvOcrEdge()){
+    try{
+      const res=await fetchWithTimeout(EDGE_PHOTO_URL,{method:'POST',body:JSON.stringify(payload)}, 60000);
+      const text=await res.text(); let j=null; try{ j=JSON.parse(text); }catch(e){}
+      if(res.ok && j && !j.fallback) return j;          // อ่านได้ / อ่านไม่ออก (ผลจริง) → ใช้เลย
+      console.warn('OCR Edge → GAS', text.slice(0,200));
+    }catch(e){ console.warn('OCR Edge → GAS', e); }
+  }
   try{
     const res=await fetchWithTimeout(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)}, OCR_TIMEOUT_MS);
     const text=await res.text();
