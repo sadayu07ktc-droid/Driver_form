@@ -2658,6 +2658,25 @@ function showDashboard(){
   else if(!hubRamp&&hubClient&&hubFactory) rows.push({k:'📏 ลูกค้า → ปลายทาง',v:`${(hubFactory-hubClient).toLocaleString()} กม.`,highlight:true});
   if(hubStart&&hubFactory) rows.push({k:'📏 รวมทั้งสาย',         v:`${(hubFactory-hubStart).toLocaleString()} กม.`,highlight:true});
 
+  // 🆕 ระยะทางจาก GPS DTC (เลขไมล์สะสมที่บันทึกแต่ละจุด) · คุณน้องขอ 2026-10-14 — แสดงคู่กับดุมล้อ
+  const GPS_PTS=[['start','เริ่ม'],['rampDrop','ลานวางกระบะ'],['client','ลูกค้า'],['ramp','ลานขากลับ'],['factory','ปลายทาง']];
+  const fmtKm=n=>Number(n).toLocaleString(undefined,{maximumFractionDigits:1});
+  const gpsPts=GPS_PTS.map(([k,lbl])=>({lbl, m:parseFloat(readings[k]&&readings[k].mile)})).filter(p=>!isNaN(p.m)&&p.m>0);
+  if(gpsPts.length){
+    rows.push({section:'📡 ระยะทาง (จาก GPS DTC)'});
+    gpsPts.forEach(p=>rows.push({k:'ไมล์ GPS '+p.lbl, v:fmtKm(p.m)}));
+    for(let i=0;i<gpsPts.length-1;i++){
+      const dd=gpsPts[i+1].m-gpsPts[i].m;
+      rows.push({k:`📏 ${gpsPts[i].lbl} → ${gpsPts[i+1].lbl}`, v:`${fmtKm(dd)} กม.`, highlight:true});
+    }
+    if(gpsPts.length>2) rows.push({k:'📏 รวมทั้งสาย (GPS)', v:`${fmtKm(gpsPts[gpsPts.length-1].m-gpsPts[0].m)} กม.`, highlight:true});
+    // เทียบรวมทั้งสาย ดุมล้อ vs GPS (ห่างกันมาก = เลขใดเลขหนึ่งน่าจะผิด)
+    if(hubStart&&hubFactory&&gpsPts.length>1&&gpsPts[0].lbl==='เริ่ม'&&gpsPts[gpsPts.length-1].lbl==='ปลายทาง'){
+      const hubKm=hubFactory-hubStart, gpsKm=gpsPts[gpsPts.length-1].m-gpsPts[0].m, diff=hubKm-gpsKm;
+      rows.push({k:'↔️ ส่วนต่าง ดุมล้อ − GPS', v:`${diff>0?'+':''}${fmtKm(diff)} กม.`});
+    }
+  }
+
   // 🆕 สรุปสภาพรถ เบา/หนัก (preview — ค่าจริงคิดที่ server)
   const ls=computeLoadSummary();
   if(ls.light+ls.heavy>0){
