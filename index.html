@@ -1416,11 +1416,11 @@ function formFactory(){
     <div class="exp-section" style="margin-top:0">
       <div class="row2">
         <div>
-          <label class="lbl">จำนวนลิตร <span class="req">*</span></label>
+          <label class="lbl">จำนวนลิตร ${isBulkJob()?'(ถ้าเติม)':'<span class="req">*</span>'}</label>
           <input class="inp" type="number" id="fuel-factory-liter" placeholder="0" oninput="calcFuelFactory()">
         </div>
         <div>
-          <label class="lbl">ราคา/ลิตร <span class="req">*</span></label>
+          <label class="lbl">ราคา/ลิตร ${isBulkJob()?'(ถ้าเติม)':'<span class="req">*</span>'}</label>
           <select class="inp" id="fuel-factory-price"></select>
         </div>
       </div>
@@ -2538,11 +2538,11 @@ function formFB_factory(){
     <div class="exp-section" style="margin-top:0">
       <div class="row2">
         <div>
-          <label class="lbl">จำนวนลิตร <span class="req">*</span></label>
+          <label class="lbl">จำนวนลิตร ${isBulkJob()?'(ถ้าเติม)':'<span class="req">*</span>'}</label>
           <input class="inp" type="number" id="fuel-factory-liter" placeholder="0" oninput="calcFuelFactory()">
         </div>
         <div>
-          <label class="lbl">ราคา/ลิตร <span class="req">*</span></label>
+          <label class="lbl">ราคา/ลิตร ${isBulkJob()?'(ถ้าเติม)':'<span class="req">*</span>'}</label>
           <select class="inp" id="fuel-factory-price"></select>
         </div>
       </div>
