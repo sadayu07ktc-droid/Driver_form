@@ -495,6 +495,14 @@ function fmtDateTime(v){
 const FAR_BASE_UIDS = ['Uc48f5b90387a3dfb6a3fe935b02ab64b'];  // สนิท วรสุข (คลองหาด) — คนขับ far-base จริง
 function isFarBase(){ try{ return !!(U && FAR_BASE_UIDS.indexOf(U.userId)!==-1); }catch(e){ return false; } }
 
+// 🛢️ งาน Bulk (2026-10-15) — ออเดอร์สร้างเองตอนคนขับกดรับงานในการ์ด LINE (ORD-BK-…)
+//   ขั้น: ออกจาก SSB (ชั่ง/โหลด/เอกสารเสร็จแล้ว · รถหนัก + รูปใบชั่ง) → ถึงลูกค้า (GPS) → ออกจากลูกค้า (ชั่งปลายทาง/ใบชั่ง ตามค่าตั้งลูกค้า) → กลับถึง SSB
+//   ค่าตั้งลูกค้ามากับ order._bulk (Edge driver-form) · ไม่มี = ไม่บังคับชั่ง/ใบชั่ง · ไม่ใช้ใบชั่งลูกค้าที่โรงงาน (ต่างจากงานไร่)
+const isBulkJob = () => jobType === 'Bulk';
+const bulkInfo = (o) => ((o || order || {})._bulk) || {};
+const LOAD_DEFAULT_BULK = {start:'หนัก', client:'เบา'};
+const fmtKg = n => Number(n||0).toLocaleString('en-US');
+
 // คำนวณสเต็ปของ "งานนั้น" โดยตรง (ไม่พึ่ง global jobType/hasRamp)
 function stepsOf(o){
   const jt = o['ประเภทงาน']||'ปาล์ม';
@@ -539,6 +547,7 @@ function nextActionOf(o){
 function jobTypeBadge(o){
   const jt = o['ประเภทงาน']||'ปาล์ม';
   const hr = !!(o['จุดรับเพิ่ม']);
+  if(jt==='Bulk')        return '🛢️ Bulk' + (bulkInfo(o).lineNo ? ' #' + bulkInfo(o).lineNo : '');
   if(jt==='ปาล์ม' && hr) return '🏭 ปาล์ม+ลาน';
   if(jt==='ปาล์ม')       return '🌴 ปาล์ม';
   if(hr)                 return '🏭 งานอื่นๆ+ลาน';
@@ -582,7 +591,9 @@ function renderJobList(){
       <div class="jl-card active">
         <div class="jl-top"><span class="jl-no">งานที่ ${i+1}</span><span class="jl-st" style="color:${stColor}">สถานะ: ${status}</span></div>
         <div class="jl-oid">${oid} <span style="font-size:11px;font-weight:600;background:var(--g3);color:var(--g1);padding:2px 8px;border-radius:20px;margin-left:4px">${jobTypeBadge(o)}</span></div>
-        <div class="jl-info"><span>🌳 ${garden}</span><span>📅 ${dt} ⏰ ${tm}</span><span>📍 จุดรับ ${pickup}</span></div>
+        ${o['ประเภทงาน']==='Bulk'
+          ? `<div class="jl-info"><span>🏭 ${garden}</span><span>📅 ส่ง ${dt}</span><span>📍 ส่งที่ ${pickup}</span>${bulkInfo(o).prod?`<span>🛢️ ${bulkInfo(o).prod} · ${fmtKg(bulkInfo(o).qty)} กก.</span>`:''}</div>`
+          : `<div class="jl-info"><span>🌳 ${garden}</span><span>📅 ${dt} ⏰ ${tm}</span><span>📍 จุดรับ ${pickup}</span></div>`}
         <div class="jl-btns">${btnsHtml}</div>
       </div>`;
   });
@@ -610,7 +621,9 @@ async function confirmStartJob(orderId){
   const ok = await confirmModal({
     icon:'🚚',
     title:'ยืนยันวิ่งงานนี้?',
-    msg:`${orderId}  ·  🌳 ${o['ชื่อสวน']||'—'}  ·  📍 จุดรับ ${o['จุดรับ']||'—'}  ·  📅 ${fmtDate(o['วันที่ต้องการ'])} ⏰ ${fmtTime(o['เวลา'])}`,
+    msg: o['ประเภทงาน']==='Bulk'
+      ? `${orderId}  ·  🏭 ${o['ชื่อสวน']||'—'}  ·  📍 ส่งที่ ${o['จุดรับ']||'—'}  ·  📅 ส่ง ${fmtDate(o['วันที่ต้องการ'])}`
+      : `${orderId}  ·  🌳 ${o['ชื่อสวน']||'—'}  ·  📍 จุดรับ ${o['จุดรับ']||'—'}  ·  📅 ${fmtDate(o['วันที่ต้องการ'])} ⏰ ${fmtTime(o['เวลา'])}`,
     okText:'✔ วิ่งงานนี้',
     cancelText:'ยังก่อน'
   });
@@ -660,7 +673,19 @@ function renderOrderBanner(){
   document.getElementById('ob-bin').textContent=`${order['จำนวนกระบะ']} ใบ`;
   document.getElementById('ob-pickup').textContent=order['จุดรับ']||'—';
   const typeEl=document.getElementById('ob-type');
-  if(jobType==='ปาล์ม'&&hasRamp){typeEl.textContent='🏭 ปาล์ม+ลาน';typeEl.className='ob-type ramp';}
+  // ป้ายช่องในแบนเนอร์ (สวน/กระบะ/จุดรับ) — งาน Bulk เปลี่ยนเป็น ลูกค้า/จำนวน/ส่งที่ · งานอื่นคืนค่าเดิม
+  const setLbl=(id,t)=>{ const el=document.getElementById(id); if(el&&el.previousElementSibling) el.previousElementSibling.textContent=t; };
+  setLbl('ob-garden', isBulkJob()?'ลูกค้า':'สวน'); setLbl('ob-bin', isBulkJob()?'จำนวน':'กระบะ'); setLbl('ob-pickup', isBulkJob()?'ส่งที่':'จุดรับ'); setLbl('ob-date', isBulkJob()?'วันที่ส่ง':'วันที่');
+  if(isBulkJob()){
+    const b=bulkInfo();
+    typeEl.textContent='🛢️ Bulk'+(b.lineNo?' #'+b.lineNo:''); typeEl.className='ob-type other';
+    document.getElementById('ob-bin').textContent = b.qty ? fmtKg(b.qty)+' กก.' : '—';
+    document.getElementById('ob-time').textContent = b.prod || '—';
+    setLbl('ob-time','สินค้า');
+  }
+  else{ setLbl('ob-time','เวลา'); }
+  if(isBulkJob()){ /* ป้ายตั้งแล้วด้านบน */ }
+  else if(jobType==='ปาล์ม'&&hasRamp){typeEl.textContent='🏭 ปาล์ม+ลาน';typeEl.className='ob-type ramp';}
   else if(jobType==='ปาล์ม'){typeEl.textContent='🌴 ปาล์ม';typeEl.className='ob-type palm';}
   else if(hasRamp){typeEl.textContent='🏭 งานอื่นๆ+ลาน';typeEl.className='ob-type ramp';}
   else{typeEl.textContent='📦 งานอื่นๆ';typeEl.className='ob-type other';}
@@ -671,6 +696,14 @@ function renderOrderBanner(){
 }
 
 function getSteps(){
+  if(isBulkJob()){   // 🛢️ Bulk: เริ่มงาน = ออกจาก SSB (ความหมายเดียวกับ GPS ป้อมยาม)
+    return [
+      {key:'start',label:'🚀 ออกจาก SSB (โหลด+ชั่งเสร็จ)'},
+      {key:'arrive',label:'🏭 ถึงลูกค้า (GPS)'},
+      {key:'client',label:'🚪 ออกจากลูกค้า'},
+      {key:'factory',label:'🏁 กลับถึง SSB'}
+    ];
+  }
   if(hasRamp){
     return [
       {key:'start',label:'🚀 ออกโรงงาน'},
@@ -807,9 +840,21 @@ function formStart(){
     <div id="plate-box" class="plate-box">
       <div class="plate-load">กำลังโหลดทะเบียน...</div>
     </div>
+    ${isBulkJob() ? bulkJobCard() : ''}
     ${ocrMileHubBlock('start','รูปเลขไมล์เริ่ม','รูปเลขดุมล้อเริ่ม')}
-    <button class="btn btn-green" onclick="submitStart()">🚀 ยืนยันออกโรงงาน</button>
+    <button class="btn btn-green" onclick="submitStart()">${isBulkJob() ? '🚀 ยืนยันออกจาก SSB' : '🚀 ยืนยันออกโรงงาน'}</button>
   `;
+}
+// 🛢️ กล่องสรุปใบงาน Bulk (สินค้า/จำนวน/บิล/ใบขนย้าย/หมายเหตุลูกค้า) — โชว์ที่สเต็ปออกจาก SSB และออกจากลูกค้า
+function bulkJobCard(){
+  const b=bulkInfo();
+  const rows=[['สินค้า',b.prod],['จำนวน',b.qty?fmtKg(b.qty)+' กก.':''],['หัวจ่าย',b.group],['บิล',b.bill],
+    ['ใบขนย้าย',b.co?'✅ มี — รับที่ป้อมยามถ้ายังไม่ได้':''],['หมายเหตุ',b.note],['หมายเหตุลูกค้า',b.custNote]].filter(r=>r[1]);
+  if(!rows.length) return '';
+  return `<div class="net-badge" style="text-align:left">
+    <div class="net-lbl">🛢️ ใบงาน Bulk${b.lineNo?' #'+b.lineNo:''}</div>
+    ${rows.map(r=>`<div style="font-size:13px;line-height:1.6"><span style="color:var(--g1);opacity:.75">${r[0]}:</span> <b>${r[1]}</b></div>`).join('')}
+  </div>`;
 }
 
 // ── QR เติมน้ำมันที่โรงงาน ─────────────────────────────────
@@ -1235,7 +1280,7 @@ function formArrive(){
     <div class="net-badge">
       <div class="net-lbl">📡 รอเช็คอินอัตโนมัติ (GPS)</div>
       <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">
-        เมื่อรถถึงจุดรับ ระบบจะเช็คอิน "ถึงลูกค้า" ให้เอง<br>แล้วจะมี step "🚪 ออกจากลูกค้า" ให้กรอกข้อมูล
+        ${isBulkJob() ? 'เมื่อรถถึงลูกค้า' : 'เมื่อรถถึงจุดรับ'} ระบบจะเช็คอิน "ถึงลูกค้า" ให้เอง<br>แล้วจะมี step "🚪 ออกจากลูกค้า" ให้กรอกข้อมูล
       </div>
     </div>
     <button class="btn btn-green" onclick="manualCheckin()">📍 เช็คอินเอง (ถ้า GPS ไม่ขึ้น)</button>
@@ -1259,6 +1304,7 @@ async function manualCheckin(){
 }
 
 function formClient(){
+  if(isBulkJob()) return formClientBulk();
   return `
     ${ocrMileHubBlock('client','รูปเลขไมล์ออกจากลูกค้า','รูปเลขดุมล้อออกจากลูกค้า')}
     <div class="net-badge">
@@ -1268,6 +1314,28 @@ function formClient(){
       </div>
     </div>
     <button class="btn btn-green" onclick="submitClient()">🌴 ยืนยันออกจากลูกค้า</button>
+  `;
+}
+
+// 🛢️ ออกจากลูกค้า (Bulk) — ลูกค้ามีตาชั่ง = ถ่ายใบชั่งปลายทาง (OCR หนัก/เบา/สุทธิ) · ต้องมีใบชั่งตอนออก = ถ่ายรูปบังคับ · อื่น ๆ แนบได้ถ้ามี
+//   ลงช่อง "ลูกค้า" ของ log_weight (น้ำหนักหนัก/เบา/สุทธิลูกค้า + รูปใบชั่งลูกค้า) — Bulk ไม่มีใบชั่งลูกค้าที่โรงงาน
+function formClientBulk(){
+  const b=bulkInfo();
+  let slip='';
+  if(b.destScale){
+    slip=`<div class="sec-lbl">⚖️ ชั่งปลายทาง (ตาชั่งลูกค้า)</div>
+      ${ocrPhotoBox('bulk-dest-weight','รูปใบชั่งปลายทาง','weight-bulk-dest','ใบชั่งลูกค้า')}`;
+  }else{
+    slip=`<div class="sec-lbl">🧾 ใบชั่ง / ใบรับสินค้าจากลูกค้า</div>
+      <div class="field"><label class="lbl">รูปใบชั่ง/ใบรับสินค้า ${b.slipOut?'<span class="req">*</span>':'(ถ้ามี)'}</label>
+      ${photoBox('bulk-slip', b.slipOut?'ถ่ายรูปก่อนออกจากลูกค้า':'แนบรูปได้ถ้ามี', 'bulk-slip')}</div>`;
+  }
+  return `
+    ${bulkJobCard()}
+    ${slip}
+    <div class="sec-divider"></div>
+    ${ocrMileHubBlock('client','รูปเลขไมล์ออกจากลูกค้า','รูปเลขดุมล้อออกจากลูกค้า')}
+    <button class="btn btn-green" onclick="submitClient()">🚪 ยืนยันออกจากลูกค้า</button>
   `;
 }
 
@@ -1301,7 +1369,11 @@ function setNoPalm(v){
 function formFactory(){
   // renderTimeline() วาดใหม่ได้หลายครั้ง → กู้สถานะ QR กลับมา ไม่ให้คนขับสับสนว่าหาย
   setTimeout(_fuelResume, 0);
-  let html = `
+  // 🛢️ Bulk: กลับถึง SSB — ไม่มีใบชั่งลูกค้าที่โรงงาน (ชั่งปลายทางบันทึกตอนออกจากลูกค้าแล้ว) · เติมน้ำมันไม่บังคับ
+  let html = isBulkJob() ? `
+    <div class="net-badge"><div class="net-lbl">🏁 กลับถึง SSB</div>
+      <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">ถ่ายเลขดุมล้อ + ดึงไมล์ GPS ตอนถึงโรงงาน<br>เติมน้ำมันที่โรงงาน = ขอ QR ให้ปั๊มสแกน (ถ้าไม่ได้เติมเว้นว่างได้)</div></div>
+  ` : `
     <div class="field" style="background:var(--g3,#f0efe9);border-radius:12px;padding:12px 14px;margin-bottom:12px">
       <label class="lbl" style="margin-bottom:6px">🪧 งานนี้ไปวางกระบะเปล่าไหม?</label>
       <div class="chips">
@@ -1319,17 +1391,17 @@ function formFactory(){
   `;
 
   // ✅ เช็คเพื่อซ่อนใบชั่งลานเท ถ้าไม่ได้แวะลาน
-  if (hasRamp) {
+  if (hasRamp && !isBulkJob()) {
     html += `
       <div class="sec-lbl">⚖️ ใบชั่งลานเท (ที่โรงงาน)</div>
       ${ocrPhotoBox('factory-ramp-weight','รูปใบชั่งลานเท','weight-factory-ramp','ใบชั่งลาน')}
       <div class="sec-divider"></div>
     `;
   }
-  html += `</div>`;   // ปิด fac-weigh-wrap (ซ่อนได้เมื่อโหมดวางกระบะเปล่า)
+  if (!isBulkJob()) html += `</div>`;   // ปิด fac-weigh-wrap (ซ่อนได้เมื่อโหมดวางกระบะเปล่า)
 
   html += `
-    ${ocrMileHubBlock('factory','รูปเลขไมล์หลังชั่งเสร็จ','รูปเลขดุมล้อหลังชั่งเสร็จ')}
+    ${isBulkJob() ? ocrMileHubBlock('factory','รูปเลขไมล์กลับถึง SSB','รูปเลขดุมล้อกลับถึง SSB') : ocrMileHubBlock('factory','รูปเลขไมล์หลังชั่งเสร็จ','รูปเลขดุมล้อหลังชั่งเสร็จ')}
     <div class="sec-divider"></div>
     <div class="sec-lbl">⛽ เติมน้ำมันที่โรงงาน</div>
     <div class="qr-card" id="fuel-qr-card">
@@ -1489,17 +1561,17 @@ function startScaleBox(){
   const heavy = getLoadState('start') === 'หนัก';
   const has = !!photos['scale-start'];
   return `<div class="field ${heavy ? '' : 'hide'}" id="start-scale-wrap">
-      <label class="lbl">รูปใบชั่ง (รถหนัก) ${START_SCALE_REQUIRED() ? '<span class="req">*</span>' : ''}</label>
+      <label class="lbl">${isBulkJob() ? 'รูปใบชั่งออก SSB' : 'รูปใบชั่ง (รถหนัก)'} ${START_SCALE_REQUIRED() ? '<span class="req">*</span>' : ''}</label>
       <label class="photo-box ${has ? 'has-photo' : ''}" id="box-start-scale" for="inp-start-scale">
         <input type="file" id="inp-start-scale" accept="image/*" capture="environment" onchange="onPhoto(this,'box-start-scale','lbl-start-scale','scale-start')">
-        <div class="ph-icon">📷</div><div class="ph-lbl" id="lbl-start-scale">${has ? '✅ แนบรูปแล้ว' : 'ถ่ายรูปใบชั่งตอนออกจากโรงงาน'}</div>
+        <div class="ph-icon">📷</div><div class="ph-lbl" id="lbl-start-scale">${has ? '✅ แนบรูปแล้ว' : (isBulkJob() ? 'ถ่ายรูปใบชั่งออก (หลังโหลด+ชั่งเสร็จ)' : 'ถ่ายรูปใบชั่งตอนออกจากโรงงาน')}</div>
       </label>
     </div>`;
 }
 
 // 🆕 ปุ่มเลือกสภาพรถ เบา/หนัก — ตั้ง default อัตโนมัติ คนขับแตะเปลี่ยนได้
 function loadStateChip(key){
-  const cur = loadStates[key] || LOAD_DEFAULT[key] || 'เบา';
+  const cur = loadStates[key] || (isBulkJob() && LOAD_DEFAULT_BULK[key]) || LOAD_DEFAULT[key] || 'เบา';
   loadStates[key] = cur;   // ตั้งค่า default ทันที กันคนขับลืมเลือก
   return `
     <div class="field">
@@ -1519,7 +1591,7 @@ function pickLoadState(key, val, el){
   if(key==='start'){ const w=document.getElementById('start-scale-wrap'); if(w) w.classList.toggle('hide', val!=='หนัก'); }   // รถหนัก → โชว์ช่องใบชั่ง
 }
 function getLoadState(key){
-  return loadStates[key] || LOAD_DEFAULT[key] || 'เบา';
+  return loadStates[key] || (isBulkJob() && LOAD_DEFAULT_BULK[key]) || LOAD_DEFAULT[key] || 'เบา';
 }
 
 // 🆕 คำนวณสรุป เบา/หนัก ฝั่งมือถือ (โชว์ใน dashboard เป็น preview — ค่าจริงคิดที่ server)
@@ -2373,11 +2445,30 @@ async function submitClient(){
 
   const eChk=checkReading('client',mileClient,hubClient); if(eChk){toast(eChk);return;}
 
+  // 🛢️ Bulk: ใบชั่งปลายทาง / ใบรับสินค้า ตามค่าตั้งลูกค้า → ลงช่อง "ลูกค้า" ของ log_weight
+  const clientFields={'เลขไมล์ลูกค้า':mileClient,'เลขดุมล้อลูกค้า':hubClient,'สภาพรถลูกค้า':getLoadState('client')};
+  if(isBulkJob()){
+    const b=bulkInfo(); let slipB64='';
+    if(b.destScale){
+      const w=getWeightOcrData('weight-bulk-dest');
+      if(!w.gross||!w.tare||!w.net){toast('กรุณาถ่ายใบชั่งปลายทาง แล้วตรวจน้ำหนัก หนัก/เบา/สุทธิ ให้ครบครับ');document.getElementById('box-bulk-dest-weight')?.scrollIntoView({behavior:'smooth',block:'center'});return;}
+      Object.assign(clientFields,{'น้ำหนักหนักลูกค้า':w.gross,'น้ำหนักเบาลูกค้า':w.tare,'สุทธิลูกค้า':w.net});
+      const url=ocrData['weight-bulk-dest']&&ocrData['weight-bulk-dest'].fileUrl;
+      if(url) clientFields['รูปใบชั่งลูกค้า']=url; else slipB64=photos['weight-bulk-dest']||'';   // OCR ไม่ได้อัปรูป → อัปเอง
+    }else if(photos['bulk-slip']) slipB64=photos['bulk-slip'];
+    else if(b.slipOut){toast('ลูกค้านี้ต้องมีใบชั่ง/ใบรับสินค้า — ถ่ายรูปก่อนออกครับ');document.getElementById('box-bulk-slip')?.scrollIntoView({behavior:'smooth',block:'center'});return;}
+    if(slipB64){
+      const up=await postGAS({action:'uploadImage',orderId:order['Order ID'],userId:U.userId,imageBase64:slipB64,prefix:'BULK_SLIP'},'📤 กำลังอัปโหลดรูปใบชั่ง...');
+      if(up&&up.success&&up.fileUrl) clientFields['รูปใบชั่งลูกค้า']=up.fileUrl;
+      else if(b.slipOut||b.destScale){toast('❌ อัปโหลดรูปใบชั่งไม่สำเร็จ ลองใหม่อีกครั้งครับ');return;}
+    }
+  }
+
   // ⚡ ยิงพร้อมกัน: สถานะถึงลูกค้า (orders) + บันทึกไมล์/ดุม (ชีต LOG_WEIGHT) — คนละที่ ไม่ทับกัน
   const [r]=await postGASParallel([
     {action:'driverArrived',orderId:order['Order ID'],userId:U.userId},
     {action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:'ลูกค้า',
-      fields:{'เลขไมล์ลูกค้า':mileClient,'เลขดุมล้อลูกค้า':hubClient,'สภาพรถลูกค้า':getLoadState('client')}}
+      fields:clientFields}
   ],'🌴 กำลังบันทึกถึงลูกค้า...');
   if(!r?.success){toast('❌ '+(r?.error||'อัปเดตสถานะลูกค้าไม่สำเร็จ'));return;}
 
@@ -2549,7 +2640,7 @@ function prepareFactory(){
   saveReading('factory',mileF,hubF);
 
   const wClient=getWeightOcrData('weight-factory-client');
-  if(!factoryNoPalm && (!wClient||!wClient.gross||!wClient.tare||!wClient.net)){toast('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');return;}
+  if(!factoryNoPalm && !isBulkJob() && (!wClient||!wClient.gross||!wClient.tare||!wClient.net)){toast('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');return;}
 
   // ✅ เช็คและบังคับถ่ายใบชั่งลาน "เฉพาะกรณีที่มีแวะลานเท่านั้น" (ข้ามถ้าวางกระบะเปล่า)
   let wRamp = null;
@@ -2560,8 +2651,9 @@ function prepareFactory(){
 
   const fLiter=getVal('fuel-factory-liter');
   const fPrice=getVal('fuel-factory-price');
-  if(!factoryNoPalm && !fLiter){toast('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
-  if(!factoryNoPalm && !fPrice){toast('กรุณากรอกราคาน้ำมันโรงงาน');return;}
+  if(!factoryNoPalm && !isBulkJob() && !fLiter){toast('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
+  if(!factoryNoPalm && !isBulkJob() && !fPrice){toast('กรุณากรอกราคาน้ำมันโรงงาน');return;}
+  if(isBulkJob() && fLiter && !fPrice){toast('กรอกลิตรแล้ว — เลือกราคาน้ำมันด้วยครับ');return;}   // 🛢️ Bulk: เติมหรือไม่เติมก็ได้ แต่ถ้าเติมต้องครบ
 
   collectedData={};
   
@@ -2571,7 +2663,8 @@ function prepareFactory(){
   collectedData.mileFactory=mileF;
   collectedData.hubFactory=hubF;
   
-  collectedData.weightFactClient = (factoryNoPalm || !wClient)
+  collectedData.weightFactClient = isBulkJob() ? null   // 🛢️ Bulk: น้ำหนักลงไว้ตอนออกจากลูกค้าแล้ว — ห้ามทับ
+    : (factoryNoPalm || !wClient)
     ? {h:'', l:'', net:'', pricePerKg:'', totalAmount:'', fileUrl:''}   // วางกระบะเปล่า = ไม่มีน้ำหนัก
     : {h:wClient.gross, l:wClient.tare, net:wClient.net, pricePerKg:wClient.pricePerKg||'', totalAmount:wClient.totalAmount||'', fileUrl: urlClient};
   collectedData.noPalm = factoryNoPalm;   // มาร์คว่าเป็นงานวางกระบะเปล่า
@@ -2638,7 +2731,8 @@ function showDashboard(){
   rows.push({section:'📋 ข้อมูลออเดอร์'});
   rows.push({k:'เลขที่ออเดอร์', v:order['Order ID'], highlight:true});
   rows.push({k:'วันที่',        v:fmtDate(order['วันที่ต้องการ'])});
-  rows.push({k:'จุดรับ',        v:order['จุดรับ']||'—'});
+  rows.push({k:isBulkJob()?'ส่งที่':'จุดรับ', v:order['จุดรับ']||'—'});
+  if(isBulkJob()){ const b=bulkInfo(); rows.push({k:'ลูกค้า', v:order['ชื่อสวน']||'—'}); if(b.prod) rows.push({k:'สินค้า', v:b.prod+(b.qty?' · '+fmtKg(b.qty)+' กก.':'')}); }
   if(hasRamp) rows.push({k:'แวะลานเท 🏭', v:order['จุดรับเพิ่ม']||'—'});
 
   rows.push({section:'🛣️ ระยะทาง (จากดุมล้อ)'});
@@ -2686,7 +2780,10 @@ function showDashboard(){
     rows.push({k:'📊 % วิ่งรถหนัก', v:`${ls.pct}%`, highlight:true});
   }
 
-  if(d.noPalm){
+  if(isBulkJob()){
+    rows.push({section:'⚖️ ชั่ง / ใบชั่งปลายทาง'});
+    rows.push({k:'สถานะ', v:'บันทึกแล้วตอนออกจากลูกค้า', highlight:true});
+  }else if(d.noPalm){
     rows.push({section:'🪧 งานวางกระบะเปล่า'});
     rows.push({k:'น้ำหนัก', v:'— (ไม่มีปาล์ม/ไม่ต้องชั่ง)', highlight:true});
   }else{
@@ -2706,7 +2803,7 @@ function showDashboard(){
       rows.push({k:'สุทธิปลายทาง',  v:`${Math.round(d.weightFactory.net).toLocaleString()} กก.`,highlight:true});
     }
   }
-  rows.push({k:'เจ้าของใบ',v:order['ชื่อในบิล']||order['ชื่อสวน']||'—'});
+  rows.push({k:isBulkJob()?'บิล':'เจ้าของใบ',v:order['ชื่อในบิล']||order['ชื่อสวน']||'—'});
 
   rows.push({section:'💰 ค่าใช้จ่าย'});
   if(d.fuelFactory && d.fuelFactory.liter) rows.push({k:'⛽ น้ำมันโรงงาน',v:`${d.fuelFactory.liter} ลิตร × ${d.fuelFactory.price} = ${d.fuelFactory.total} บาท`});
