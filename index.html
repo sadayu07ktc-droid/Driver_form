@@ -1143,7 +1143,7 @@ function loadPlateOptions(){
         if(r.ok){ const j=await r.json(); if(j&&j.ok) return (PLATE_EX={children:j.children||[],groups:j.groups||[]}); }
       }catch(e){ console.warn('getPlateOptions Edge → GAS', e); }
     }
-    const g = a => fetch(GAS_URL+'?action='+a,{redirect:'follow'}).then(r=>r.json()).catch(()=>({}));
+    const g = a => fetch(GAS_URL+'?action='+a+'&userId='+encodeURIComponent((U&&U.userId)||''),{redirect:'follow'}).then(r=>r.json()).catch(()=>({}));   // GAS สำรองกรองกลุ่มเหมือน Edge
     const rs = await Promise.all([g('getAvailableTrailerChildren'), g('getAvailableVehicles')]);
     if(!rs[0].success && !rs[1].success) PLATE_EX_P=null;   // พังทั้งคู่ → เปิดใหม่ลองโหลดอีก
     return (PLATE_EX={children:rs[0].children||[],groups:rs[1].groups||[]});
