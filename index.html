@@ -1137,7 +1137,8 @@ function loadPlateOptions(){
       try{
         const ac=(typeof AbortController!=='undefined')?new AbortController():null;
         const tm=ac?setTimeout(()=>ac.abort(),10000):null;
-        const r=await fetch(EDGE_DRV_URL+'?action=getPlateOptions', ac?{signal:ac.signal}:{});
+        // userId → เหลือเฉพาะรถคนขับกลุ่มเดียวกัน (คุณน้อง 2026-10-19: สลับคันได้แค่ในกลุ่มตัวเอง)
+        const r=await fetch(EDGE_DRV_URL+'?action=getPlateOptions&userId='+encodeURIComponent((U&&U.userId)||''), ac?{signal:ac.signal}:{});
         if(tm) clearTimeout(tm);
         if(r.ok){ const j=await r.json(); if(j&&j.ok) return (PLATE_EX={children:j.children||[],groups:j.groups||[]}); }
       }catch(e){ console.warn('getPlateOptions Edge → GAS', e); }
