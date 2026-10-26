@@ -1325,7 +1325,8 @@ function formClientBulk(){
   let slip='';
   if(b.destScale){
     slip=`<div class="sec-lbl">⚖️ ชั่งปลายทาง (ตาชั่งลูกค้า)</div>
-      ${ocrPhotoBox('bulk-dest-weight','รูปใบชั่งปลายทาง','weight-bulk-dest','ใบชั่งลูกค้า')}`;
+      ${ocrPhotoBox('bulk-dest-weight','รูปใบชั่งปลายทาง','weight-bulk-dest','ใบชั่งปลายทาง')}
+      <div style="font-size:12px;color:var(--g2,#6b7280);margin:-4px 2px 10px;line-height:1.5">ถ่ายให้เห็นทั้งใบ ชื่อบริษัทหัวกระดาษ และตัวเลขชั่งเข้า/ออก · ถ้ามี 2 ใบ (ลงสินค้า 2 รอบ) วางคู่กันแล้วถ่ายรูปเดียว</div>`;
   }else{
     slip=`<div class="sec-lbl">🧾 ใบชั่ง / ใบรับสินค้าจากลูกค้า</div>
       <div class="field"><label class="lbl">รูปใบชั่ง/ใบรับสินค้า ${b.slipOut?'<span class="req">*</span>':'(ถ้ามี)'}</label>
@@ -1520,7 +1521,7 @@ function formFactory(){
 
 // ── OCR photo box — ซ่อน ocr-edit สำหรับใบชั่ง, โชว์เฉพาะ ไมล์/ดุมล้อ ──
 function ocrPhotoBox(id, label, key, type){
-  const isWeight = (type === 'ใบชั่งลูกค้า' || type === 'ใบชั่งลาน');
+  const isWeight = (type === 'ใบชั่งลูกค้า' || type === 'ใบชั่งลาน' || type === 'ใบชั่งปลายทาง');
   // 🆕 กู้ค่าที่ "อ่าน OCR แล้ว" จาก ocrData → กันเลขหายตอน renderTimeline วาดฟอร์มใหม่ (เดิมรีเซ็ตเป็น "—" ต้องถ่ายซ้ำ)
   const saved = (typeof ocrData !== 'undefined' && ocrData) ? ocrData[key] : null;
   const has = !!saved;
@@ -1689,6 +1690,16 @@ function getMileValue(mileKey){
 }
 
 // ── buildWeightEditFields — หนัก/เบา/สุทธิ แถวแรก, ราคา/รวมเงิน แถวสอง ──
+// 🛢️ ใบชั่งปลายทาง: คำเตือน (ไม่ใช่ใบลูกค้างานนี้ / เลขเขียนมือ / หนัก−เบา≠สุทธิ) + หมายเหตุ (รวม 2 ใบ / ลายมือ +20)
+function weightHints(data){
+  const w=(data&&data.warn)||[], i=(data&&data.info)||[];
+  if(!w.length&&!i.length) return '';
+  return '<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">'
+    + w.map(t=>'<div style="font-size:12.5px;font-weight:600;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:6px 9px">⚠️ '+escHtml(t)+'</div>').join('')
+    + i.map(t=>'<div style="font-size:12.5px;color:var(--g1);background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:6px 9px">ℹ️ '+escHtml(t)+'</div>').join('')
+    + '</div>';
+}
+function escHtml(v){ return String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function buildWeightEditFields(key, type, data){
   const showPrice = (type === 'ใบชั่งลูกค้า');
   return `
@@ -1706,6 +1717,7 @@ function buildWeightEditFields(key, type, data){
         <input class="inp" id="ocr-${key}-net" value="${data.net||''}">
       </div>
     </div>
+    ${weightHints(data)}
     ${showPrice ? `
     <div class="row2" style="margin-top:8px">
       <div>
@@ -2001,6 +2013,7 @@ async function postOcr(payload){
       console.warn('OCR Edge → GAS', text.slice(0,200));
     }catch(e){ console.warn('OCR Edge → GAS', e); }
   }
+  if(payload&&payload.imageType==='ใบชั่งปลายทาง') payload={...payload,imageType:'ใบชั่งลูกค้า'};   // ocr.gs ไม่มีชนิดนี้ (มีเฉพาะ Edge)
   try{
     const res=await fetchWithTimeout(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)}, OCR_TIMEOUT_MS);
     const text=await res.text();
@@ -2118,7 +2131,7 @@ function onPhoto(input,boxId,lblId,key){
     }
     if(ocrSeq[key]!==seq) return;
 
-    const isWeight=(type==='ใบชั่งลูกค้า'||type==='ใบชั่งลาน');
+    const isWeight=(type==='ใบชั่งลูกค้า'||type==='ใบชั่งลาน'||type==='ใบชั่งปลายทาง');
 
     if(res&&res.success&&res.stale){   // 🕰️ ชั้น 2: ลายน้ำวันเวลาบนรูปเก่า (ocr.gs) → ไม่รับค่า
       res={success:false,error:'รูปนี้มีวันที่ '+(res.stamp||'')+' ไม่ใช่รูปปัจจุบัน — ถ่ายใหม่ตอนนี้'};
@@ -2142,7 +2155,9 @@ function onPhoto(input,boxId,lblId,key){
         net:res.net||'',
         pricePerKg:res.pricePerKg||'',
         totalAmount:res.totalAmount||'',
-        fileUrl:res.fileUrl||''
+        fileUrl:res.fileUrl||'',
+        warn:Array.isArray(res.warn)?res.warn:[],
+        info:Array.isArray(res.info)?res.info:[]
       };
     }else{
       ocrData[key]={value:res.value||'',fileUrl:res.fileUrl||''};
@@ -2155,6 +2170,7 @@ function onPhoto(input,boxId,lblId,key){
     if(isWeight){
       // แสดงตัวเลขแก้ไขได้ทันที ไม่มี read-only display ซ้ำ
       ocrValEl.innerHTML=buildWeightEditFields(key,type,ocrData[key]);
+      if(ocrData[key].warn.length){ document.getElementById(lblId).textContent='⚠️ อ่านแล้ว — ตรวจตัวเลขก่อนบันทึก'; toast('⚠️ '+ocrData[key].warn[0],'warn',7000); }
     }else{
       // ไมล์/ดุมล้อ — โชว์ตัวเลขใหญ่ + ช่องแก้ไข
       ocrValEl.textContent=res.value||'';
