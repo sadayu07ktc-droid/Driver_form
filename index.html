@@ -503,6 +503,35 @@ const bulkInfo = (o) => ((o || order || {})._bulk) || {};
 const LOAD_DEFAULT_BULK = {start:'หนัก', client:'เบา'};
 const fmtKg = n => Number(n||0).toLocaleString('en-US');
 
+// 📦 งาน Packing (2026-10-30) — ออเดอร์ ORD-PK-… สร้างเองตอนคนขับกดรับการ์ด LINE (Edge pk-plan + trigger)
+//   คุณน้อง: "ทำเหมือนงานไร่แวะลาน" → จุดส่งลงช่องเลขไมล์เดิมตามลำดับ (1 จุด = ลูกค้า · 2 = ลูกค้า → ลานขากลับ · 3+ = ลานวางกระบะ → ลูกค้า → ลานขากลับ)
+//   ออกจาก SSB = รถหนัก + ใบชั่งขาออก · ลงของแต่ละจุด: ค่าลงจริง / ตัดชั้น / บิล (ไม่มีบิล = รูปพาเลท) / พาเลทแลกคืน / ถังเปล่า / เอกสารรับกลับ / ค่าที่จอด
+//   ข้อมูลรายจุด → Edge pk-driver (pk_stop_logs) · ค่าลงไม่ตรงแผน/ตัดชั้น → แจ้งแอดมินที่จ่ายงาน
+const isPkJob = () => jobType === 'Packing' && /^ORD-PK-/.test(String((order && order['Order ID']) || ''));
+const noFarmWeigh = () => isBulkJob() || isPkJob();   // ไม่มีใบชั่งลูกค้าที่โรงงาน · น้ำมันโรงงานไม่บังคับ
+const PK_EDGE = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-driver';
+let pkInfo = null;
+const pkSlots = () => { const s = []; ((pkInfo && pkInfo.stops) || []).forEach(x => { if (s.indexOf(x.slot) < 0) s.push(x.slot); }); return s.length ? s : ['client']; };
+const pkSeq = () => ['start'].concat(pkSlots(), ['factory']);
+const pkStopsOf = slot => ((pkInfo && pkInfo.stops) || []).filter(x => x.slot === slot);
+// สภาพรถหลังออกจากจุด: ลงของ = เบา (ถ้าเก็บของกลับ/รับถังเปล่า = หนัก) · จุดรับของ (พาเลท/ปูนขาว) = หนัก · วางบิล/รับเช็ค = คงตามช่วงก่อน
+function pkLoadDefault(key){
+  if (key === 'start') return 'หนัก';
+  const ss = pkStopsOf(key); if (!ss.length) return 'เบา';
+  const last = ss[ss.length - 1];
+  if (last.kind === 'pickup' || last.drums || /เก็บ/.test(last.task || '')) return 'หนัก';
+  if (last.kind === 'dist_only' || last.kind === 'tbd') { const seq = pkSeq(), i = seq.indexOf(key); return i > 0 ? getLoadState(seq[i - 1]) : 'เบา'; }
+  return 'เบา';
+}
+async function loadPkInfo(){
+  try{
+    const r = await fetch(PK_EDGE + '?action=pkJobInfo&userId=' + encodeURIComponent(U.userId) + '&orderId=' + encodeURIComponent(order['Order ID']));
+    const d = await r.json();
+    if (!d.ok) { toast('❌ ' + (d.error || 'โหลดใบงาน Packing ไม่ได้')); return; }
+    pkInfo = d; renderOrderBanner(); renderTimeline();
+  }catch(e){ toast('📡 โหลดใบงาน Packing ไม่ได้ — ตรวจสัญญาณแล้วเปิดงานใหม่'); }
+}
+
 // คำนวณสเต็ปของ "งานนั้น" โดยตรง (ไม่พึ่ง global jobType/hasRamp)
 function stepsOf(o){
   const jt = o['ประเภทงาน']||'ปาล์ม';
@@ -531,6 +560,7 @@ function nextActionOf(o){
   const st = o['สถานะ']||'รับงานแล้ว';
   const hr = !!(o['จุดรับเพิ่ม']);
   if(st==='เสร็จงาน') return null;            // จบแล้ว ไม่มีปุ่ม
+  if(o['ประเภทงาน']==='Packing') return st==='รับงานแล้ว' ? 'เริ่มงาน' : 'ทำงานต่อ';   // 📦 จุดส่งหลายจุด
 
   // map: สถานะปัจจุบัน -> label ของ checkpoint ถัดไปที่ต้องกด
   let nextLabel;
@@ -548,6 +578,7 @@ function jobTypeBadge(o){
   const jt = o['ประเภทงาน']||'ปาล์ม';
   const hr = !!(o['จุดรับเพิ่ม']);
   if(jt==='Bulk')        return '🛢️ Bulk' + (bulkInfo(o).lineNo ? ' #' + bulkInfo(o).lineNo : '');
+  if(jt==='Packing')     return '📦 Packing';
   if(jt==='ปาล์ม' && hr) return '🏭 ปาล์ม+ลาน';
   if(jt==='ปาล์ม')       return '🌴 ปาล์ม';
   if(hr)                 return '🏭 งานอื่นๆ+ลาน';
@@ -593,6 +624,8 @@ function renderJobList(){
         <div class="jl-oid">${oid} <span style="font-size:11px;font-weight:600;background:var(--g3);color:var(--g1);padding:2px 8px;border-radius:20px;margin-left:4px">${jobTypeBadge(o)}</span></div>
         ${o['ประเภทงาน']==='Bulk'
           ? `<div class="jl-info"><span>🏭 ${garden}</span><span>📅 ส่ง ${dt}</span><span>📍 ส่งที่ ${pickup}</span>${bulkInfo(o).prod?`<span>🛢️ ${bulkInfo(o).prod} · ${fmtKg(bulkInfo(o).qty)} กก.</span>`:''}</div>`
+          : o['ประเภทงาน']==='Packing'
+          ? `<div class="jl-info"><span>📅 ส่ง ${dt}${tm&&tm!=='-'?' ⏰ ลง '+tm:''}</span><span>📍 ${pickup}</span></div>`
           : `<div class="jl-info"><span>🌳 ${garden}</span><span>📅 ${dt} ⏰ ${tm}</span><span>📍 จุดรับ ${pickup}</span></div>`}
         <div class="jl-btns">${btnsHtml}</div>
       </div>`;
@@ -639,6 +672,7 @@ function openJob(orderId){
   gpsMile={}; gpsFetching={};   // 🆕 ล้างค่า GPS ของงานก่อนหน้า
   loadStates={};                // 🆕 ล้างสภาพรถของงานก่อนหน้า
   factoryNoPalm=false;          // 🆕 รีเซ็ตโหมดวางกระบะเปล่า
+  pkInfo=null; if(isPkJob()) loadPkInfo();   // 📦 จุดส่ง/ค่าลง/ร้าน จาก Edge pk-driver (วาดใหม่เมื่อโหลดเสร็จ)
   readings={}; seedReadingsFromOrder();
   document.getElementById('job-list').classList.add('hide');
   document.getElementById('job-form').classList.remove('hide');
@@ -684,7 +718,15 @@ function renderOrderBanner(){
     setLbl('ob-time','สินค้า');
   }
   else{ setLbl('ob-time','เวลา'); }
-  if(isBulkJob()){ /* ป้ายตั้งแล้วด้านบน */ }
+  if(isPkJob()){   // 📦 ส่งที่ = ทุกจุด · จำนวน = เลท/ลัง · เวลา = เวลาลง
+    setLbl('ob-garden','ใบงาน'); setLbl('ob-bin','จำนวน'); setLbl('ob-pickup','ส่งที่'); setLbl('ob-date','วันที่ส่ง'); setLbl('ob-time','เวลาลง');
+    const s0=(pkInfo&&pkInfo.stops||[]).find(x=>x.kind==='drop')||{};
+    document.getElementById('ob-garden').textContent=pkInfo?('#'+pkInfo.lineNo+(pkInfo.truckGroup?' · '+pkInfo.truckGroup:'')):'กำลังโหลด…';
+    document.getElementById('ob-bin').textContent=[s0.pallets&&s0.pallets+' เลท',s0.cases&&s0.cases+' ลัง'].filter(Boolean).join(' · ')||'—';
+    document.getElementById('ob-time').textContent=(pkInfo&&pkInfo.unloadTime)||'—';
+    typeEl.textContent='📦 Packing'+(pkInfo?' #'+pkInfo.lineNo:''); typeEl.className='ob-type other';
+  }
+  if(isBulkJob()||isPkJob()){ /* ป้ายตั้งแล้วด้านบน */ }
   else if(jobType==='ปาล์ม'&&hasRamp){typeEl.textContent='🏭 ปาล์ม+ลาน';typeEl.className='ob-type ramp';}
   else if(jobType==='ปาล์ม'){typeEl.textContent='🌴 ปาล์ม';typeEl.className='ob-type palm';}
   else if(hasRamp){typeEl.textContent='🏭 งานอื่นๆ+ลาน';typeEl.className='ob-type ramp';}
@@ -696,6 +738,15 @@ function renderOrderBanner(){
 }
 
 function getSteps(){
+  if(isPkJob()){   // 📦 ออกจาก SSB → จุดส่งตามลำดับ (ช่อง ลานวางกระบะ/ลูกค้า/ลานขากลับ) → กลับถึง SSB
+    const out=[{key:'start',label:'🚀 ออกจาก SSB (โหลด+ชั่งเสร็จ)'}];
+    if(!pkInfo) out.push({key:'client',label:'📦 จุดส่ง (กำลังโหลดใบงาน…)'});
+    else pkSlots().forEach(sl=>{ const ss=pkStopsOf(sl);
+      const ico=ss.every(x=>x.kind==='pickup')?'🔄':ss.every(x=>x.kind==='dist_only')?'🧾':'📦';
+      out.push({key:sl,label:ico+' จุด '+ss.map(x=>x.seq).join('–')+' · '+ss.map(x=>x.name).join(' + ')}); });
+    out.push({key:'factory',label:'🏁 กลับถึง SSB'});
+    return out;
+  }
   if(isBulkJob()){   // 🛢️ Bulk: เริ่มงาน = ออกจาก SSB (ความหมายเดียวกับ GPS ป้อมยาม)
     return [
       {key:'start',label:'🚀 ออกจาก SSB (โหลด+ชั่งเสร็จ)'},
@@ -734,6 +785,13 @@ function getSteps(){
 function getActiveStepKey(status) {
   if (status === 'เสร็จงาน') return null;
   if (status === 'รับงานแล้ว') return 'start';
+  if (isPkJob()) {   // 📦 สถานะ = ช่องล่าสุดที่บันทึก → ช่องถัดไปตามลำดับจุดส่ง
+    const seq = pkSeq();
+    const done = {'เริ่มงานแล้ว':'start','ถึงลานวางกระบะ':'rampDrop','ออกจากลูกค้า':'client','ถึงลานขากลับ':'ramp','ถึงลาน':'ramp'}[status];
+    if (status === 'ถึงลูกค้า') return seq.indexOf('client') >= 0 ? 'client' : null;
+    if (!done || seq.indexOf(done) < 0) return null;
+    return seq[seq.indexOf(done) + 1] || null;
+  }
   if (status === 'ถึงลูกค้า') return 'client';  // 🆕 GPS เช็คอินถึงลูกค้า → เปิด step กรอก "ออกจากลูกค้า"
 
   if (hasRamp) {
@@ -824,6 +882,7 @@ function buildForm(key){
     // key==='start' → ใช้ formStart() ปกติด้านล่าง (ออกจากคลองหาด, เลือกสภาพรถ=หนัก)
   }
   if(key==='start') return formStart();
+  if(isPkJob() && ['rampDrop','client','ramp'].indexOf(key)>=0) return formPkStop(key);
   if(key==='rampDrop') return formRampDrop();
   if(key==='arrive') return formArrive();
   if(key==='client') return formClient();
@@ -841,8 +900,9 @@ function formStart(){
       <div class="plate-load">กำลังโหลดทะเบียน...</div>
     </div>
     ${isBulkJob() ? bulkJobCard() : ''}
+    ${isPkJob() ? pkJobCard() : ''}
     ${ocrMileHubBlock('start','รูปเลขไมล์เริ่ม','รูปเลขดุมล้อเริ่ม')}
-    <button class="btn btn-green" onclick="submitStart()">${isBulkJob() ? '🚀 ยืนยันออกจาก SSB' : '🚀 ยืนยันออกโรงงาน'}</button>
+    <button class="btn btn-green" onclick="submitStart()">${noFarmWeigh() ? '🚀 ยืนยันออกจาก SSB' : '🚀 ยืนยันออกโรงงาน'}</button>
   `;
 }
 // 🛢️ กล่องสรุปใบงาน Bulk (สินค้า/จำนวน/บิล/ใบขนย้าย/หมายเหตุลูกค้า) — โชว์ที่สเต็ปออกจาก SSB และออกจากลูกค้า
@@ -855,6 +915,127 @@ function bulkJobCard(){
     <div class="net-lbl">🛢️ ใบงาน Bulk${b.lineNo?' #'+b.lineNo:''}</div>
     ${rows.map(r=>`<div style="font-size:13px;line-height:1.6"><span style="color:var(--g1);opacity:.75">${r[0]}:</span> <b>${r[1]}</b></div>`).join('')}
   </div>`;
+}
+
+/* ── 📦 Packing: การ์ดใบงาน + ฟอร์มลงของรายจุด (2026-10-30) ───────────────── */
+let pkSaved = {};   // seq → ข้อมูลที่บันทึกแล้ว (โชว์ในสรุปก่อนส่ง)
+const pkEsc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pkTel = p => { p=String(p||''); return p.length===10?p.slice(0,3)+'-'+p.slice(3,6)+'-'+p.slice(6):p.length===9?p.slice(0,2)+'-'+p.slice(2,5)+'-'+p.slice(5):p; };
+function pkJobCard(){
+  if(!pkInfo) return '<div class="net-badge"><div class="net-lbl">📦 กำลังโหลดใบงาน Packing…</div></div>';
+  const rows=[];
+  if(pkInfo.testMode) rows.push('<div style="background:#FDE8E8;color:#B42318;border-radius:8px;padding:6px 8px;font-size:12px;margin-bottom:6px">🧪 เทสระบบ — ยังไม่ใช่งานจริง</div>');
+  pkInfo.stops.forEach(s=>rows.push(`<div style="font-size:13px;line-height:1.6"><b>${s.seq}. ${pkEsc(s.name)}</b> <span style="color:#6b7280">${
+    s.kind==='pickup'?'· ขากลับ รับของ':s.kind==='dist_only'?'· วางบิล/รับเช็ค':s.kind==='tbd'?'· ⚠️ รอแอดมินแจ้งที่':[s.pallets&&s.pallets+' เลท',s.cases&&s.cases+' ลัง'].filter(Boolean).join(' · ')}</span></div>`));
+  if(pkInfo.helpers) rows.push(`<div style="font-size:13px">👷 เด็กรถ: <b>${pkEsc(pkInfo.helpers)}</b>${pkInfo.helperTime?' · นัด '+pkEsc(pkInfo.helperTime):''}</div>`);
+  if(pkInfo.docs&&pkInfo.docs.length) rows.push(`<div style="font-size:13px;color:#7A5B00">📄 รับเอกสารกลับ: <b>${pkInfo.docs.join(' · ')}</b></div>`);
+  if(pkInfo.extras) rows.push(`<div style="font-size:13px;color:#6b7280">งานเสริม: ${pkEsc(pkInfo.extras)}</div>`);
+  return `<div class="net-badge" style="text-align:left"><div class="net-lbl">📦 ใบงาน Packing #${pkInfo.lineNo}</div>${rows.join('')}</div>`;
+}
+function pkToggle(id,on){ const el=document.getElementById(id); if(el) el.classList.toggle('hide',!on); }
+function formPkStop(slot){
+  if(!pkInfo) return '<div class="net-badge"><div class="net-lbl">📦 กำลังโหลดใบงาน Packing…</div></div>';
+  const ss=pkStopsOf(slot);
+  const blocks=ss.map(s=>{
+    const n=s.seq, log=(pkInfo.logs||[]).find(l=>l.seq===n)||{};
+    let h=`<div class="sec-lbl">${s.kind==='pickup'?'🔄':s.kind==='dist_only'?'🧾':'📦'} จุด ${n} · ${pkEsc(s.name)}</div>`;
+    const info=[s.pallets&&s.pallets+' เลท',s.cases&&s.cases+' ลัง',s.task&&'งาน: '+s.task].filter(Boolean);
+    if(info.length) h+=`<div style="font-size:13px;color:#4A5B53;margin:-4px 2px 8px">${pkEsc(info.join(' · '))}</div>`;
+    if(s.team||(s.phones||[]).length) h+=`<div style="font-size:13px;margin:0 2px 8px">📞 ทีมลง ${pkEsc(s.team||'')} ${(s.phones||[]).map(p=>`<a href="tel:${p}" style="color:#1E4FA3;font-weight:700;text-decoration:underline;margin-right:8px">${pkTel(p)}</a>`).join('')}</div>`;
+    if(s.kind==='tbd') h+=`<div class="net-badge" style="background:#FEF6DC"><div style="font-size:13px;color:#7A5B00">⚠️ ใบงานไม่ได้บอกที่ — ถามแอดมินก่อนไป</div></div>`;
+    if(s.kind==='drop'){
+      const fee=log.unload_fee_paid!=null?log.unload_fee_paid:(s.feePlan!=null?s.feePlan:'');
+      h+=`<div class="field"><label class="lbl">ค่าลงที่จ่ายจริง (บาท) ${s.feePlan!=null||(s.feeOptions||[]).length?'<span class="req">*</span>':'(ถ้ามี)'}</label>
+        <input class="inp" type="number" inputmode="decimal" id="pk-fee-${n}" value="${fee}" placeholder="0">
+        ${s.feePlan!=null?`<div style="font-size:12px;color:#6b7280;margin-top:3px">ตามแผน ${Number(s.feePlan).toLocaleString()} บาท · ไม่ตรง = ระบบแจ้งแอดมิน</div>`:''}</div>
+      <div class="field"><label style="display:flex;gap:8px;align-items:center;font-size:14px;font-weight:600;color:#7A5B00;background:#FBF3DA;border-radius:10px;padding:10px 12px">
+        <input type="checkbox" id="pk-cut-${n}" ${log.layer_cut?'checked':''} onchange="pkToggle('pk-cutbox-${n}',this.checked)" style="width:20px;height:20px"> ✂️ หน้างานตัดชั้น / ต่อพาเลทใหม่</label>
+        <div id="pk-cutbox-${n}" class="row2 mt8 ${log.layer_cut?'':'hide'}">
+          <div><label class="lbl">ร้านรับกี่ชั้น</label><input class="inp" type="number" inputmode="numeric" id="pk-layers-${n}" value="${log.layers_accepted??''}"></div>
+          <div><label class="lbl">พาเลทหลังตัด</label><input class="inp" type="number" inputmode="numeric" id="pk-palafter-${n}" value="${log.pallets_after??''}"></div>
+        </div></div>
+      <div class="field"><label class="lbl">📷 บิลค่าลง</label>${photoBox('pkbill-'+n,log.photo_bill?'✅ แนบแล้ว (ถ่ายใหม่ได้)':'ถ่ายรูปบิลค่าลง','pkbill-'+n)}
+        <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:6px"><input type="checkbox" id="pk-nobill-${n}" ${log.no_bill?'checked':''} onchange="pkToggle('pk-palbox-${n}',this.checked)"> ร้านไม่ออกบิล</label>
+        <div id="pk-palbox-${n}" class="${log.no_bill?'':'hide'}" style="margin-top:6px">${photoBox('pkpal-'+n,log.photo_pallets?'✅ แนบแล้ว':'ถ่ายรูปพาเลทที่ลงแล้ว (แทนบิล)','pkpal-'+n)}</div></div>`;
+      if(s.palletExchange) h+=`<div class="field"><label class="lbl">♻️ พาเลทแลกคืน (ใบ) <span class="req">*</span></label><input class="inp" type="number" inputmode="numeric" id="pk-palret-${n}" value="${log.pallets_returned??''}" placeholder="${s.pallets||''}">
+        <div style="font-size:12px;color:#6b7280;margin-top:3px">ร้านนี้แลกพาเลท — ตัดชั้นแล้วนับตามพาเลทหลังตัด</div></div>`;
+      if(s.drums) h+=`<div class="field"><label class="lbl">🛢️ รับถังเปล่ากลับกี่ถัง <span class="req">*</span></label><input class="inp" type="number" inputmode="numeric" id="pk-drum-${n}" value="${log.drums_returned??''}">
+        ${photoBox('pkdrum-'+n,log.photo_drums?'✅ แนบแล้ว':'ถ่ายรูปถังเปล่าบนรถ','pkdrum-'+n)}</div>`;
+      const docTxt=[(s.docs||[]).join(' · '),s.docColor&&('Invoice '+s.docColor)].filter(Boolean).join(' + ');
+      if(docTxt) h+=`<div class="field"><label class="lbl">📄 เอกสารรับกลับ: ${pkEsc(docTxt)} ${(s.docs||[]).length?'<span class="req">*</span>':'(ถ้ามี)'}</label>${photoBox('pkdoc-'+n,log.photo_docs?'✅ แนบแล้ว':'ถ่ายรูปเอกสารที่ร้านเซ็นรับ','pkdoc-'+n)}</div>`;
+      h+=`<div class="field"><label class="lbl">🅿️ ค่าที่จอด (บาท) ${s.parking?'<span style="color:#6b7280;font-weight:400">· ร้านนี้ ~'+pkEsc(s.parking)+'</span>':'(ถ้ามี)'}</label>
+        <input class="inp" type="number" inputmode="decimal" id="pk-park-${n}" value="${log.parking_paid??''}" placeholder="0"></div>`;
+    }else{
+      h+=`<div class="field"><label class="lbl">📷 รูป${s.kind==='pickup'?'ของที่รับ (พาเลท/ปูน)':'เช็ค/ใบวางบิล'} (ถ้ามี)</label>${photoBox('pkoth-'+n,log.photo_other?'✅ แนบแล้ว':'แนบรูป','pkoth-'+n)}</div>`;
+    }
+    h+=`<div class="field"><label class="lbl">หมายเหตุ (ถ้ามี)</label><input class="inp" type="text" id="pk-note-${n}" value="${pkEsc(log.note||'')}" placeholder="เช่น ชื่อคนรับเงินค่าลง"></div>`;
+    return h;
+  }).join('<div class="sec-divider"></div>');
+  return `${blocks}<div class="sec-divider"></div>
+    ${ocrMileHubBlock(slot,'รูปเลขไมล์ออกจากจุดนี้','รูปเลขดุมล้อออกจากจุดนี้')}
+    <button class="btn btn-green" onclick="submitPkStop('${slot}')">✅ บันทึก · ออกจากจุดนี้</button>`;
+}
+async function pkUpload(key,prefix){   // อัปรูปทีละรูป · ต้องได้ลิงก์ (ออฟไลน์ = ให้ลองใหม่ ไม่เข้าคิว)
+  if(!photos[key]) return '';
+  const up=await postGAS({action:'uploadImage',orderId:order['Order ID'],userId:U.userId,imageBase64:photos[key],prefix},'📤 กำลังอัปโหลดรูป...');
+  if(up&&up.success&&up.fileUrl) return up.fileUrl;
+  throw new Error('อัปโหลดรูปไม่สำเร็จ — ตรวจสัญญาณแล้วกดใหม่');
+}
+let _pkBusy=false;
+async function submitPkStop(slot){
+  if(_pkBusy||ocrBusy()) return;
+  const mile=getMileValue('mile-'+slot), hub=getOcrValue('hub-'+slot);
+  if(!mile){toast('กรุณาดึงเลขไมล์จาก GPS หรือกรอกเอง');return;}
+  if(!hub){toast('กรุณาถ่ายเลขดุมล้อก่อนออกจากจุดนี้');return;}
+  const eChk=checkReading(slot,mile,hub); if(eChk){toast(eChk);return;}
+  const ss=pkStopsOf(slot), V=id=>(document.getElementById(id)||{}).value||'', C=id=>!!(document.getElementById(id)||{}).checked;
+  const go=id=>document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'center'});
+  // ตรวจครบก่อนอัปโหลด
+  for(const s of ss){ const n=s.seq, log=(pkInfo.logs||[]).find(l=>l.seq===n)||{};
+    if(s.kind!=='drop') continue;
+    const fee=V('pk-fee-'+n);
+    if((s.feePlan!=null||(s.feeOptions||[]).length)&&fee===''){toast('จุด '+n+': กรอกค่าลงที่จ่ายจริง (ไม่มี = 0)');go('pk-fee-'+n);return;}
+    if(C('pk-cut-'+n)&&(!V('pk-layers-'+n)||!V('pk-palafter-'+n))){toast('จุด '+n+': ตัดชั้น — กรอกชั้นที่ร้านรับ และพาเลทหลังตัด');go('pk-layers-'+n);return;}
+    if(Number(fee)>0&&!photos['pkbill-'+n]&&!log.photo_bill&&!(C('pk-nobill-'+n)&&(photos['pkpal-'+n]||log.photo_pallets))){
+      toast(C('pk-nobill-'+n)?'จุด '+n+': ร้านไม่ออกบิล — ถ่ายรูปพาเลทแทน':'จุด '+n+': ถ่ายรูปบิลค่าลง (ถ้าร้านไม่ออกบิล ติ๊ก "ร้านไม่ออกบิล" แล้วถ่ายรูปพาเลท)');go('box-pkbill-'+n);return;}
+    if(s.palletExchange&&V('pk-palret-'+n)===''){toast('จุด '+n+': กรอกจำนวนพาเลทที่แลกคืน');go('pk-palret-'+n);return;}
+    if(s.drums&&(V('pk-drum-'+n)===''||(!photos['pkdrum-'+n]&&!log.photo_drums))){toast('จุด '+n+': กรอกจำนวนถังเปล่า + ถ่ายรูปถัง');go('pk-drum-'+n);return;}
+    if((s.docs||[]).length&&!photos['pkdoc-'+n]&&!log.photo_docs){toast('จุด '+n+': ถ่ายรูปเอกสารรับกลับ ('+s.docs.join(' · ')+')');go('box-pkdoc-'+n);return;}
+  }
+  _pkBusy=true;
+  try{
+    for(const s of ss){ const n=s.seq, log=(pkInfo.logs||[]).find(l=>l.seq===n)||{};
+      const data={note:V('pk-note-'+n)};
+      if(s.kind==='drop'){
+        Object.assign(data,{fee_paid:V('pk-fee-'+n),layer_cut:C('pk-cut-'+n),layers_accepted:V('pk-layers-'+n),pallets_after:V('pk-palafter-'+n),no_bill:C('pk-nobill-'+n),
+          pallets_returned:V('pk-palret-'+n),drums_returned:V('pk-drum-'+n),parking_paid:V('pk-park-'+n),
+          photo_bill:await pkUpload('pkbill-'+n,'PK_BILL')||log.photo_bill||'', photo_pallets:await pkUpload('pkpal-'+n,'PK_PALLET')||log.photo_pallets||'',
+          photo_drums:await pkUpload('pkdrum-'+n,'PK_DRUM')||log.photo_drums||'', photo_docs:await pkUpload('pkdoc-'+n,'PK_DOC')||log.photo_docs||''});
+      }else data.photo_other=await pkUpload('pkoth-'+n,'PK_OTHER')||log.photo_other||'';
+      setLoading(true,'💾 กำลังบันทึกจุด '+n+'...');
+      let d; try{ const r=await fetch(PK_EDGE,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'pkStop',userId:U.userId,orderId:order['Order ID'],seq:n,data})}); d=await r.json(); }
+      finally{ setLoading(false); }
+      if(!d||!d.ok){toast('❌ จุด '+n+': '+((d&&d.error)||'บันทึกไม่สำเร็จ — ลองใหม่'));return;}
+      pkSaved[n]=Object.assign({saved:true},data);
+      ['pkbill-','pkpal-','pkdrum-','pkdoc-','pkoth-'].forEach(p=>{ delete photos[p+n]; });
+      if(d.mismatch) toast('📨 จุด '+n+': ค่าลงไม่ตรงแผน/ตัดชั้น — แจ้งแอดมินแล้ว');
+    }
+    // เลขไมล์/สภาพรถ ลงช่องเดิมของ log_weight แบบงานไร่แวะลาน → สถานะถัดไป
+    const CP={rampDrop:['ลานวางกระบะ','เลขไมล์ลานวางกระบะ','เลขดุมล้อลานวางกระบะ','สภาพรถลานวางกระบะ','ถึงลานวางกระบะ'],
+      client:['ลูกค้า','เลขไมล์ลูกค้า','เลขดุมล้อลูกค้า','สภาพรถลูกค้า','ออกจากลูกค้า'],ramp:['ลานขากลับ','เลขไมล์ลานขากลับ','เลขดุมล้อลานขากลับ','สภาพรถลานขากลับ','ถึงลานขากลับ']}[slot];
+    const fields={[CP[1]]:mile,[CP[2]]:hub,[CP[3]]:getLoadState(slot)};
+    let r;
+    if(slot==='client') [r]=await postGASParallel([{action:'driverArrived',orderId:order['Order ID'],userId:U.userId},
+      {action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:CP[0],fields}],'📦 กำลังบันทึกออกจากจุดส่ง...');
+    else r=await postGAS({action:'submitWeight',orderId:order['Order ID'],userId:U.userId,jobType,checkPoint:CP[0],fields},'📦 กำลังบันทึกออกจากจุดส่ง...');
+    if(!r?.success){toast('❌ '+(r?.error||'บันทึกเลขไมล์ไม่สำเร็จ — กดอีกครั้ง (ข้อมูลจุดส่งบันทึกแล้ว)'));return;}
+    hubHistory[slot]=parseFloat(hub)||0; saveReading(slot,mile,hub);
+    order['สถานะ']=CP[4];
+    try{ const r2=await fetch(PK_EDGE+'?action=pkJobInfo&userId='+encodeURIComponent(U.userId)+'&orderId='+encodeURIComponent(order['Order ID'])); const d2=await r2.json(); if(d2.ok) pkInfo=d2; }catch(e){}
+    renderTimeline(); window.scrollTo(0,0);
+    toast(r.queued?'📡 ไม่มีสัญญาณ — บันทึกเลขไมล์ไว้แล้ว จะส่งเองเมื่อมีเน็ต':'✅ บันทึกจุดส่งเรียบร้อย');
+  }catch(e){ toast('❌ '+(e.message||e)); }
+  finally{ _pkBusy=false; }
 }
 
 // ── QR เติมน้ำมันที่โรงงาน ─────────────────────────────────
@@ -1372,7 +1553,7 @@ function formFactory(){
   // renderTimeline() วาดใหม่ได้หลายครั้ง → กู้สถานะ QR กลับมา ไม่ให้คนขับสับสนว่าหาย
   setTimeout(_fuelResume, 0);
   // 🛢️ Bulk: กลับถึง SSB — ไม่มีใบชั่งลูกค้าที่โรงงาน (ชั่งปลายทางบันทึกตอนออกจากลูกค้าแล้ว) · เติมน้ำมันไม่บังคับ
-  let html = isBulkJob() ? `
+  let html = noFarmWeigh() ? `
     <div class="net-badge"><div class="net-lbl">🏁 กลับถึง SSB</div>
       <div style="font-size:13px;color:var(--g1);font-weight:600;line-height:1.6">ถ่ายเลขดุมล้อ + ดึงไมล์ GPS ตอนถึงโรงงาน<br>เติมน้ำมันที่โรงงาน = ขอ QR ให้ปั๊มสแกน (ถ้าไม่ได้เติมเว้นว่างได้)</div></div>
   ` : `
@@ -1393,17 +1574,17 @@ function formFactory(){
   `;
 
   // ✅ เช็คเพื่อซ่อนใบชั่งลานเท ถ้าไม่ได้แวะลาน
-  if (hasRamp && !isBulkJob()) {
+  if (hasRamp && !noFarmWeigh()) {
     html += `
       <div class="sec-lbl">⚖️ ใบชั่งลานเท (ที่โรงงาน)</div>
       ${ocrPhotoBox('factory-ramp-weight','รูปใบชั่งลานเท','weight-factory-ramp','ใบชั่งลาน')}
       <div class="sec-divider"></div>
     `;
   }
-  if (!isBulkJob()) html += `</div>`;   // ปิด fac-weigh-wrap (ซ่อนได้เมื่อโหมดวางกระบะเปล่า)
+  if (!noFarmWeigh()) html += `</div>`;   // ปิด fac-weigh-wrap (ซ่อนได้เมื่อโหมดวางกระบะเปล่า)
 
   html += `
-    ${isBulkJob() ? ocrMileHubBlock('factory','รูปเลขไมล์กลับถึง SSB','รูปเลขดุมล้อกลับถึง SSB') : ocrMileHubBlock('factory','รูปเลขไมล์หลังชั่งเสร็จ','รูปเลขดุมล้อหลังชั่งเสร็จ')}
+    ${noFarmWeigh() ? ocrMileHubBlock('factory','รูปเลขไมล์กลับถึง SSB','รูปเลขดุมล้อกลับถึง SSB') : ocrMileHubBlock('factory','รูปเลขไมล์หลังชั่งเสร็จ','รูปเลขดุมล้อหลังชั่งเสร็จ')}
     <div class="sec-divider"></div>
     <div class="sec-lbl">⛽ เติมน้ำมันที่โรงงาน</div>
     <div class="qr-card" id="fuel-qr-card">
@@ -1418,11 +1599,11 @@ function formFactory(){
     <div class="exp-section" style="margin-top:0">
       <div class="row2">
         <div>
-          <label class="lbl">จำนวนลิตร ${isBulkJob()?'(ถ้าเติม)':'<span class="req">*</span>'}</label>
+          <label class="lbl">จำนวนลิตร ${noFarmWeigh()?'(ถ้าเติม)':'<span class="req">*</span>'}</label>
           <input class="inp" type="number" id="fuel-factory-liter" placeholder="0" oninput="calcFuelFactory()">
         </div>
         <div>
-          <label class="lbl">ราคา/ลิตร ${isBulkJob()?'(ถ้าเติม)':'<span class="req">*</span>'}</label>
+          <label class="lbl">ราคา/ลิตร ${noFarmWeigh()?'(ถ้าเติม)':'<span class="req">*</span>'}</label>
           <select class="inp" id="fuel-factory-price"></select>
         </div>
       </div>
@@ -1486,6 +1667,7 @@ function formFactory(){
       </div>
     </div>
 
+    ${isPkJob() ? '<div class="note" style="font-size:12px;color:#6b7280;margin:-2px 2px 10px">📦 ค่าลงของ: บันทึกแล้วที่แต่ละจุดส่ง</div>' : `
     <div class="field">
       <label class="lbl">📦 ค่าลงของ</label>
       <div class="chips">
@@ -1500,6 +1682,7 @@ function formFactory(){
       </div>
     </div>
 
+    `}
     <div class="field">
       <label class="lbl">👷 ค่าจ้างเด็กลงสินค้านอก</label>
       <div class="chips">
@@ -1563,17 +1746,17 @@ function startScaleBox(){
   const heavy = getLoadState('start') === 'หนัก';
   const has = !!photos['scale-start'];
   return `<div class="field ${heavy ? '' : 'hide'}" id="start-scale-wrap">
-      <label class="lbl">${isBulkJob() ? 'รูปใบชั่งออก SSB' : 'รูปใบชั่ง (รถหนัก)'} ${START_SCALE_REQUIRED() ? '<span class="req">*</span>' : ''}</label>
+      <label class="lbl">${noFarmWeigh() ? 'รูปใบชั่งออก SSB' : 'รูปใบชั่ง (รถหนัก)'} ${START_SCALE_REQUIRED() ? '<span class="req">*</span>' : ''}</label>
       <label class="photo-box ${has ? 'has-photo' : ''}" id="box-start-scale" for="inp-start-scale">
         <input type="file" id="inp-start-scale" accept="image/*" capture="environment" onchange="onPhoto(this,'box-start-scale','lbl-start-scale','scale-start')">
-        <div class="ph-icon">📷</div><div class="ph-lbl" id="lbl-start-scale">${has ? '✅ แนบรูปแล้ว' : (isBulkJob() ? 'ถ่ายรูปใบชั่งออก (หลังโหลด+ชั่งเสร็จ)' : 'ถ่ายรูปใบชั่งตอนออกจากโรงงาน')}</div>
+        <div class="ph-icon">📷</div><div class="ph-lbl" id="lbl-start-scale">${has ? '✅ แนบรูปแล้ว' : (noFarmWeigh() ? 'ถ่ายรูปใบชั่งออก (หลังโหลด+ชั่งเสร็จ)' : 'ถ่ายรูปใบชั่งตอนออกจากโรงงาน')}</div>
       </label>
     </div>`;
 }
 
 // 🆕 ปุ่มเลือกสภาพรถ เบา/หนัก — ตั้ง default อัตโนมัติ คนขับแตะเปลี่ยนได้
 function loadStateChip(key){
-  const cur = loadStates[key] || (isBulkJob() && LOAD_DEFAULT_BULK[key]) || LOAD_DEFAULT[key] || 'เบา';
+  const cur = loadStates[key] || (isPkJob() && pkLoadDefault(key)) || (isBulkJob() && LOAD_DEFAULT_BULK[key]) || LOAD_DEFAULT[key] || 'เบา';
   loadStates[key] = cur;   // ตั้งค่า default ทันที กันคนขับลืมเลือก
   return `
     <div class="field">
@@ -1593,7 +1776,7 @@ function pickLoadState(key, val, el){
   if(key==='start'){ const w=document.getElementById('start-scale-wrap'); if(w) w.classList.toggle('hide', val!=='หนัก'); }   // รถหนัก → โชว์ช่องใบชั่ง
 }
 function getLoadState(key){
-  return loadStates[key] || (isBulkJob() && LOAD_DEFAULT_BULK[key]) || LOAD_DEFAULT[key] || 'เบา';
+  return loadStates[key] || (isPkJob() && pkLoadDefault(key)) || (isBulkJob() && LOAD_DEFAULT_BULK[key]) || LOAD_DEFAULT[key] || 'เบา';
 }
 
 // 🆕 คำนวณสรุป เบา/หนัก ฝั่งมือถือ (โชว์ใน dashboard เป็น preview — ค่าจริงคิดที่ server)
@@ -2279,6 +2462,7 @@ function renumberFuelRows(){
 function getVal(id){return document.getElementById(id)?.value||'';}
 
 function getPrevHub(key){
+  if(isPkJob()){ const p=prevCheckpoint(key); return p?(hubHistory[p]||0):0; }
   if(key==='client') return hubHistory.start||0;
   if(key==='ramp')   return hubHistory.client||0;
   if(key==='factory') return hasRamp?(hubHistory.ramp||0):(hubHistory.client||0);
@@ -2288,6 +2472,7 @@ function getPrevHub(key){
 // ── เช็คเลขไมล์ + ดุมล้อ ต้องมากกว่าจุดก่อนหน้าทั้งคู่ (เท่ากัน/น้อยกว่า = ไม่ผ่าน) ──
 // จุดก่อนหน้าของแต่ละ checkpoint
 function prevCheckpoint(key){
+  if(isPkJob()){ const s=pkSeq(), i=s.indexOf(key); return i>0?s[i-1]:null; }   // 📦 ตามลำดับจุดส่งจริง
   if(key==='rampDrop') return 'start';
   if(key==='client')   return hasRamp ? 'rampDrop' : 'start';
   if(key==='ramp')     return 'client';
@@ -2555,11 +2740,11 @@ function formFB_factory(){
     <div class="exp-section" style="margin-top:0">
       <div class="row2">
         <div>
-          <label class="lbl">จำนวนลิตร ${isBulkJob()?'(ถ้าเติม)':'<span class="req">*</span>'}</label>
+          <label class="lbl">จำนวนลิตร ${noFarmWeigh()?'(ถ้าเติม)':'<span class="req">*</span>'}</label>
           <input class="inp" type="number" id="fuel-factory-liter" placeholder="0" oninput="calcFuelFactory()">
         </div>
         <div>
-          <label class="lbl">ราคา/ลิตร ${isBulkJob()?'(ถ้าเติม)':'<span class="req">*</span>'}</label>
+          <label class="lbl">ราคา/ลิตร ${noFarmWeigh()?'(ถ้าเติม)':'<span class="req">*</span>'}</label>
           <select class="inp" id="fuel-factory-price"></select>
         </div>
       </div>
@@ -2657,7 +2842,7 @@ function prepareFactory(){
   saveReading('factory',mileF,hubF);
 
   const wClient=getWeightOcrData('weight-factory-client');
-  if(!factoryNoPalm && !isBulkJob() && (!wClient||!wClient.gross||!wClient.tare||!wClient.net)){toast('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');return;}
+  if(!factoryNoPalm && !noFarmWeigh() && (!wClient||!wClient.gross||!wClient.tare||!wClient.net)){toast('กรุณาถ่ายใบชั่งลูกค้าที่โรงงาน');return;}
 
   // ✅ เช็คและบังคับถ่ายใบชั่งลาน "เฉพาะกรณีที่มีแวะลานเท่านั้น" (ข้ามถ้าวางกระบะเปล่า)
   let wRamp = null;
@@ -2668,9 +2853,9 @@ function prepareFactory(){
 
   const fLiter=getVal('fuel-factory-liter');
   const fPrice=getVal('fuel-factory-price');
-  if(!factoryNoPalm && !isBulkJob() && !fLiter){toast('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
-  if(!factoryNoPalm && !isBulkJob() && !fPrice){toast('กรุณากรอกราคาน้ำมันโรงงาน');return;}
-  if(isBulkJob() && fLiter && !fPrice){toast('กรอกลิตรแล้ว — เลือกราคาน้ำมันด้วยครับ');return;}   // 🛢️ Bulk: เติมหรือไม่เติมก็ได้ แต่ถ้าเติมต้องครบ
+  if(!factoryNoPalm && !noFarmWeigh() && !fLiter){toast('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
+  if(!factoryNoPalm && !noFarmWeigh() && !fPrice){toast('กรุณากรอกราคาน้ำมันโรงงาน');return;}
+  if(noFarmWeigh() && fLiter && !fPrice){toast('กรอกลิตรแล้ว — เลือกราคาน้ำมันด้วยครับ');return;}   // 🛢️ Bulk: เติมหรือไม่เติมก็ได้ แต่ถ้าเติมต้องครบ
 
   collectedData={};
   
@@ -2680,7 +2865,7 @@ function prepareFactory(){
   collectedData.mileFactory=mileF;
   collectedData.hubFactory=hubF;
   
-  collectedData.weightFactClient = isBulkJob() ? null   // 🛢️ Bulk: น้ำหนักลงไว้ตอนออกจากลูกค้าแล้ว — ห้ามทับ
+  collectedData.weightFactClient = noFarmWeigh() ? null   // 🛢️ Bulk: น้ำหนักลงไว้ตอนออกจากลูกค้าแล้ว — ห้ามทับ
     : (factoryNoPalm || !wClient)
     ? {h:'', l:'', net:'', pricePerKg:'', totalAmount:'', fileUrl:''}   // วางกระบะเปล่า = ไม่มีน้ำหนัก
     : {h:wClient.gross, l:wClient.tare, net:wClient.net, pricePerKg:wClient.pricePerKg||'', totalAmount:wClient.totalAmount||'', fileUrl: urlClient};
@@ -2748,7 +2933,7 @@ function showDashboard(){
   rows.push({section:'📋 ข้อมูลออเดอร์'});
   rows.push({k:'เลขที่ออเดอร์', v:order['Order ID'], highlight:true});
   rows.push({k:'วันที่',        v:fmtDate(order['วันที่ต้องการ'])});
-  rows.push({k:isBulkJob()?'ส่งที่':'จุดรับ', v:order['จุดรับ']||'—'});
+  rows.push({k:noFarmWeigh()?'ส่งที่':'จุดรับ', v:order['จุดรับ']||'—'});
   if(isBulkJob()){ const b=bulkInfo(); rows.push({k:'ลูกค้า', v:order['ชื่อสวน']||'—'}); if(b.prod) rows.push({k:'สินค้า', v:b.prod+(b.qty?' · '+fmtKg(b.qty)+' กก.':'')}); }
   if(hasRamp) rows.push({k:'แวะลานเท 🏭', v:order['จุดรับเพิ่ม']||'—'});
 
@@ -2797,7 +2982,11 @@ function showDashboard(){
     rows.push({k:'📊 % วิ่งรถหนัก', v:`${ls.pct}%`, highlight:true});
   }
 
-  if(isBulkJob()){
+  if(isPkJob()){   // 📦 สรุปรายจุดที่บันทึกแล้ว (ค่าลงจริง/ตัดชั้น/พาเลทคืน/ถังเปล่า)
+    rows.push({section:'📦 จุดส่ง'});
+    ((pkInfo&&pkInfo.stops)||[]).forEach(s=>{ const l=pkSaved[s.seq]||{};
+      rows.push({k:'จุด '+s.seq+' · '+s.name, v:[l.fee_paid!=null&&l.fee_paid!==''?'ค่าลง '+Number(l.fee_paid).toLocaleString()+' บาท':'', l.layer_cut?'ตัดชั้น':'', l.pallets_returned?'พาเลทคืน '+l.pallets_returned:'', l.drums_returned?'ถัง '+l.drums_returned:''].filter(Boolean).join(' · ')||(l.saved?'บันทึกแล้ว':'—')}); });
+  }else if(isBulkJob()){
     rows.push({section:'⚖️ ชั่ง / ใบชั่งปลายทาง'});
     rows.push({k:'สถานะ', v:'บันทึกแล้วตอนออกจากลูกค้า', highlight:true});
   }else if(d.noPalm){
@@ -2820,7 +3009,7 @@ function showDashboard(){
       rows.push({k:'สุทธิปลายทาง',  v:`${Math.round(d.weightFactory.net).toLocaleString()} กก.`,highlight:true});
     }
   }
-  rows.push({k:isBulkJob()?'บิล':'เจ้าของใบ',v:order['ชื่อในบิล']||order['ชื่อสวน']||'—'});
+  if(!isPkJob()) rows.push({k:isBulkJob()?'บิล':'เจ้าของใบ',v:order['ชื่อในบิล']||order['ชื่อสวน']||'—'});
 
   rows.push({section:'💰 ค่าใช้จ่าย'});
   if(d.fuelFactory && d.fuelFactory.liter) rows.push({k:'⛽ น้ำมันโรงงาน',v:`${d.fuelFactory.liter} ลิตร × ${d.fuelFactory.price} = ${d.fuelFactory.total} บาท`});
