@@ -956,8 +956,8 @@ function formPkStop(slot){
           <div><label class="lbl">ร้านรับกี่ชั้น</label><input class="inp" type="number" inputmode="numeric" id="pk-layers-${n}" value="${log.layers_accepted??''}"></div>
           <div><label class="lbl">พาเลทหลังตัด</label><input class="inp" type="number" inputmode="numeric" id="pk-palafter-${n}" value="${log.pallets_after??''}"></div>
         </div></div>
-      <div class="field"><label class="lbl">📷 บิลค่าลง</label>${photoBox('pkbill-'+n,log.photo_bill?'✅ แนบแล้ว (ถ่ายใหม่ได้)':'ถ่ายรูปบิลค่าลง','pkbill-'+n)}
-        <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:6px"><input type="checkbox" id="pk-nobill-${n}" ${log.no_bill?'checked':''} onchange="pkToggle('pk-palbox-${n}',this.checked)"> ร้านไม่ออกบิล</label>
+      <div class="field"><div id="pk-billbox-${n}" class="${log.no_bill?'hide':''}"><label class="lbl">📷 บิลค่าลง</label>${photoBox('pkbill-'+n,log.photo_bill?'✅ แนบแล้ว (ถ่ายใหม่ได้)':'ถ่ายรูปบิลค่าลง','pkbill-'+n)}</div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:6px"><input type="checkbox" id="pk-nobill-${n}" ${log.no_bill?'checked':''} onchange="pkToggle('pk-palbox-${n}',this.checked);pkToggle('pk-billbox-${n}',!this.checked)"> ร้านไม่ออกบิล</label>
         <div id="pk-palbox-${n}" class="${log.no_bill?'':'hide'}" style="margin-top:6px">${photoBox('pkpal-'+n,log.photo_pallets?'✅ แนบแล้ว':'ถ่ายรูปพาเลทที่ลงแล้ว (แทนบิล)','pkpal-'+n)}</div></div>`;
       if(s.palletExchange) h+=`<div class="field"><label class="lbl">♻️ พาเลทแลกคืน (ใบ) <span class="req">*</span></label><input class="inp" type="number" inputmode="numeric" id="pk-palret-${n}" value="${log.pallets_returned??''}" placeholder="${s.pallets||''}">
         <div style="font-size:12px;color:#6b7280;margin-top:3px">ร้านนี้แลกพาเลท — ตัดชั้นแล้วนับตามพาเลทหลังตัด</div></div>`;
@@ -998,8 +998,8 @@ async function submitPkStop(slot){
     const fee=V('pk-fee-'+n);
     if((s.feePlan!=null||(s.feeOptions||[]).length)&&fee===''){toast('จุด '+n+': กรอกค่าลงที่จ่ายจริง (ไม่มี = 0)');go('pk-fee-'+n);return;}
     if(C('pk-cut-'+n)&&(!V('pk-layers-'+n)||!V('pk-palafter-'+n))){toast('จุด '+n+': ตัดชั้น — กรอกชั้นที่ร้านรับ และพาเลทหลังตัด');go('pk-layers-'+n);return;}
-    if(Number(fee)>0&&!photos['pkbill-'+n]&&!log.photo_bill&&!(C('pk-nobill-'+n)&&(photos['pkpal-'+n]||log.photo_pallets))){
-      toast(C('pk-nobill-'+n)?'จุด '+n+': ร้านไม่ออกบิล — ถ่ายรูปพาเลทแทน':'จุด '+n+': ถ่ายรูปบิลค่าลง (ถ้าร้านไม่ออกบิล ติ๊ก "ร้านไม่ออกบิล" แล้วถ่ายรูปพาเลท)');go('box-pkbill-'+n);return;}
+    if(Number(fee)>0&&C('pk-nobill-'+n)&&!photos['pkpal-'+n]&&!log.photo_pallets){toast('จุด '+n+': ร้านไม่ออกบิล — ถ่ายรูปพาเลทแทน');go('box-pkpal-'+n);return;}
+    if(Number(fee)>0&&!C('pk-nobill-'+n)&&!photos['pkbill-'+n]&&!log.photo_bill){toast('จุด '+n+': ถ่ายรูปบิลค่าลง (ถ้าร้านไม่ออกบิล ติ๊ก "ร้านไม่ออกบิล" แล้วถ่ายรูปพาเลท)');go('box-pkbill-'+n);return;}
     if(s.palletExchange&&V('pk-palret-'+n)===''){toast('จุด '+n+': กรอกจำนวนพาเลทที่แลกคืน');go('pk-palret-'+n);return;}
     if(s.drums&&(V('pk-drum-'+n)===''||(!photos['pkdrum-'+n]&&!log.photo_drums))){toast('จุด '+n+': กรอกจำนวนถังเปล่า + ถ่ายรูปถัง');go('pk-drum-'+n);return;}
     if((s.docs||[]).length&&!photos['pkdoc-'+n]&&!log.photo_docs){toast('จุด '+n+': ถ่ายรูปเอกสารรับกลับ ('+s.docs.join(' · ')+')');go('box-pkdoc-'+n);return;}
@@ -1011,7 +1011,7 @@ async function submitPkStop(slot){
       if(s.kind==='drop'){
         Object.assign(data,{fee_paid:V('pk-fee-'+n),layer_cut:C('pk-cut-'+n),layers_accepted:V('pk-layers-'+n),pallets_after:V('pk-palafter-'+n),no_bill:C('pk-nobill-'+n),
           pallets_returned:V('pk-palret-'+n),drums_returned:V('pk-drum-'+n),parking_paid:V('pk-park-'+n),
-          photo_bill:await pkUpload('pkbill-'+n,'PK_BILL')||log.photo_bill||'', photo_pallets:await pkUpload('pkpal-'+n,'PK_PALLET')||log.photo_pallets||'',
+          photo_bill:C('pk-nobill-'+n)?'':(await pkUpload('pkbill-'+n,'PK_BILL')||log.photo_bill||''), photo_pallets:C('pk-nobill-'+n)?(await pkUpload('pkpal-'+n,'PK_PALLET')||log.photo_pallets||''):'',
           photo_drums:await pkUpload('pkdrum-'+n,'PK_DRUM')||log.photo_drums||'', photo_docs:await pkUpload('pkdoc-'+n,'PK_DOC')||log.photo_docs||''});
       }else data.photo_other=await pkUpload('pkoth-'+n,'PK_OTHER')||log.photo_other||'';
       setLoading(true,'💾 กำลังบันทึกจุด '+n+'...');
