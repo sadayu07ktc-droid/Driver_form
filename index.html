@@ -319,6 +319,7 @@ let hubHistory={start:0, client:0, ramp:0};
 let readings={};   // เก็บ {mile,hub} ของแต่ละจุดที่ผ่านแล้ว เพื่อเช็คว่ามากขึ้นเรื่อยๆ
 let collectedData={};
 let ocrData={};
+let vehLimits=null;   // ⚖️ พิกัดน้ำหนักรถ (ทะเบียน → {gvw,tare}) จาก Edge driver-form · โหลดไม่ได้ = ไม่เตือน
 let priceOptions=[];
 let ocrPending=0;   // ✅ นับจำนวน OCR ที่กำลังอ่านอยู่ (กันกดส่งก่อน OCR เสร็จ)
 let gpsMile={};     // 🆕 เก็บเลขไมล์จาก GPS แต่ละจุด {mile-start:..., mile-client:...}
@@ -673,6 +674,7 @@ function openJob(orderId){
   loadStates={};                // 🆕 ล้างสภาพรถของงานก่อนหน้า
   factoryNoPalm=false;          // 🆕 รีเซ็ตโหมดวางกระบะเปล่า
   pkInfo=null; if(isPkJob()) loadPkInfo();   // 📦 จุดส่ง/ค่าลง/ร้าน จาก Edge pk-driver (วาดใหม่เมื่อโหลดเสร็จ)
+  loadVehLimits();              // ⚖️ พิกัดน้ำหนักรถ (ไม่บล็อกการเปิดงาน)
   readings={}; seedReadingsFromOrder();
   document.getElementById('job-list').classList.add('hide');
   document.getElementById('job-form').classList.remove('hide');
@@ -1429,6 +1431,7 @@ async function savePlate(){
   order['ทะเบียนรถ'] = saved;
   plateOk = true;
   renderPlateBox();
+  owRefresh();   // ⚖️ สลับคัน/หาง → พิกัดน้ำหนักเปลี่ยนตาม
   pullActiveGps(!!r.changed);   // สลับคันแล้ว → ดึงไมล์ GPS ใหม่ตามคันที่เลือก (ล้างค่าคันเก่าทิ้ง)
   if(r.changed) toast('✅ เปลี่ยนเป็น '+saved+' แล้วครับ');
 }
@@ -1713,6 +1716,7 @@ function ocrPhotoBox(id, label, key, type){
   return `
     <div class="field">
       <label class="lbl">${label} <span class="req">*</span></label>
+      ${isWeight ? `<div class="ow-cap">${owCapHtml()}</div>` : ''}
       <label class="photo-box ${has ? 'has-photo' : ''}" id="box-${id}" for="inp-${id}">
         <input type="file" id="inp-${id}" accept="image/*" capture="environment"
                onchange="onOcrPhoto(this,'box-${id}','lbl-${id}','${key}','${type}')">
@@ -1744,6 +1748,8 @@ function ocrMileHubBlock(key, mileLabel, hubLabel){
 const START_SCALE_REQUIRED = () => !isFarBase();
 function startScaleBox(){
   const heavy = getLoadState('start') === 'หนัก';
+  // ⚖️ Packing / รถที่มีพิกัดน้ำหนัก: อ่านเลขจากใบชั่งออกด้วย เพื่อเตือนน้ำหนักเกินก่อนออกรถ (ชนิด "ใบชั่งลาน" = อ่านหนัก/เบา/สุทธิ ไม่อ่านราคา)
+  if(isPkJob() || vehLimit()) return `<div class="${heavy ? '' : 'hide'}" id="start-scale-wrap">${ocrPhotoBox('start-scale', noFarmWeigh() ? 'รูปใบชั่งออก SSB' : 'รูปใบชั่ง (รถหนัก)', 'scale-start', 'ใบชั่งลาน')}</div>`;
   const has = !!photos['scale-start'];
   return `<div class="field ${heavy ? '' : 'hide'}" id="start-scale-wrap">
       <label class="lbl">${noFarmWeigh() ? 'รูปใบชั่งออก SSB' : 'รูปใบชั่ง (รถหนัก)'} ${START_SCALE_REQUIRED() ? '<span class="req">*</span>' : ''}</label>
@@ -1883,24 +1889,86 @@ function weightHints(data){
     + '</div>';
 }
 function escHtml(v){ return String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// ⚖️ เตือนน้ำหนักเกิน (2026-11-04 คุณน้อง: Loading Planner ยังไม่เสร็จ → เตือนหน้าคนขับทุกจุดที่แนบใบชั่ง) · เตือนอย่างเดียว ไม่บล็อกการส่ง
+//   พิกัดจากตาราง vehicles (gvw_kg = รวมตัวรถ · tare_kg = รถเปล่า) · คันที่ไม่มีข้อมูล = ไม่โชว์อะไร
+//   เทียบ "รถหนัก" บนใบกับ gvw · ไม่มีรถหนักค่อยเทียบ "สุทธิ" กับ gvw−tare · เปลี่ยนหาง (ทะเบียนไม่ตรงทั้งคู่) ใช้ gvw ของหัว ไม่ใช้ tare เพราะน้ำหนักหางต่างกัน
+function owPlate(s){ return String(s==null?'':s).replace(/[\s\-\.]/g,''); }
+async function loadVehLimits(){
+  if(vehLimits) return;
+  try{
+    const r=await fetch(EDGE_DRV_URL+'?action=getVehLimits');
+    const j=await r.json();
+    if(!j||!j.ok||!Array.isArray(j.limits)) return;
+    const m={}; j.limits.forEach(x=>{ m[owPlate(x.plate)]=x; });
+    vehLimits=m;
+    owRefresh();
+  }catch(e){ console.warn('getVehLimits', e); }
+}
+function vehLimit(){
+  if(!vehLimits||!order) return null;
+  const p=owPlate(order['ทะเบียนรถ']);
+  if(!p) return null;
+  if(vehLimits[p]) return {gvw:vehLimits[p].gvw,tare:vehLimits[p].tare};
+  const head=p.split(',')[0], k=Object.keys(vehLimits).find(x=>x.split(',')[0]===head);
+  return k?{gvw:vehLimits[k].gvw,tare:0}:null;
+}
+function owCheck(d){
+  const lim=vehLimit();
+  if(!lim||!d) return null;
+  const n=x=>Number(String(x==null?'':x).replace(/[^\d.]/g,''))||0;
+  const g=n(d.gross), net=n(d.net), pay=lim.tare?lim.gvw-lim.tare:0;
+  if(g>0) return {label:'รถหนักบนใบชั่ง',limLabel:'พิกัดรวมตัวรถ',actual:g,limit:lim.gvw,over:g-lim.gvw};
+  if(net>0&&pay>0) return {label:'สุทธิบนใบชั่ง',limLabel:'บรรทุกได้',actual:net,limit:pay,over:net-pay};
+  return null;
+}
+function owHtml(d){
+  const c=owCheck(d);
+  if(!c) return '';
+  if(c.over>0) return `<div style="margin-top:8px;text-align:left;background:#fef2f2;border:1.5px solid #dc2626;border-radius:10px;padding:9px 11px;color:#991b1b;font-size:13px;line-height:1.55">
+      <div style="font-size:15px;font-weight:800">🚫 น้ำหนักเกิน ${fmtKg(c.over)} กก.</div>
+      <div>${c.label} ${fmtKg(c.actual)} กก. · ${c.limLabel} ${fmtKg(c.limit)} กก.</div>
+      <div style="font-size:12px;margin-top:2px">เลขอ่านผิดให้แก้ในช่องด้านบน · ถ้าเกินจริงแจ้งแอดมินก่อนออกรถ</div>
+    </div>`;
+  return `<div style="margin-top:8px;text-align:left;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:7px 11px;color:var(--g1);font-size:12.5px;font-weight:600;line-height:1.5">
+      ✅ น้ำหนักไม่เกิน · ${c.label} ${fmtKg(c.actual)} / ${fmtKg(c.limit)} กก. (เหลือ ${fmtKg(-c.over)})
+    </div>`;
+}
+function owCapHtml(){
+  const lim=vehLimit();
+  if(!lim) return '';
+  return `<div style="font-size:12px;color:var(--g1);margin:-2px 2px 6px;line-height:1.5">⚖️ รถคันนี้ รวมตัวรถไม่เกิน <b>${fmtKg(lim.gvw)}</b> กก.${lim.tare?` · บรรทุกได้ <b>${fmtKg(lim.gvw-lim.tare)}</b> กก.`:''}</div>`;
+}
+function owInput(key){   // คนขับแก้เลข → เช็คใหม่ทันที + จำค่าที่แก้ไว้ กันหายตอนวาดฟอร์มใหม่
+  const d=getWeightOcrData(key);
+  if(ocrData[key]){ ocrData[key].gross=d.gross; ocrData[key].tare=d.tare; ocrData[key].net=d.net; }
+  const s=document.querySelector('.ow-slot[data-key="'+key+'"]');
+  if(s) s.innerHTML=owHtml(d);
+}
+function owRefresh(){
+  document.querySelectorAll('.ow-cap').forEach(e=>{ e.innerHTML=owCapHtml(); });
+  document.querySelectorAll('.ow-slot').forEach(e=>{ e.innerHTML=owHtml(getWeightOcrData(e.dataset.key)); });
+}
+
 function buildWeightEditFields(key, type, data){
   const showPrice = (type === 'ใบชั่งลูกค้า');
   return `
     <div class="row3" style="margin-top:8px">
       <div>
         <label class="lbl">รถหนัก (กก.)</label>
-        <input class="inp" id="ocr-${key}-gross" value="${data.gross||''}">
+        <input class="inp" id="ocr-${key}-gross" value="${data.gross||''}" oninput="owInput('${key}')">
       </div>
       <div>
         <label class="lbl">รถเบา (กก.)</label>
-        <input class="inp" id="ocr-${key}-tare" value="${data.tare||''}">
+        <input class="inp" id="ocr-${key}-tare" value="${data.tare||''}" oninput="owInput('${key}')">
       </div>
       <div>
         <label class="lbl">น้ำหนักสุทธิ (กก.)</label>
-        <input class="inp" id="ocr-${key}-net" value="${data.net||''}">
+        <input class="inp" id="ocr-${key}-net" value="${data.net||''}" oninput="owInput('${key}')">
       </div>
     </div>
     ${weightHints(data)}
+    <div class="ow-slot" data-key="${key}">${owHtml(data)}</div>
     ${showPrice ? `
     <div class="row2" style="margin-top:8px">
       <div>
@@ -2354,6 +2422,8 @@ function onPhoto(input,boxId,lblId,key){
       // แสดงตัวเลขแก้ไขได้ทันที ไม่มี read-only display ซ้ำ
       ocrValEl.innerHTML=buildWeightEditFields(key,type,ocrData[key]);
       if(ocrData[key].warn.length){ document.getElementById(lblId).textContent='⚠️ อ่านแล้ว — ตรวจตัวเลขก่อนบันทึก'; toast('⚠️ '+ocrData[key].warn[0],'warn',7000); }
+      const ow=owCheck(ocrData[key]);
+      if(ow&&ow.over>0){ document.getElementById(lblId).textContent='🚫 น้ำหนักเกิน '+fmtKg(ow.over)+' กก.'; toast('น้ำหนักเกิน '+fmtKg(ow.over)+' กก.\n'+ow.label+' '+fmtKg(ow.actual)+' · '+ow.limLabel+' '+fmtKg(ow.limit)+' กก.','error',8000); }
     }else{
       // ไมล์/ดุมล้อ — โชว์ตัวเลขใหญ่ + ช่องแก้ไข
       ocrValEl.textContent=res.value||'';
@@ -2555,11 +2625,13 @@ async function submitStart(){
     return;
   }
   const startFields={'เลขไมล์เริ่ม':mileS,'เลขดุมล้อเริ่ม':hubS,'สภาพรถเริ่ม':getLoadState('start')};
+  const scaleUrl=startHeavy ? ((ocrData['scale-start']&&ocrData['scale-start'].fileUrl)||'') : '';   // ⚖️ OCR เก็บรูปให้แล้ว ไม่ต้องอัปซ้ำ
+  if(scaleUrl) startFields['รูปใบชั่งเริ่ม']=scaleUrl;
 
   // ⚡ ยิงพร้อมกัน: สถานะ (orders) + บันทึกไมล์/ดุม (ชีต LOG_WEIGHT) — คนละที่ ไม่ทับกัน
   //    รถหนัก+มีรูปใบชั่ง → อัปโหลดรูปพร้อมเปลี่ยนสถานะ แล้วค่อยบันทึกไมล์/ดุม+ลิงก์รูป
   let r;
-  if(startHeavy && photos['scale-start']){
+  if(startHeavy && photos['scale-start'] && !scaleUrl){
     const [rs, up]=await postGASParallel([
       {action:'driverStartJob',orderId:order['Order ID'],userId:U.userId},
       {action:'uploadImage',orderId:order['Order ID'],userId:U.userId,imageBase64:photos['scale-start'],prefix:'SCALE_START'}
