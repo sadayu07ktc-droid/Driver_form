@@ -504,7 +504,7 @@ const fmtKg = n => Number(n||0).toLocaleString('en-US');
 
 // 📦 งาน Packing (2026-10-30) — ออเดอร์ ORD-PK-… สร้างเองตอนคนขับกดรับการ์ด LINE (Edge pk-plan + trigger)
 //   คุณน้อง: "ทำเหมือนงานไร่แวะลาน" → จุดส่งลงช่องเลขไมล์เดิมตามลำดับ (1 จุด = ลูกค้า · 2 = ลูกค้า → ลานขากลับ · 3+ = ลานวางกระบะ → ลูกค้า → ลานขากลับ)
-//   ออกจาก SSB = รถหนัก + ใบชั่งขาออก · ลงของแต่ละจุด: ค่าลงจริง / ตัดชั้น (ติ๊กอย่างเดียว) / รูปบิล (ถ้ามี) / พาเลทแลกคืน / ถังเปล่า / ค่าที่จอด (เอกสาร = หมายเหตุ นำไปจากโรงงาน ไม่ต้องถ่ายรูป)
+//   ออกจาก SSB = รถหนัก + ใบชั่งขาออก · ลงของแต่ละจุด: ค่าลงจริง / ตัดชั้น (ติ๊กอย่างเดียว) / รูปบิล (ถ้ามี) / พาเลทแลกคืน+รูปพาเลท / ถังเปล่า / ค่าที่จอด (เอกสาร = หมายเหตุ นำไปจากโรงงาน ไม่ต้องถ่ายรูป)
 //   ข้อมูลรายจุด → Edge pk-driver (pk_stop_logs) · ค่าลงไม่ตรงแผน/ตัดชั้น → แจ้งแอดมินที่จ่ายงาน
 const isPkJob = () => jobType === 'Packing' && /^ORD-PK-/.test(String((order && order['Order ID']) || ''));
 const noFarmWeigh = () => isBulkJob() || isPkJob();   // ไม่มีใบชั่งลูกค้าที่โรงงาน · น้ำมันโรงงานไม่บังคับ
@@ -952,7 +952,8 @@ function formPkStop(slot){
         <input type="checkbox" id="pk-cut-${n}" ${log.layer_cut?'checked':''} style="width:20px;height:20px"> ✂️ หน้างานตัดชั้น / ต่อพาเลทใหม่</label></div>
       <div class="field"><label class="lbl">📷 บิลค่าลง (ถ้ามี)</label>${photoBox('pkbill-'+n,log.photo_bill?'✅ แนบแล้ว (ถ่ายใหม่ได้)':'ถ่ายรูปบิลค่าลง','pkbill-'+n)}</div>`;
       if(s.palletExchange) h+=`<div class="field"><label class="lbl">♻️ พาเลทแลกคืน (ใบ) <span class="req">*</span></label><input class="inp" type="number" inputmode="numeric" id="pk-palret-${n}" value="${log.pallets_returned??''}" placeholder="${s.pallets||''}">
-        <div style="font-size:12px;color:#6b7280;margin-top:3px">ร้านนี้แลกพาเลท — ตัดชั้นแล้วนับตามพาเลทหลังตัด</div></div>`;
+        <div style="font-size:12px;color:#6b7280;margin:3px 0 8px">ร้านนี้แลกพาเลท — ตัดชั้นแล้วนับตามพาเลทหลังตัด · ไม่ได้แลกคืน ใส่ 0</div>
+        ${photoBox('pkpal-'+n,log.photo_pallets?'✅ แนบแล้ว (ถ่ายใหม่ได้)':'ถ่ายรูปพาเลทที่แลกคืน','pkpal-'+n)}</div>`;
       if(s.drums) h+=`<div class="field"><label class="lbl">🛢️ รับถังเปล่ากลับกี่ถัง <span class="req">*</span></label><input class="inp" type="number" inputmode="numeric" id="pk-drum-${n}" value="${log.drums_returned??''}">
         ${photoBox('pkdrum-'+n,log.photo_drums?'✅ แนบแล้ว':'ถ่ายรูปถังเปล่าบนรถ','pkdrum-'+n)}</div>`;
       if(pkDocTxt(s)) h+=`<div style="font-size:13px;color:#7A5B00;margin:0 2px 12px">📄 หมายเหตุเอกสาร (นำไปจากโรงงาน): <b>${pkEsc(pkDocTxt(s))}</b></div>`;
@@ -989,6 +990,7 @@ async function submitPkStop(slot){
     const fee=V('pk-fee-'+n);
     if((s.feePlan!=null||(s.feeOptions||[]).length)&&fee===''){toast('จุด '+n+': กรอกค่าลงที่จ่ายจริง (ไม่มี = 0)');go('pk-fee-'+n);return;}
     if(s.palletExchange&&V('pk-palret-'+n)===''){toast('จุด '+n+': กรอกจำนวนพาเลทที่แลกคืน');go('pk-palret-'+n);return;}
+    if(s.palletExchange&&Number(V('pk-palret-'+n))>0&&!photos['pkpal-'+n]&&!log.photo_pallets){toast('จุด '+n+': ถ่ายรูปพาเลทที่แลกคืน');go('box-pkpal-'+n);return;}
     if(s.drums&&(V('pk-drum-'+n)===''||(!photos['pkdrum-'+n]&&!log.photo_drums))){toast('จุด '+n+': กรอกจำนวนถังเปล่า + ถ่ายรูปถัง');go('pk-drum-'+n);return;}
   }
   _pkBusy=true;
@@ -998,7 +1000,7 @@ async function submitPkStop(slot){
       if(s.kind==='drop'){
         Object.assign(data,{fee_paid:V('pk-fee-'+n),layer_cut:C('pk-cut-'+n),
           pallets_returned:V('pk-palret-'+n),drums_returned:V('pk-drum-'+n),parking_paid:V('pk-park-'+n),
-          photo_bill:await pkUpload('pkbill-'+n,'PK_BILL')||log.photo_bill||'',
+          photo_bill:await pkUpload('pkbill-'+n,'PK_BILL')||log.photo_bill||'', photo_pallets:await pkUpload('pkpal-'+n,'PK_PALLET')||log.photo_pallets||'',
           photo_drums:await pkUpload('pkdrum-'+n,'PK_DRUM')||log.photo_drums||''});
       }else data.photo_other=await pkUpload('pkoth-'+n,'PK_OTHER')||log.photo_other||'';
       setLoading(true,'💾 กำลังบันทึกจุด '+n+'...');
@@ -1006,7 +1008,7 @@ async function submitPkStop(slot){
       finally{ setLoading(false); }
       if(!d||!d.ok){toast('❌ จุด '+n+': '+((d&&d.error)||'บันทึกไม่สำเร็จ — ลองใหม่'));return;}
       pkSaved[n]=Object.assign({saved:true},data);
-      ['pkbill-','pkdrum-','pkoth-'].forEach(p=>{ delete photos[p+n]; });
+      ['pkbill-','pkpal-','pkdrum-','pkoth-'].forEach(p=>{ delete photos[p+n]; });
       if(d.mismatch) toast('📨 จุด '+n+': ค่าลงไม่ตรงแผน/ตัดชั้น — แจ้งแอดมินแล้ว');
     }
     // เลขไมล์/สภาพรถ ลงช่องเดิมของ log_weight แบบงานไร่แวะลาน → สถานะถัดไป
