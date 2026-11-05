@@ -513,13 +513,15 @@ let pkInfo = null;
 const pkSlots = () => { const s = []; ((pkInfo && pkInfo.stops) || []).forEach(x => { if (s.indexOf(x.slot) < 0) s.push(x.slot); }); return s.length ? s : ['client']; };
 const pkSeq = () => ['start'].concat(pkSlots(), ['factory']);
 const pkStopsOf = slot => ((pkInfo && pkInfo.stops) || []).filter(x => x.slot === slot);
-// สภาพรถหลังออกจากจุด: ลงของ = เบา (ถ้าเก็บของกลับ/รับถังเปล่า = หนัก) · จุดรับของ (พาเลท/ปูนขาว) = หนัก · วางบิล/รับเช็ค = คงตามช่วงก่อน
+// สภาพรถหลังออกจากจุด: ลงของจุดสุดท้าย = เบา · ยังมีจุดลงของถัดไป = หนัก (ยังมีของ · คุณน้อง 5 พ.ย.) · เก็บของกลับ/รับถังเปล่า = หนัก · จุดรับของ (พาเลท/ปูนขาว) = หนัก · วางบิล/รับเช็ค = คงตามช่วงก่อน
 function pkLoadDefault(key){
   if (key === 'start') return 'หนัก';
   const ss = pkStopsOf(key); if (!ss.length) return 'เบา';
   const last = ss[ss.length - 1];
   if (last.kind === 'pickup' || last.drums || /เก็บ/.test(last.task || '')) return 'หนัก';
   if (last.kind === 'dist_only' || last.kind === 'tbd') { const seq = pkSeq(), i = seq.indexOf(key); return i > 0 ? getLoadState(seq[i - 1]) : 'เบา'; }
+  const all = (pkInfo && pkInfo.stops) || [];
+  if (all.slice(all.indexOf(last) + 1).some(x => x.kind === 'drop')) return 'หนัก';
   return 'เบา';
 }
 async function loadPkInfo(){
