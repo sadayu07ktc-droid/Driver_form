@@ -950,6 +950,7 @@ function formPkStop(slot){
     if(s.team||(s.phones||[]).length) h+=`<div style="font-size:13px;margin:0 2px 8px">📞 ทีมลง ${pkEsc(s.team||'')} ${(s.phones||[]).map(p=>`<a href="tel:${p}" style="color:#1E4FA3;font-weight:700;text-decoration:underline;margin-right:8px">${pkTel(p)}</a>`).join('')}</div>`;
     if(s.kind==='tbd') h+=`<div class="net-badge" style="background:#FEF6DC"><div style="font-size:13px;color:#7A5B00">⚠️ ใบงานไม่ได้บอกที่ — ถามแอดมินก่อนไป</div></div>`;
     if(s.kind==='drop'){
+      if(pkDocTxt(s)) h+=`<div style="font-size:13px;color:#7A5B00;margin:0 2px 12px">📄 หมายเหตุเอกสาร (นำไปจากโรงงาน): <b>${pkEsc(pkDocTxt(s))}</b></div>`;
       const fee=log.unload_fee_paid!=null?log.unload_fee_paid:(s.feePlan!=null?s.feePlan:'');
       h+=`<div class="field"><label class="lbl">ค่าลงที่จ่ายจริง (บาท) ${s.feePlan!=null||(s.feeOptions||[]).length?'<span class="req">*</span>':'(ถ้ามี)'}</label>
         <input class="inp" type="number" inputmode="decimal" id="pk-fee-${n}" value="${fee}" placeholder="0">
@@ -969,7 +970,6 @@ function formPkStop(slot){
         <input type="checkbox" id="pk-drumon-${n}" ${log.drums_returned>0?'checked':''} onchange="document.getElementById('pk-drumbox-${n}').classList.toggle('hide',!this.checked)" style="width:20px;height:20px"> 🛢️ มีถังเปล่ารับกลับ${s.drums?' (ใบงานให้เก็บถัง)':''}</label>
         <div id="pk-drumbox-${n}" class="mt8 ${log.drums_returned>0?'':'hide'}"><label class="lbl">จำนวนถัง <span class="req">*</span></label><input class="inp" type="number" inputmode="numeric" id="pk-drum-${n}" value="${log.drums_returned??''}" style="margin-bottom:8px">
         ${photoBox('pkdrum-'+n,log.photo_drums?'✅ แนบแล้ว (ถ่ายใหม่ได้)':'ถ่ายรูปถังเปล่าบนรถ','pkdrum-'+n)}</div></div>`;
-      if(pkDocTxt(s)) h+=`<div style="font-size:13px;color:#7A5B00;margin:0 2px 12px">📄 หมายเหตุเอกสาร (นำไปจากโรงงาน): <b>${pkEsc(pkDocTxt(s))}</b></div>`;
       h+=`<div class="field"><label class="lbl">🅿️ ค่าที่จอด (บาท) ${s.parking?'<span style="color:#6b7280;font-weight:400">· ร้านนี้ ~'+pkEsc(s.parking)+'</span>':'(ถ้ามี)'}</label>
         <input class="inp" type="number" inputmode="decimal" id="pk-park-${n}" value="${log.parking_paid??''}" placeholder="0"></div>`;
     }else{
