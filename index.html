@@ -191,6 +191,13 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 /* 📝 หมายเหตุออเดอร์ถึงคนขับ (10 พ.ย.) — กล่องส้มเด่น ให้เห็นชัดทั้งในรายการงานและหัวงาน */
 .drv-note{margin:0 0 12px;padding:9px 11px;border-radius:10px;background:#FFF4E5;border:1.5px solid #F59E0B;color:#7C2D12;font-size:13.5px;font-weight:600;line-height:1.55;word-break:break-word}
 .drv-note b{display:block;font-size:11.5px;color:#B45309;font-weight:700;margin-bottom:2px;letter-spacing:.01em}
+/* 🧾 ใบชั่งออก งาน PK — อ่านหลังบ้าน (Edge pk-slip-ocr) โชว์ใต้หัวงาน (11 พ.ย.) */
+.ob-slip{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:#EEF7F1;border:1.5px solid #2D6A4F;color:#1B4332;font-size:13px;line-height:1.55}
+.ob-slip .sl-h{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;font-weight:700;color:#2D6A4F}
+.ob-slip .sl-net{font-size:20px;font-weight:800;color:#1B4332;margin:2px 0}
+.ob-slip .sl-sub{font-size:12px;color:#40624F}
+.ob-slip .sl-warn{margin-top:5px;font-size:12px;font-weight:600;color:#B45309}
+.ob-slip a.sl-btn{flex:none;font-size:12px;font-weight:700;color:#fff;background:#2D6A4F;border-radius:8px;padding:4px 10px;text-decoration:none}
 .ob-note{margin:10px 12px 12px}
 .jl-note{font-size:11px;color:var(--text-l);background:var(--bg);border-radius:8px;padding:7px 10px;margin-bottom:10px}
 .jl-btns{display:flex;gap:8px}
@@ -280,6 +287,7 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
       <div class="ob-item ob-full hide" id="ob-ramp-row"><span>แวะลาน</span><span id="ob-ramp">—</span></div>
     </div>
     <div class="ob-note hide" id="ob-note"></div>
+    <div class="ob-slip hide" id="ob-slip"></div>
   </div>
   <div class="timeline" id="timeline"></div>
   <div style="margin:0 12px 12px">
@@ -752,6 +760,47 @@ function renderOrderBanner(){
   }
   { const nb=document.getElementById('ob-note'), nh=drvNoteHtml(order);   // 📝 หมายเหตุถึงคนขับ ใต้หัวงาน
     if(nb){ nb.innerHTML=nh?nh.replace(/^<div class="drv-note">|<\/div>$/g,''):''; nb.className='ob-note drv-note'+(nh?'':' hide'); } }
+  pkSlipLoad(false);
+}
+
+// 🧾 ใบชั่งออก งาน PK (11 พ.ย.) — หลังบ้านอ่านรูป scale-start เอง (Edge pk-slip-ocr · Gemini) แล้วโชว์ใต้หัวงาน
+//   GET ?action=get = ผลที่อ่านแล้ว · ยังไม่มีผล + เริ่มงานแล้ว → POST read (คนขับของงานนี้ · อ่านแล้ว = คืนผลเดิม) · พัง = เงียบ ไม่กวนคนขับ
+const PK_SLIP_EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-slip-ocr';
+let _pkSlipFor='', _pkSlipAsked={};
+async function pkSlipLoad(force){
+  const box=document.getElementById('ob-slip'); if(!box) return;
+  const id=String((order&&order['Order ID'])||'');
+  if(!isPkJob()||!id){ box.className='ob-slip hide'; box.innerHTML=''; return; }
+  if(_pkSlipFor!==id){ box.className='ob-slip hide'; box.innerHTML=''; _pkSlipFor=id; }
+  try{
+    let row=null;
+    const g=await fetch(PK_SLIP_EDGE+'?action=get&order='+encodeURIComponent(id)).then(r=>r.json());
+    if(g&&g.ok&&g.rows&&g.rows[0]) row=g.rows[0];
+    const started=['เริ่มงานแล้ว','ถึงลูกค้า','ออกจากลูกค้า','ถึงลูกค้า (GPS)','ออกจากลูกค้า (GPS)'].indexOf(String(order['สถานะ']||''))>=0;
+    if((!row||row.status==='error')&&(force||started)&&!_pkSlipAsked[id]){
+      _pkSlipAsked[id]=1;
+      if(force) pkSlipShow(box,null,'⏳ กำลังอ่านใบชั่งออก…');
+      const p=await fetch(PK_SLIP_EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'read',userId:U.userId,orderId:id})}).then(r=>r.json()).catch(()=>null);
+      if(p&&p.ok&&p.row) row=p.row;
+    }
+    if(String((order&&order['Order ID'])||'')!==id) return;   // เปลี่ยนงานระหว่างรอ
+    if(row&&row.status!=='error') pkSlipShow(box,row); else if(force) pkSlipShow(box,null,'ยังอ่านใบชั่งไม่ได้ · ระบบจะลองอ่านอีกครั้งใน 2 นาที');
+    else { box.className='ob-slip hide'; box.innerHTML=''; }
+  }catch(e){ if(!force){ box.className='ob-slip hide'; box.innerHTML=''; } }
+}
+function pkSlipShow(box,r,msg){
+  const n=v=>(v==null||v==='')?'—':Number(v).toLocaleString('en-US');
+  const e=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  if(!r){ box.innerHTML='<div class="sl-h">🧾 ใบชั่งออก SSB</div><div class="sl-sub">'+e(msg||'')+'</div>'; box.className='ob-slip'; return; }
+  const items=((r.gate&&r.gate.items)||[]).map(x=>e(x.name)+(x.qty!==''&&x.qty!=null?' '+n(x.qty):'')).join(' · ');
+  const warn=(r.warn||[]).map(e).join(' · ');
+  box.innerHTML='<div class="sl-h"><span>🧾 ใบชั่งออก SSB'+(r.slip_no?' · เลขที่ '+e(r.slip_no):'')+' (ระบบอ่านให้)</span>'
+    +(r.photo_url?'<a class="sl-btn" href="'+e(r.photo_url)+'" target="_blank" rel="noopener">ดูรูป</a>':'')+'</div>'
+    +(r.status==='ok'?'<div class="sl-net">สุทธิ '+n(r.net_kg)+' กก.</div><div class="sl-sub">เข้า '+n(r.tare_kg)+' · ออก '+n(r.gross_kg)+' กก.</div>'
+      :'<div class="sl-sub">อ่านน้ำหนักจากรูปไม่ได้ · กดดูรูป</div>')
+    +(items?'<div class="sl-sub">📦 '+items+'</div>':'')
+    +(warn?'<div class="sl-warn">⚠️ '+warn+'</div>':'');
+  box.className='ob-slip';
 }
 
 function getSteps(){
@@ -2556,6 +2605,7 @@ async function submitStart(){
 
   order['สถานะ']='เริ่มงานแล้ว';
   renderTimeline();
+  if(isPkJob()&&startHeavy&&!r?.queued) pkSlipLoad(true);   // 🧾 อ่านใบชั่งออกให้เลย (หลังบ้าน)
   toast(r?.queued
     ? '📡 ไม่มีสัญญาณตอนนี้\nระบบบันทึกออกโรงงานไว้แล้ว จะส่งอัตโนมัติเมื่อมีเน็ต\nไม่ต้องกดซ้ำครับ'
     : '✅ บันทึกออกโรงงานแล้วครับ');
