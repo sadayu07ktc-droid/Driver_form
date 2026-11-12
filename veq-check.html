@@ -161,6 +161,8 @@ button:disabled{cursor:not-allowed}
 .fm-no{font-size:22px;font-weight:800;color:var(--g1)}
 .item.compact .fm-no{font-size:17px}
 .it-sub .fm-star{color:var(--bad);font-weight:700}
+.it-sub .fm-parts{margin-top:3px;color:var(--ink,#1f2a24);font-size:14.5px;line-height:1.45}
+.it-sub .fm-parts b{color:var(--g1,#1B4332)}
 .fm-stop{background:var(--bad-l);color:var(--bad);border-radius:10px;padding:8px 12px;margin:8px 0;font-weight:700;font-size:15px}
 .it-age{display:block;font-size:14px;color:var(--text-l)}
 .gauge-ref{display:flex;align-items:center;gap:12px;background:var(--g4);border-radius:12px;padding:8px 12px;margin-bottom:10px;font-size:15px;line-height:1.45}
@@ -893,8 +895,14 @@ function catHTML(g){
   const ui=CAT_UI[g.cat]||{ic:'📦',n:g.cat};
   return '<div class="cat-hd"><div class="cat-t">'+ui.ic+' '+esc(ui.n)+'</div><div class="cat-n'+(done===g.items.length?' full':'')+'">'+done+'/'+g.items.length+'</div></div>'+g.items.map(itemHTML).join('');
 }
+const isExt = it => (it.sub_parts||[]).indexOf('ถังดับเพลิง')>=0;   // ข้อที่มีถังดับเพลิง → โชว์ภาพเกจ
 function subHTML(it){
-  if(it.fm_no) return (it.fm_star?'<span class="fm-star">★ ข้อห้ามออกรถ</span> · ':'')+esc(it.criteria||'');
+  if(it.fm_no){   // FM-TR-10: บอกให้เห็นตั้งแต่แรกว่าต้องตรวจอะไร (ส่วนย่อย) ไม่ต้องรอกดผิดปกติ
+    const subs=(it.sub_parts||[]).filter(x=>x!==FM_OTHER);
+    return (it.fm_star?'<span class="fm-star">★ ข้อห้ามออกรถ</span> · ':'')+esc(it.criteria||'')+
+      (subs.length?'<div class="fm-parts"><b>ตรวจ:</b> '+subs.map(esc).join(' · ')+'</div>':'')+
+      (it.photo_required?'<div class="fm-parts">📷 ถ่ายรูปทุกครั้ง'+(isExt(it)?' (หน้าเกจถังดับเพลิง)':'')+'</div>':'');
+  }
   const parts=[];
   if(it.check_mode==='count') parts.push('<span class="it-qty">ต้องมี '+it.qty_expected+' '+esc(it.unit)+'</span>');
   if(it.check_mode==='status') parts.push('บัตรอยู่ไหน');
@@ -949,7 +957,7 @@ function itemHTML(it){
       const opts=m==='status'?STATUS_OPTS:m==='installed'?INST_OPTS:it.fm_no?FM_OPTS:PF_OPTS;
       h+='<div class="opt-grid'+(opts.length===3?' c3':'')+'">'+opts.map(o=>
         '<button class="opt o-'+o[3]+(ln.value===o[0]?' on':'')+'" onclick="A.val(\''+code+'\',\''+o[0]+'\')"><span>'+o[1]+'</span>'+o[2]+'</button>').join('')+'</div>';
-      if(inf.answered && (inf.problem || ln.admin)) h+=eviHTML(it,ln,inf)+finHTML(code,inf);
+      if(inf.answered && (inf.problem || ln.admin || inf.needPhoto)) h+=eviHTML(it,ln,inf)+finHTML(code,inf);
     } else if(m==='gauge'){
       h+='<div class="gauge-ref">'+GAUGE_SVG+'<div><b>เข็มต้องอยู่โซนเขียว</b><br>ดูเข็มที่หน้าเกจ'+(it.qty_expected>1?' ทุกถัง แล้วตอบตามถังที่แย่ที่สุด':'')+'<br>แล้วถ่ายรูปหน้าเกจ</div></div>'+
         '<div class="opt-grid">'+GAUGE_OPTS.map(o=>
@@ -968,6 +976,11 @@ function itemHTML(it){
 function eviHTML(it,ln,inf){
   if(!inf.needPhoto && !inf.needNote && !ln.photo) return '';
   let h='<div class="evi">';
+  if(it.fm_no && inf.chipSet!=='fm'){   // FM ปกติ แต่ต้องถ่ายรูปทุกครั้ง (ข้อ 8 เกจถังดับเพลิง)
+    if(isExt(it)) h+='<div class="gauge-ref">'+GAUGE_SVG+'<div><b>เข็มต้องอยู่โซนเขียว</b><br>ถ้าเข็มไม่อยู่โซนเขียว ให้กด ❌ ผิดปกติ แล้วติ๊ก ถังดับเพลิง</div></div>';
+    h+='<div class="ed-lbl">'+(isExt(it)?'📷 รูปหน้าเกจถังดับเพลิง ':'รูปถ่าย ')+(inf.needPhoto?'<span class="req">*</span>':'')+'</div>'+photoHTML(it.item_code, ln.photo, ln.photoUp, inf.needPhoto);
+    return h+'</div>';
+  }
   if(inf.chipSet==='fm'){
     const subs=it.sub_parts||[FM_OTHER], other=ln.chips.indexOf(FM_OTHER)>=0, onlyOther=subs.length===1;
     if(it.fm_star) h+='<div class="fm-stop">⛔ ข้อห้ามออกรถ — ระบบแจ้งแอดมินทันที รอแอดมินตรวจก่อนออกรถ</div>';
