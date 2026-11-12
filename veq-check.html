@@ -380,7 +380,9 @@ const CATALOG = {
   HAIR_NET:['หมวกคลุมผม','PPE','ใบ','count','🧢',{is_consumable:true}],
   HARD_HAT:['หมวกเซฟตี้','PPE','ใบ','count','⛑️'],
 };
-const ICON = code => /^FM\d\d/.test(String(code)) ? '<span class="fm-no">'+parseInt(String(code).slice(2),10)+'</span>' : (CATALOG[String(code).split('__')[0]]||[])[4] || '📦';
+// FM-TR-10: เลขข้อมาจาก fm_no (12 พ.ย. แทรกข้อ 10 กล้อง FM_CAM + ข้อ 11 เอกสาร FM_DOCS → code FM10–13 = ข้อ 12–15)
+const fmNoOf = code => { const its=(S&&S.data&&S.data.items)||[]; const it=its.find(x=>x.item_code===String(code)); return it&&it.fm_no ? it.fm_no : (/^FM\d\d$/.test(String(code)) ? parseInt(String(code).slice(2),10) : null); };
+const ICON = code => { const n=fmNoOf(code); return n ? '<span class="fm-no">'+n+'</span>' : (CATALOG[String(code).split('__')[0]]||[])[4] || '📦'; };
 const CHIPS = {
   broken:['แตก / หัก','ใช้งานไม่ได้','จอดับ / ไม่ติด','รั่ว / ซึม','ส่งซ่อมแล้ว'],
   lost:['หายระหว่างทาง','ไม่เคยได้รับ','ใช้หมดแล้ว','อยู่ที่รถคันอื่น','แอดมินเก็บไว้'],
@@ -677,7 +679,7 @@ function odoInfo(){
     if(n<d.last_odometer) warn='⚠️ น้อยกว่าครั้งก่อน ('+fmtNum(d.last_odometer)+') — ดูเลขอีกครั้ง';
     else if(n-d.last_odometer>3000) warn='⚠️ มากกว่าครั้งก่อน '+fmtNum(n-d.last_odometer)+' กม. — ดูเลขอีกครั้ง';
   }
-  const miss=[]; if(!valid) miss.push('กรอกเลขไมล์'); if(!F.odoPhoto) miss.push('ถ่ายรูปหน้าปัด');
+  const miss=[]; if(!valid) miss.push('กรอกเลขไมล์');
   return {valid, n, warn, missing:miss, done:!miss.length};
 }
 const ovDone = () => !!(S.F.ov[0]||S.F.ov[1]);
@@ -685,8 +687,7 @@ function progress(){
   const items=S.data.items; let done=0;
   items.forEach(it=>{ if(lineInfo(it,S.F.lines[it.item_code]).done) done++; });
   if(odoInfo().done) done++;
-  if(ovDone()) done++;
-  return {done, total:items.length+2};
+  return {done, total:items.length+1};
 }
 function problemsOf(lines){ return S.data.items.filter(it=>lineInfo(it,lines[it.item_code]).problem); }
 
@@ -859,9 +860,9 @@ function rCheck(){
   if(c && c.status==='ต้องแก้ไข') h+='<div class="reason"><b>↩️ แอดมินให้แก้</b>'+esc(c.review_note||'')+'</div>';
   else if(k==='departed') h+='<div class="note-box nb-warn">รถออกแล้ว '+hm((d.departure||{}).first_departure_at)+' — ส่งตอนนี้นับเป็น 🟡 ส่งหลังออกรถ</div>';
   else if(k==='todo' && d.first_job_plan_at) h+='<div class="note-box nb-info">งานแรกนัด '+hm(d.first_job_plan_at)+' — ส่งก่อนออกรถ</div>';
-  h+='<div class="sec"><span class="stepn">1</span>รูปรวม<span id="ov-mark"></span></div><div class="card" id="ov-card">'+ovCardHTML()+'</div>';
-  h+='<div class="sec"><span class="stepn">2</span>เลขไมล์</div><div class="card" id="odo-card">'+odoCardHTML()+'</div>';
-  h+='<div class="sec"><span class="stepn">3</span>รายการเช็ค <span class="muted" style="font-size:16px;font-weight:600">('+d.items.length+')</span></div>';
+  // 12 พ.ย. คุณน้อง: เลิกถ่ายรูปรวม + รูปหน้าปัด (กรอกเลขไมล์อย่างเดียว)
+  h+='<div class="sec"><span class="stepn">1</span>เลขไมล์</div><div class="card" id="odo-card">'+odoCardHTML()+'</div>';
+  h+='<div class="sec"><span class="stepn">2</span>รายการเช็ค <span class="muted" style="font-size:16px;font-weight:600">('+d.items.length+')</span></div>';
   h+='<div id="all-wrap">'+allBtnHTML()+'</div>';
   catsOf(d.items).forEach((g,i)=>{ h+='<section class="cat" id="cat-'+i+'">'+catHTML(g)+'</section>'; });
   $('app').innerHTML=h;
@@ -879,8 +880,7 @@ function odoCardHTML(){
     (d.last_odometer?'<div class="muted small" style="margin-bottom:8px">ครั้งก่อน: <b>'+fmtNum(d.last_odometer)+'</b> กม.'+(d.last_odometer_at?' ('+fmtD(d.last_odometer_at)+')':'')+'</div>':'')+
     '<input class="odo-inp" id="odo" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="พิมพ์เลขไมล์" value="'+esc(F.odo)+'" oninput="A.odo(this)" aria-label="เลขไมล์">'+
     '<div class="odo-fmt" id="odo-fmt">'+(oi.valid?'= '+fmtNum(oi.n)+' กม.':'ดูเลขบนหน้าปัด แล้วพิมพ์ตัวเลขอย่างเดียว')+'</div>'+
-    '<div id="odo-warn">'+(oi.warn?'<div class="odo-warn">'+oi.warn+'</div>':'')+'</div>'+
-    '<div class="ed-lbl" style="margin-top:14px">รูปหน้าปัดเลขไมล์ <span class="req">*</span></div>'+photoHTML('__ODO__', F.odoPhoto, F.odoUp, true);
+    '<div id="odo-warn">'+(oi.warn?'<div class="odo-warn">'+oi.warn+'</div>':'')+'</div>';
 }
 function photoHTML(target, src, up, need){
   if(!src) return '<button class="btn-cam'+(need?' need':'')+'" onclick="A.photo(\''+target+'\')">📷 ถ่ายรูป'+(need?' (ต้องมี)':'')+'</button>';
@@ -1260,7 +1260,6 @@ const A = {
   viewSrc(src){ const m=$('modal'); m.innerHTML='<img src="'+src+'" alt="รูปขยาย"><button class="btn-sec" onclick="A.closeModal()">ปิด</button>'; m.classList.add('show'); },
   closeModal(){ const m=$('modal'); m.classList.remove('show'); m.innerHTML=''; },
   nextTodo(){
-    if(!ovDone()) return A.focus('__OV__');
     if(!odoInfo().done) return A.focus('__ODO__');
     const it=catsOf(S.data.items).flatMap(g=>g.items).find(it=>!lineInfo(it,S.F.lines[it.item_code]).done);
     if(it) A.focus(it.item_code);
