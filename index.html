@@ -998,6 +998,29 @@ function getStepTime(key){
   }[key]||'';
 }
 
+// 📍 ที่มาการเช็คอิน "ถึง…" — กติกาเดียวกับ Order_Status (checkinTag/checkinChip) · dev-drivers · การ์ด LINE · 12 พ.ย.
+//   GPS อัตโนมัติ → GPS · คนขับกดเอง → กดเอง · ไม่ได้เช็คอิน (เวลา = ตอนกดออก) · ว่าง = ไม่ทราบ · รายการทุกจุด: memory ssb-checkin-status-points.md
+function checkinTag(src){ const s=String(src||'').trim(); if(!s) return ''; if(s.indexOf('GPS')>=0) return 'GPS'; if(s==='ไม่ได้เช็คอิน') return 'ไม่ได้เช็คอิน'; return 'กดเอง'; }
+function checkinChip(src,distM){
+  const t=checkinTag(src); if(!t) return '';
+  const c=t==='GPS'?'color:#127a2e;background:#e7f5ee':t==='กดเอง'?'color:#8a5a0b;background:#fef0d9':'color:#a32d2d;background:#fceded';
+  return `<span style="display:inline-block;font-size:11px;font-weight:700;${c};border-radius:10px;padding:1px 7px">${t==='GPS'?'🛰️':t==='กดเอง'?'👆':'⚠️'} ${t}${t==='GPS'&&distM!=null?' · ห่างหมุด '+distM+' ม.':''}</span>`;
+}
+// ชื่อขั้นตามที่มา: ถึงลูกค้า (GPS/กดเอง/ไม่ได้เช็คอิน) · ถึงลาน (กดเอง — ไม่มี GPS) · ยังไม่ทำ = ชื่อเดิม
+function stepLabel(step,state){
+  if(state!=='done' || isPkJob()) return step.label;
+  if(step.key==='arrive'){ const t=checkinTag(order['ที่มาเช็คอิน']); return step.label.replace(' (GPS)', t?' ('+t+')':''); }
+  if((step.key==='rampDrop'||step.key==='ramp') && !isFarBase()) return step.label+' (กดเอง)';
+  return step.label;
+}
+// 📦 PK: เวลาถึงทุกจุดในช่องนั้น (pkInfo.arrivals จาก Edge pk-driver)
+function pkArrHtml(key){
+  if(!isPkJob() || !pkInfo || ['rampDrop','client','ramp'].indexOf(key)<0) return '';
+  const arr={}; (pkInfo.arrivals||[]).forEach(a=>arr[a.seq]=a);
+  const rows=pkStopsOf(key).map(x=>{ const a=arr[x.seq]; return a?`<div>📍 จุด ${x.seq} ถึง ${a.at} ${checkinChip(a.src,a.distM)}</div>`:''; }).filter(Boolean);
+  return rows.length?`<div style="margin-top:4px;font-size:12px;color:#14532d;line-height:1.8">${rows.join('')}</div>`:'';
+}
+
 function renderTimeline(){
   const tl=document.getElementById('timeline');tl.innerHTML='';
   getSteps().forEach((step,i)=>{
@@ -1008,9 +1031,9 @@ function renderTimeline(){
     const card=document.createElement('div');card.className=`tl-card ${state}-card`;
     card.innerHTML=`
       <div class="tl-head">
-        <span class="tl-step-label">${step.label}</span>
+        <span class="tl-step-label">${stepLabel(step,state)}</span>
         <span class="tl-step-time">${state==='done'?(fmtDateTime(getStepTime(step.key))||'✅'):state==='active'?'กำลังดำเนินการ':'รอดำเนินการ'}</span>
-      </div>${devvRecHtml(step.key)}
+      </div>${pkArrHtml(step.key)}${devvRecHtml(step.key)}
       ${state==='active'?`<div class="tl-body">${buildForm(step.key)}</div>`:''}
     `;
     wrap.appendChild(dot);wrap.appendChild(line);wrap.appendChild(card);
