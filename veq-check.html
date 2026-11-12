@@ -276,6 +276,21 @@ details.oks[open] summary::after{content:'▴'}
 #modal.show{display:flex}
 #modal img{max-width:100%;max-height:75vh;border-radius:12px}
 #modal .btn-sec{max-width:320px}
+/* 🚚 วันนี้ขับทะเบียนนี้ไหม */
+.vq{background:#fff;border-radius:18px;padding:18px 16px;width:100%;max-width:420px;max-height:88vh;overflow:auto;color:var(--text)}
+.vq-t{font-size:21px;font-weight:800;text-align:center;margin-bottom:6px}
+.vq-s{font-size:15px;color:var(--text-m);text-align:center;margin-bottom:6px}
+#modal .vq .btn-sec,#modal .vq .btn-main{max-width:none}
+.vq .plates{justify-content:center}
+.vq-g{display:grid;gap:10px;margin-top:10px}
+.vq-o{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:66px;border:2px solid var(--line);border-radius:14px;background:#fff;padding:8px 14px;font-size:19px;font-weight:800;text-align:left;width:100%;color:var(--text)}
+.vq-o small{display:block;font-size:13px;font-weight:600;color:var(--text-m)}
+.vq-o .n{font-size:14px;font-weight:700;color:var(--g1);background:#EEF5EC;border-radius:20px;padding:3px 10px;white-space:nowrap}
+.vq-o:disabled{opacity:.45}
+.vq-o.mine{border-color:var(--g2);background:#F6FAF4}
+.vq-load{text-align:center;padding:28px 0;color:var(--text-m);font-size:16px}
+.veh-pick{display:block;width:100%;margin-top:10px;min-height:46px;border-radius:12px;border:1.5px dashed var(--g2);background:transparent;color:var(--g1);font-size:16px;font-weight:700}
+.veh-today{margin-top:8px;padding:8px 12px;border-radius:10px;background:#FFF7E0;color:#7A5B00;font-size:14px;font-weight:600}
 
 </style>
 </head>
@@ -486,6 +501,8 @@ const api = {
   getCheckDetail: ({checkId})              => edgeGet({action:'checkDetail', checkId}),
   uploadPhoto:    p                        => edgePost(Object.assign({action:'uploadPhoto'}, p)),
   submitDaily:    payload                  => edgePost(Object.assign({action:'submitDaily'}, payload)),
+  pickList:       ({group})                => edgeGet({action:'pickList', group}),          // รถว่างวันนี้ (ตัดคันที่คนอื่นใช้แล้ว)
+  pickVehicle:    ({vehicleId})            => edgePost({action:'pickVehicle', vehicleId}),   // วันนี้ขับคันนี้ (เฉพาะเช็คลิสต์ ไม่เกี่ยวค่าแรง)
 };
 // ลิงก์หมดอายุ (เลยวัน) → เก็บร่างไว้ แล้วบอกให้พิมพ์ ช ใหม่
 function linkExpired(){
@@ -739,7 +756,8 @@ function rState(ic,t,p,retry){ setHeader({}); setBottom('');
 function rNoVeh(){ setHeader({}); setBottom('');
   const drv=(S.data&&S.data.driver)||{};
   $('app').innerHTML='<div class="state"><div class="state-ic">🚚</div><div class="state-t">ยังไม่มีรถประจำ</div>'+
-    '<div class="state-p">'+(drv.name?'คุณ'+esc(drv.name)+' ':'')+'ยังไม่มีทะเบียนรถผูกกับชื่อในระบบ<br>ให้แอดมินกลุ่ม'+esc(drv.job_group||'')+' ผูกรถให้ก่อน<br>(รถสแปร์ แอดมินตรวจเอง ไม่ต้องส่ง)</div>'+
+    '<div class="state-p">'+(drv.name?'คุณ'+esc(drv.name)+' ':'')+'ยังไม่มีทะเบียนรถผูกกับชื่อในระบบ<br>ถ้าวันนี้ขับรถคันไหน กดเลือกได้เลย<br>(รถประจำ ให้แอดมินกลุ่มผูกให้)</div>'+
+    '<button class="btn-main" onclick="A.vehNo()">🚚 เลือกรถที่ขับวันนี้</button>'+
     '<button class="btn-sec" onclick="boot()">🔄 ลองใหม่</button></div>'; }
 const grpLabel = g => ({'ไร่':'🌴 รถไร่','Bulk':'🛢️ รถ Bulk','Packing':'📦 รถ Packing'})[g]||g;
 function platesHTML(v){ return '<div class="plates"><div class="plate"><small>'+(v.plate_tail?'หัว':'ทะเบียน')+'</small><b>'+esc(v.plate_head)+'</b></div>'+(v.plate_tail?'<div class="plate"><small>หาง</small><b>'+esc(v.plate_tail)+'</b></div>':'')+'</div>'; }
@@ -783,11 +801,12 @@ function rHome(){
     body='<span class="pill p-bad">↩️ แอดมินให้แก้</span><div class="reason"><b>เหตุผล ('+esc(c.reviewed_by||'แอดมิน')+')</b>'+esc(c.review_note||'')+'</div>'+
       '<button class="btn-main" onclick="A.start()">✏️ แก้แล้วส่งใหม่</button>';
   }
-  const spares = (d.vehicles||[]).filter(x=>x.id!==v.id);
-  const spare = spares.length ? '<div class="spare">🔁 รถสแปร์ '+spares.map(s=>esc(plateTxt(s))).join(', ')+' — แอดมินตรวจเอง ไม่ต้องส่ง</div>' : '';
+  const spares = (d.vehicles||[]).filter(x=>x.id!==v.id), picked = d.vehicle_source==='today';
+  const spare = picked ? '<div class="veh-today">📌 วันนี้เลือกขับคันนี้ (เฉพาะเช็คลิสต์)'+(spares.length?' · คันประจำ '+spares.map(s=>esc(plateTxt(s))).join(', '):'')+'</div>' : spares.length ? '<div class="spare">🔁 รถสแปร์ '+spares.map(s=>esc(plateTxt(s))).join(', ')+' — แอดมินตรวจเอง ไม่ต้องส่ง</div>' : '';
   $('app').innerHTML=
     '<div class="card"><div class="veh-top"><span class="grp g-'+esc(v.job_group)+'">'+grpLabel(v.job_group)+'</span><span class="veh-type">'+esc((v.head_kind||'')+' '+(v.body_type||''))+'</span></div>'+
-      platesHTML(v)+'<div class="veh-drv">👤 '+esc(d.driver.name)+' <span class="muted small">· '+esc(d.driver.driver_id)+'</span></div>'+spare+'</div>'+
+      platesHTML(v)+'<div class="veh-drv">👤 '+esc(d.driver.name)+' <span class="muted small">· '+esc(d.driver.driver_id)+'</span></div>'+spare+
+      (!d.as_admin && S.date===d.today ? '<button class="veh-pick" onclick="A.vehNo()">🔁 วันนี้ขับคันอื่น? เปลี่ยนทะเบียน</button>' : '')+'</div>'+
     '<div class="card mc st-'+k+'"><div class="mc-lbl">เช็คก่อนออกรถ วันนี้</div><div class="mc-day">'+dayLabel(S.date,true)+'</div>'+body+'</div>'+
     '<div class="h3">📅 ย้อนหลัง 14 วัน</div><div id="hist"><div class="sk" style="height:150px"></div></div>';
   loadHist();
@@ -1175,8 +1194,41 @@ function repaintTarget(target){
 /* =====================================================================
    actions
    ===================================================================== */
+// ตอบ "ใช่" แล้ววันนี้ไม่ถามซ้ำ (ต่อคัน) · ไม่ถาม: แอดมิน / วันย้อนหลัง / ส่งแล้ว / เลือกคันนี้เองแล้ว
+const vehKey = id => 'ssb_veq_vok_'+S.uid+'_'+S.date+'_'+id;
+function vehAsk(){ const d=S.data; return !!(d && d.ok && !d.as_admin && S.date===d.today && !d.check && d.vehicle_source!=='today' && !lsGet(vehKey(d.vehicle.id))); }
+function vqOpen(html){ const m=$('modal'); m.innerHTML='<div class="vq">'+html+'</div>'; m.classList.add('show'); }
 const A = {
-  start(){ S.F=loadForm(); go('check'); },
+  start(force){ if(!force && vehAsk()) return A.vehAskShow(); S.F=loadForm(); go('check'); },
+  // 🚚 ถามก่อนเริ่มเช็ค "วันนี้ขับทะเบียนนี้ใช่ไหม" (ครั้งเดียวต่อวันต่อคัน) · ไม่ใช่ → เลือกหน่วยงาน → รถว่าง
+  vehAskShow(){ const v=S.data.vehicle;
+    vqOpen('<div class="vq-t">วันนี้ขับทะเบียนนี้ใช่ไหม?</div>'+platesHTML(v)+
+      '<button class="btn-main" onclick="A.vehYes()">✅ ใช่ ขับคันนี้</button>'+
+      '<button class="btn-sec" onclick="A.vehNo()">❌ ไม่ใช่ เลือกทะเบียนอื่น</button>'); },
+  vehYes(){ lsSet(vehKey(S.data.vehicle.id),'1'); A.closeModal(); A.start(true); },
+  async vehNo(){ vqOpen('<div class="vq-load">กำลังโหลดรถว่าง…</div>');
+    let r; try{ r=await api.pickList({}); }catch(e){ r=null; }
+    if(!r||!r.ok){ vqOpen('<div class="vq-t">โหลดรายการรถไม่ได้</div><div class="vq-s">'+esc(r&&r.error||'เน็ตมีปัญหา ลองใหม่')+'</div><button class="btn-sec" onclick="A.vehNo()">🔄 ลองใหม่</button><button class="btn-plain" onclick="A.closeModal()">ปิด</button>'); return; }
+    const reg=(r.regular||[])[0];
+    const back = r.picked && reg ? '<button class="vq-o mine" onclick="A.vehPick('+Number(reg.id)+')"><span>'+esc(plateTxt(reg))+'<small>กลับไปขับคันประจำ</small></span><span class="n">คันประจำ</span></button>' : '';
+    vqOpen('<div class="vq-t">วันนี้ขับรถหน่วยงานไหน?</div><div class="vq-s">โชว์เฉพาะรถที่ยังว่างวันนี้</div><div class="vq-g">'+back+
+      (r.groups||[]).map((g,i)=>'<button class="vq-o" '+(g.free?'':'disabled ')+'onclick="A.vehGroup('+i+')"><span>'+grpLabel(g.group)+'</span><span class="n">ว่าง '+g.free+' คัน</span></button>').join('')+
+      '</div><button class="btn-plain" onclick="A.closeModal()">ยกเลิก</button>');
+    S.vqGroups=(r.groups||[]).map(g=>g.group); },
+  async vehGroup(i){ const g=(S.vqGroups||[])[i]; if(!g) return A.vehNo();
+    vqOpen('<div class="vq-load">กำลังโหลด '+esc(grpLabel(g))+'…</div>');
+    let r; try{ r=await api.pickList({group:g}); }catch(e){ r=null; }
+    if(!r||!r.ok){ toast(r&&r.error||'โหลดไม่ได้ ลองใหม่','error'); return A.vehNo(); }
+    const vs=r.vehicles||[];
+    vqOpen('<div class="vq-t">'+grpLabel(g)+' ที่ว่าง</div><div class="vq-s">แตะทะเบียนที่ขับวันนี้</div><div class="vq-g">'+
+      (vs.length ? vs.map(v=>'<button class="vq-o'+(v.mine?' mine':'')+'" onclick="A.vehPick('+Number(v.id)+')"><span>'+esc(v.plate_head)+'<small>'+esc([v.plate_tail?'หาง '+v.plate_tail:'', v.type||''].filter(Boolean).join(' · '))+'</small></span>'+(v.mine?'<span class="n">คันประจำ</span>':'')+'</button>').join('')
+        : '<div class="vq-load">ไม่มีรถว่างในหน่วยงานนี้</div>')+
+      '</div><button class="btn-sec" onclick="A.vehNo()">← เลือกหน่วยงานใหม่</button><button class="btn-plain" onclick="A.closeModal()">ยกเลิก</button>'); },
+  async vehPick(id){ if(S.busy) return; S.busy=true; vqOpen('<div class="vq-load">กำลังบันทึก…</div>');
+    let r; try{ r=await api.pickVehicle({vehicleId:id}); }catch(e){ r=null; } S.busy=false;
+    if(!r||!r.ok){ toast(r&&r.error||'บันทึกไม่ได้ ลองใหม่','error',5000); return A.vehNo(); }
+    lsSet(vehKey(id),'1'); A.closeModal(); toast('วันนี้ขับ '+plateTxt(r.vehicle)+' ✓','ok');
+    await loadData(true); if(S.data && S.data.ok && S.screen==='home') A.start(true); },
   home(){ S.F=null; S.hist=null; loadData(true); },
   viewCurrent(){ go('report',{current:true}); },
   openDay(date){
@@ -1393,6 +1445,7 @@ async function loadData(replace){
   if(S.expired || (d && d.code==='LINK_EXPIRED')) return;
   if(d && d.ok){ d.items_raw=d.items||[]; d.items=expandItems(d.items_raw); }
   S.data=d;
+  S.uid = S.user.mode==='link' ? 'D_'+((d&&d.driver&&d.driver.driver_id)||'x') : S.user.userId;
   if(!d || !d.ok){ const c=d&&d.code; go(c==='NO_VEHICLE'?'novehicle':c==='NOT_DRIVER'?'notdriver':c==='INACTIVE'?'inactive':c==='NOT_YOUR_VEHICLE'?'notyours':'error',{msg:d&&d.error||''},replace); return; }
   // คีย์ร่างในเครื่อง: LIFF = userId · ลิงก์ = รหัสคนขับ (t เปลี่ยนทุกวัน ไม่ใช้เป็นคีย์)
   S.uid = S.user.mode==='link' ? 'D_'+((d.driver&&d.driver.driver_id)||'x') : S.user.userId;
