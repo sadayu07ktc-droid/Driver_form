@@ -811,10 +811,18 @@ function pkLegalHtml(r){
   if(r.over_kg>0) return '<div style="margin-top:8px;background:#fef2f2;border:1.5px solid #dc2626;border-radius:10px;padding:9px 11px;color:#991b1b;line-height:1.55">'
     +'<div style="font-size:16px;font-weight:800">🚫 น้ำหนักเกินกฎหมาย '+n(r.over_kg)+' กก.</div>'
     +'<div style="font-size:13px">รถหนัก '+n(r.gross_kg)+' กก. · เกณฑ์ '+n(r.legal_kg)+' กก. ('+src+')</div>'
+    +pkPayloadLine(r,'#991b1b')
     +'<div style="font-size:12px;margin-top:2px">ระบบแจ้งแอดมินแล้ว · ถ้าเลขอ่านผิด ดูรูปแล้วแจ้งแอดมิน</div></div>';
   return '<div style="margin-top:8px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:7px 11px;color:#166534;font-size:13px;font-weight:600;line-height:1.5">'
     +'✅ น้ำหนักไม่เกินกฎหมาย · รถหนัก '+n(r.gross_kg)+' / '+n(r.legal_kg)+' กก. (เหลือ '+n(-r.over_kg)+')'
+    +pkPayloadLine(r,'#166534')
     +'<div style="font-size:11.5px;font-weight:400;opacity:.8">เกณฑ์: '+src+'</div></div>';
+}
+// 📦 12 พ.ย. คุณน้อง: บรรทุกสินค้าได้ = รวมไม่เกิน − รถเปล่า (ตารางรถ ทะเบียนตรงทั้งหัว+หาง · ไม่มีรถเปล่า = ไม่โชว์)
+function pkPayloadLine(r,c){
+  if(!r||!r.payload_kg||!r.veh_tare_kg) return '';
+  const n=v=>Number(v).toLocaleString('en-US');
+  return '<div style="font-size:12.5px;font-weight:600;color:'+c+';margin-top:2px">📦 บรรทุกสินค้าได้ไม่เกิน '+n(r.payload_kg)+' กก. <span style="font-weight:400;opacity:.85">(รวม '+n(r.legal_kg)+' − รถเปล่า '+n(r.veh_tare_kg)+')</span></div>';
 }
 
 function getSteps(){
@@ -1371,7 +1379,7 @@ async function loadPlateVeh(){
 function plateVehHtml(){
   if(!plateVeh) return '';
   const lg=plateVeh.legal||{};
-  return `<div style="font-size:13px;color:var(--text-m);margin-top:4px;line-height:1.5">${plateVeh.vtype?'🚚 '+escHtml(plateVeh.vtype):''}${lg.kg?(plateVeh.vtype?' · ':'')+'⚖️ รวมตัวรถไม่เกิน <b>'+fmtKg(lg.kg)+'</b> กก.':''}</div>`;
+  return `<div style="font-size:13px;color:var(--text-m);margin-top:4px;line-height:1.5">${plateVeh.vtype?'🚚 '+escHtml(plateVeh.vtype):''}${lg.kg?(plateVeh.vtype?' · ':'')+'⚖️ รวมตัวรถไม่เกิน <b>'+fmtKg(lg.kg)+'</b> กก.':''}${lg.kg&&lg.tare>0&&lg.tare<lg.kg?'<br>📦 บรรทุกสินค้าได้ไม่เกิน <b>'+fmtKg(lg.kg-lg.tare)+'</b> กก. <span style="opacity:.8">(รวม '+fmtKg(lg.kg)+' − รถเปล่า '+fmtKg(lg.tare)+')</span>':''}</div>`;
 }
 function plateReportHtml(){
   const rp=plateVeh&&plateVeh.report;
