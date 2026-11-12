@@ -1347,11 +1347,13 @@ const A = {
     S.busy=true; const btn=$('btn-submit'); if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span> กำลังส่ง...'; }
     try{
       const pend=[];
-      if(F.odoUp!=='ok') pend.push('__ODO__');
-      F.ov.forEach((o,i)=>{ if(o && o.up!=='ok') pend.push('__OV'+i+'__'); });
+      // 12 พ.ย. เลิกบังคับรูปหน้าปัด/รูปรวม → อัปโหลดเฉพาะที่มีรูปจริง (เดิมยิง __ODO__ ทั้งที่ไม่มีรูป → Edge ตอบ "ไม่มีรูป" ส่งไม่ได้ทุกคัน)
+      if(F.odoPhoto && F.odoUp!=='ok') pend.push('__ODO__');
+      F.ov.forEach((o,i)=>{ if(o && o.src && o.up!=='ok') pend.push('__OV'+i+'__'); });
       d.items.forEach(it=>{ const ln=F.lines[it.item_code]; if(ln.photo && ln.photoUp!=='ok') pend.push(it.item_code); });
       for(const t of pend){
         const k=tgtKind(t), src = k.kind==='odometer'?F.odoPhoto:k.kind==='overview'?F.ov[k.slot].src:F.lines[t].photo;
+        if(!src) continue;
         const r=await api.uploadPhoto(upParams(k, src));
         if(r && r.code==='LINK_EXPIRED') return;
         if(!r||!r.ok) throw new Error('อัปโหลดรูปไม่สำเร็จ'+(r&&r.error?' ('+r.error+')':''));
