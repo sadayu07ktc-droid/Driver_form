@@ -533,7 +533,7 @@ function pickupMs(o){
     else{ m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m){ base=new Date(+m[1],+m[2]-1,+m[3]); } else if(s){ const d2=new Date(s); if(!isNaN(d2))base=d2; } }
   }
   if(!base||isNaN(base)){                                       // ไม่รู้วันที่ → ถอยไปใช้เวลารับงาน กันคิวพัง
-    const f=new Date(o['เวลารับงาน']||o['Timestamp']||0); return isNaN(f)?Number.MAX_SAFE_INTEGER:f.getTime();
+    const f=_toDate(o['เวลารับงาน']||o['Timestamp']||0); return isNaN(f)?Number.MAX_SAFE_INTEGER:f.getTime();
   }
   const tm=tRaw.match(/(\d{1,2}):(\d{2})/);
   base.setHours(tm?+tm[1]:0, tm?+tm[2]:0, 0, 0);
@@ -550,21 +550,30 @@ function jobOrder(a,b){
   }
   return pickupMs(a)-pickupMs(b);
 }
+// 📅 แปลงเวลาเป็น Date — เวลาในออเดอร์เก็บเป็นข้อความเวลาไทย "d/M/yyyy HH:mm:ss" (วัน/เดือน)
+//    new Date("12/11/2026 10:49:58") ของเบราว์เซอร์อ่านเป็น เดือน/วัน → โชว์ 11/12 สลับ (แก้ 12 พ.ย.) · รูปแบบอื่น (ISO/Date) ใช้ new Date ตามเดิม
+function _toDate(v){
+  if(v instanceof Date) return v;
+  const m=String(v==null?'':v).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  if(m){ let y=+m[3]; if(y>2400) y-=543;
+    return new Date(Date.UTC(y, +m[2]-1, +m[1], (+m[4]||0)-7, +m[5]||0, +m[6]||0)); }   // เวลาไทย (UTC+7)
+  return new Date(v);
+}
 function fmtDate(v){
   if(!v) return '—';
-  const d = new Date(v);
+  const d = _toDate(v);
   if(isNaN(d)) return v;
   return d.toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'Asia/Bangkok'});
 }
 function fmtTime(v){
   if(!v) return '—';
-  const d = new Date(v);
+  const d = _toDate(v);
   if(isNaN(d)) return v;
   return d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Bangkok'}) + ' น.';
 }
 function fmtDateTime(v){
   if(!v) return '';
-  const d = new Date(v);
+  const d = _toDate(v);
   if(isNaN(d)) return v;
   return fmtDate(v) + ' ' + fmtTime(v);
 }
