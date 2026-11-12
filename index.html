@@ -799,8 +799,22 @@ function pkSlipShow(box,r,msg){
     +(r.status==='ok'?'<div class="sl-net">สุทธิ '+n(r.net_kg)+' กก.</div><div class="sl-sub">เข้า '+n(r.tare_kg)+' · ออก '+n(r.gross_kg)+' กก.</div>'
       :'<div class="sl-sub">อ่านน้ำหนักจากรูปไม่ได้ · กดดูรูป</div>')
     +(items?'<div class="sl-sub">📦 '+items+'</div>':'')
-    +(warn?'<div class="sl-warn">⚠️ '+warn+'</div>':'');
+    +(warn?'<div class="sl-warn">⚠️ '+warn+'</div>':'')
+    +pkLegalHtml(r);
   box.className='ob-slip';
+}
+// ⚖️ 11 พ.ย. คุณน้อง: "ให้คนขับเห็นว่าเกินกฎหมายมั้ย" — รถหนักบนใบชั่งออก เทียบเกณฑ์ (Edge pk-slip-ocr · ตารางรถ / ตามประเภทรถ)
+//   เกิน = กล่องแดง + บอกว่าแจ้งแอดมินแล้ว (หลังบ้านส่ง LINE เอง) · ผ่าน = เขียว · ไม่มีเกณฑ์/ไม่มีรถหนัก = ไม่โชว์
+function pkLegalHtml(r){
+  if(!r||r.status!=='ok'||!r.legal_kg||r.over_kg==null) return '';
+  const n=v=>Number(v).toLocaleString('en-US'), src=String(r.legal_src||'').replace(/[&<>"]/g,'');
+  if(r.over_kg>0) return '<div style="margin-top:8px;background:#fef2f2;border:1.5px solid #dc2626;border-radius:10px;padding:9px 11px;color:#991b1b;line-height:1.55">'
+    +'<div style="font-size:16px;font-weight:800">🚫 น้ำหนักเกินกฎหมาย '+n(r.over_kg)+' กก.</div>'
+    +'<div style="font-size:13px">รถหนัก '+n(r.gross_kg)+' กก. · เกณฑ์ '+n(r.legal_kg)+' กก. ('+src+')</div>'
+    +'<div style="font-size:12px;margin-top:2px">ระบบแจ้งแอดมินแล้ว · ถ้าเลขอ่านผิด ดูรูปแล้วแจ้งแอดมิน</div></div>';
+  return '<div style="margin-top:8px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:7px 11px;color:#166534;font-size:13px;font-weight:600;line-height:1.5">'
+    +'✅ น้ำหนักไม่เกินกฎหมาย · รถหนัก '+n(r.gross_kg)+' / '+n(r.legal_kg)+' กก. (เหลือ '+n(-r.over_kg)+')'
+    +'<div style="font-size:11.5px;font-weight:400;opacity:.8">เกณฑ์: '+src+'</div></div>';
 }
 
 function getSteps(){
@@ -1323,6 +1337,7 @@ async function loadPlateCheck(){
   // renderTimeline() วาดใหม่ทั้งหน้าได้หลายครั้ง (ถ่ายรูป/OCR เสร็จ)
   // ถ้าโหลดแล้วให้วาดจากค่าเดิม ไม่งั้น plateOk จะถูกรีเซ็ต คนขับต้องกดยืนยันซ้ำ
   if(plateLoaded === order['Order ID'] && plateInfo){ renderPlateBox(); return; }
+  loadPlateVeh();   // 🚗 ประเภทรถ + เกณฑ์น้ำหนัก + คำแจ้งค้าง (Edge drv-plate · ไม่บล็อก)
   try{
     const r = await drvGet(`action=getPlateCheck&userId=${encodeURIComponent(U.userId)}&orderId=${encodeURIComponent(order['Order ID'])}`);
     if(!r || !r.ok) throw new Error(r && r.error || 'โหลดไม่สำเร็จ');
@@ -1340,29 +1355,71 @@ async function loadPlateCheck(){
 }
 
 // เปลี่ยนทะเบียนได้เฉพาะแอดมิน (หน้าติดตามออเดอร์ · คุณน้อง 2026-11-04) — คนขับเห็น+ยืนยันได้อย่างเดียว
-const PLATE_ADMIN_NOTE=`<div class="plate-ask" style="font-size:12.5px;margin-top:8px">ไม่ใช่คันนี้? แจ้งแอดมินให้เปลี่ยน แล้วเปิดหน้านี้ใหม่</div>`;
+// 🚗 11 พ.ย. คุณน้อง: "ขนาดรถมีผลกับค่าแรง ให้ขึ้นว่าถูกต้อง ถ้าผิดกดแจ้งแอดมินให้เปลี่ยนในระบบ"
+//   ปุ่ม ❌ ไม่ถูก → Edge drv-plate report (LINE แอดมินกลุ่มงาน + ป้ายใน Order_Status) · คนขับทำงานต่อได้ · แอดมินเปลี่ยนแล้วป้ายหายเอง
+const DRV_PLATE_EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/drv-plate';
+let plateVeh=null, plateVehFor='';   // {vtype, legal:{kg,src}, report}
+async function loadPlateVeh(){
+  const id=String((order&&order['Order ID'])||''); if(!id) return;
+  if(plateVehFor!==id){ plateVeh=null; plateVehFor=id; }
+  try{
+    const r=await fetch(DRV_PLATE_EDGE+'?action=info&order='+encodeURIComponent(id)).then(x=>x.json());
+    if(String((order&&order['Order ID'])||'')!==id || !r || !r.ok) return;
+    plateVeh=r; renderPlateBox();
+  }catch(e){ /* ไม่มีข้อมูลรถ = กล่องแบบเดิม */ }
+}
+function plateVehHtml(){
+  if(!plateVeh) return '';
+  const lg=plateVeh.legal||{};
+  return `<div style="font-size:13px;color:var(--text-m);margin-top:4px;line-height:1.5">${plateVeh.vtype?'🚚 '+escHtml(plateVeh.vtype):''}${lg.kg?(plateVeh.vtype?' · ':'')+'⚖️ รวมตัวรถไม่เกิน <b>'+fmtKg(lg.kg)+'</b> กก.':''}</div>`;
+}
+function plateReportHtml(){
+  const rp=plateVeh&&plateVeh.report;
+  if(rp) return `<div style="margin-top:10px;background:#fff7ed;border:1.5px solid #f59e0b;border-radius:10px;padding:8px 10px;color:#92400e;font-size:13px;line-height:1.5;text-align:left">
+      ⏳ <b>แจ้งแอดมินแล้ว รอเปลี่ยนทะเบียน</b>${rp.actual?'<br>คันที่ขับจริง: <b>'+escHtml(rp.actual)+'</b>':''}${rp.note?'<br>📝 '+escHtml(rp.note):''}
+      <div style="font-size:12px;margin-top:2px">ทำงานต่อได้เลย · แอดมินเปลี่ยนแล้วทะเบียนด้านบนจะเปลี่ยนเอง</div></div>`;
+  return `<button class="btn-sm" style="margin-top:10px;width:100%;background:#fff;color:#b91c1c;border:1.5px solid #fca5a5" onclick="reportPlate()">❌ ไม่ใช่คันนี้ แจ้งแอดมินให้เปลี่ยน</button>`;
+}
 function renderPlateBox(){
   const box = document.getElementById('plate-box');
   if(!box || !plateInfo) return;
 
   if(plateInfo.locked){
-    box.innerHTML = `<div class="plate-cur">${plateInfo.current||'—'}</div>
+    box.innerHTML = `<div class="plate-cur">${plateInfo.current||'—'}</div>${plateVehHtml()}
       <div class="plate-warn">งานนี้ ${plateInfo.status} แล้ว แก้ทะเบียนไม่ได้</div>`;
     plateOk = true; return;
   }
+  if(plateVeh&&plateVeh.report) plateOk = true;   // แจ้งแล้ว = ทำงานต่อได้ (คุณน้องเคาะ)
 
   if(plateOk){
-    box.innerHTML = `<div class="plate-cur ok">${plateInfo.current||'—'}</div>
-      <div class="plate-done">✅ ยืนยันแล้ว</div>${PLATE_ADMIN_NOTE}`;
+    box.innerHTML = `<div class="plate-cur ${plateVeh&&plateVeh.report?'':'ok'}">${plateInfo.current||'—'}</div>${plateVehHtml()}
+      ${plateVeh&&plateVeh.report?'':'<div class="plate-done">✅ ยืนยันแล้ว</div>'}${plateReportHtml()}`;
     return;
   }
 
   box.innerHTML = `
-    <div class="plate-cur">${plateInfo.current||'—'}</div>
-    <div class="plate-ask">วันนี้ขับคันนี้ใช่ไหมครับ</div>
+    <div class="plate-cur">${plateInfo.current||'—'}</div>${plateVehHtml()}
+    <div class="plate-ask">วันนี้ขับคันนี้ ขนาดนี้ ใช่ไหมครับ</div>
     <div class="plate-btns">
-      <button class="btn-sm plate-yes" onclick="confirmPlate()">ใช่ ถูกแล้ว</button>
-    </div>${PLATE_ADMIN_NOTE}`;
+      <button class="btn-sm plate-yes" onclick="confirmPlate()">✅ ถูกต้อง</button>
+    </div>${plateReportHtml()}`;
+}
+let _plateReporting=false;
+async function reportPlate(){
+  if(_plateReporting||!order) return;
+  const actual=await promptModal({icon:'🚗',title:'ทะเบียนไม่ถูกต้อง',msg:'พิมพ์ทะเบียนคันที่ขับจริงวันนี้ (หัว,หาง) ระบบจะแจ้งแอดมินให้เปลี่ยน',placeholder:'เช่น 87-5215,87-6185',okText:'แจ้งแอดมิน'});
+  if(actual==null) return;
+  const v=String(actual).trim();
+  if(!v){ toast('กรุณาพิมพ์ทะเบียนคันที่ขับจริงครับ','warn'); return; }
+  _plateReporting=true;
+  try{
+    const r=await fetch(DRV_PLATE_EDGE,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'report',userId:U.userId,orderId:order['Order ID'],actual:v})}).then(x=>x.json());
+    if(!r||!r.ok){ toast('❌ '+((r&&r.error)||'แจ้งไม่สำเร็จ ลองใหม่'),'error'); return; }
+    plateVeh=Object.assign({},plateVeh||{},{report:r.report}); plateOk=true; renderPlateBox();
+    toast('✅ แจ้งแอดมินแล้ว ทำงานต่อได้เลยครับ','ok');   // ไม่ดึงไมล์ GPS — ทะเบียนในระบบยังเป็นคันผิด
+  }catch(e){ toast('❌ เชื่อมต่อไม่ได้ ลองใหม่','error'); }
+  finally{ _plateReporting=false; }
 }
 
 // เลือกคันเดิม = ไม่ต้องยิงหลังบ้าน แค่ทำเครื่องหมายว่ารีเช็คแล้ว
