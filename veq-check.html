@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2D5A27">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>เช็คก่อนออกรถ — SSB</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   veq-check · เช็คก่อนออกรถ "ทุกวัน" — ฉบับใช้งานจริง (12 พ.ย. 2569)
+   โทนเดียวกับ Driver_form (เขียว --g1/--g2 + Sarabun + พื้น #F5F5F0)
+   ขยายสำหรับคนขับข้างรถกลางแดด: ตัว 17px+, ปุ่ม ≥56px, ตัวหนังสือรองเข้มขึ้น · โหมดสว่างอย่างเดียว
+   ============================================================ */
+:root{
+  color-scheme:light;
+  --g1:#2D5A27;--g2:#4A7C3F;--g3:#D6E8D0;--g4:#F0F7EE;
+  --b1:#7B4F2E;--b3:#F5E6D0;--s1:#1E40AF;--s3:#DBEAFE;
+  --ok:#15803D;--ok-l:#DCFCE7;
+  --warn:#B45309;--warn-l:#FEF3C7;
+  --bad:#B91C1C;--bad-l:#FEE2E2;
+  --info:#1E40AF;--info-l:#DBEAFE;
+  --text:#1F2937;--text-m:#4B5563;--text-l:#6B7280;
+  --line:#E5E7EB;--white:#FFFFFF;--bg:#F5F5F0;
+  --shadow:0 2px 8px rgba(0,0,0,.07);
+  --tap:56px;--r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'Sarabun',-apple-system,'Noto Sans Thai',sans-serif;background:var(--bg);color:var(--text);font-size:17px;line-height:1.55;min-height:100vh}
+button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer;border:none;background:none}
+button:disabled{cursor:not-allowed}
+:focus-visible{outline:3px solid var(--g2);outline-offset:2px}
+.hide{display:none!important}
+.wrap{max-width:560px;margin:0 auto;padding:12px 12px 130px}
+.req{color:var(--bad);font-weight:700}
+
+/* header */
+.hdr{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;position:sticky;top:0;z-index:30;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.hdr-in{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:8px;padding:10px 12px;min-height:60px}
+.hdr-back{width:48px;height:48px;border-radius:12px;color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.14);flex-shrink:0}
+.hdr-ic{font-size:30px;line-height:1}
+.hdr-t{font-size:19px;font-weight:700;line-height:1.25}
+.hdr-s{font-size:13px;color:var(--g3)}
+.prog{max-width:560px;margin:0 auto;padding:0 12px 10px;display:flex;align-items:center;gap:10px}
+.prog-txt{font-size:16px;white-space:nowrap}
+.prog-txt b{font-size:22px}
+.prog-bar{flex:1;height:12px;border-radius:99px;background:rgba(255,255,255,.25);overflow:hidden}
+.prog-bar i{display:block;height:100%;background:#FDE68A;border-radius:99px;transition:width .3s}
+.prog-bar i.full{background:#86EFAC}
+.prog-next{height:40px;padding:0 12px;border-radius:20px;background:#fff;color:var(--g1);font-weight:700;font-size:15px;white-space:nowrap}
+.offline{background:var(--warn);color:#fff;text-align:center;font-weight:600;font-size:15px;padding:8px 12px}
+.stale{background:var(--warn-l);color:var(--warn);text-align:center;font-size:14px;padding:6px 12px}
+
+/* cards */
+.card{background:var(--white);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:12px}
+.h3{font-size:18px;font-weight:700;margin:20px 4px 10px}
+.muted{color:var(--text-m)}
+.small{font-size:15px}
+.veh-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.grp{font-size:15px;font-weight:700;padding:4px 12px;border-radius:20px}
+.g-ไร่{background:var(--g3);color:var(--g1)}
+.g-Bulk{background:var(--s3);color:var(--s1)}
+.g-Packing{background:var(--b3);color:var(--b1)}
+.veh-type{font-size:15px;color:var(--text-m)}
+.plates{display:flex;gap:10px;margin:10px 0 8px}
+.plate{flex:1;border:2.5px solid var(--text);border-radius:10px;padding:2px 8px 4px;text-align:center;background:#fff}
+.plate small{display:block;font-size:13px;color:var(--text-m);line-height:1.2}
+.plate b{font-size:24px;font-weight:700;letter-spacing:.5px;font-variant-numeric:tabular-nums}
+.veh-drv{font-size:17px}
+.spare{margin-top:10px;background:#F3F4F6;border-radius:10px;padding:8px 12px;font-size:15px;color:var(--text-m)}
+
+.mc{border-left:6px solid var(--line)}
+.mc.st-todo{border-left-color:var(--g2)}
+.mc.st-departed{border-left-color:var(--warn)}
+.mc.st-norun{border-left-color:var(--text-l)}
+.mc.st-ontime,.mc.st-reviewed{border-left-color:var(--ok)}
+.mc.st-late{border-left-color:#CA8A04}
+.mc.st-ret{border-left-color:var(--bad)}
+.mc-lbl{font-size:15px;color:var(--text-m)}
+.mc-day{font-size:24px;font-weight:700;line-height:1.25}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:16px;font-weight:700;padding:6px 14px;border-radius:99px;margin:10px 0 6px}
+.p-todo{background:#F3F4F6;color:#374151}
+.p-ok{background:var(--ok-l);color:var(--ok)}
+.p-late{background:#FEF9C3;color:#854D0E}
+.p-bad{background:var(--bad-l);color:var(--bad)}
+.p-warn{background:var(--warn-l);color:var(--warn)}
+.reason{background:var(--bad-l);border-radius:12px;padding:12px 14px;margin:8px 0;color:#7F1D1D;font-size:17px}
+.reason b{display:block;font-size:15px;color:var(--bad)}
+.note-box{border-radius:12px;padding:10px 14px;margin:8px 0;font-size:16px;font-weight:600}
+.nb-warn{background:var(--warn-l);color:var(--warn)}
+.nb-info{background:var(--info-l);color:var(--info)}
+.nb-ok{background:var(--ok-l);color:var(--ok)}
+
+/* buttons */
+.btn-main{width:100%;min-height:60px;border-radius:14px;background:var(--g1);color:#fff;font-size:20px;font-weight:700;margin-top:12px;box-shadow:0 3px 10px rgba(45,90,39,.3);display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px}
+.btn-main:disabled{background:#9CA3AF;box-shadow:none}
+.btn-main.todo{background:#fff;color:var(--warn);border:2.5px solid var(--warn);box-shadow:none}
+.btn-sec{width:100%;min-height:var(--tap);border-radius:14px;background:#fff;border:2px solid var(--g2);color:var(--g1);font-size:18px;font-weight:700;margin-top:10px;padding:0 14px}
+.btn-plain{width:100%;min-height:52px;border-radius:14px;background:transparent;color:var(--text-m);font-size:17px;font-weight:600;margin-top:6px}
+.bottom{position:fixed;left:0;right:0;bottom:0;z-index:25;background:rgba(245,245,240,.96);border-top:1px solid var(--line);padding:6px 12px calc(10px + env(safe-area-inset-bottom))}
+.bottom-in{max-width:560px;margin:0 auto}
+.bottom .btn-main{margin-top:4px}
+.saved{font-size:13px;color:var(--text-l);text-align:center}
+
+/* 14-day strip */
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{background:#fff;border-radius:10px;box-shadow:var(--shadow);min-height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 0;border:2px solid transparent}
+.day small{font-size:12px;color:var(--text-m);line-height:1.2}
+.day b{font-size:16px;line-height:1.2;font-variant-numeric:tabular-nums}
+.day i{font-style:normal;font-size:20px;line-height:1.2}
+.day.d-miss{border-color:#FCA5A5;background:#FFF7F7}
+.day.d-late{border-color:#FDE68A}
+.day.d-warn{border-color:#FCD34D}
+.day.d-idle,.day.d-none{opacity:.6;box-shadow:none;background:#F3F4F6}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px;color:var(--text-m);margin:8px 4px 0}
+.stat{display:flex;gap:10px;margin-bottom:10px}
+.stat div{flex:1;background:#fff;border-radius:12px;box-shadow:var(--shadow);padding:8px 10px;text-align:center}
+.stat b{display:block;font-size:24px;font-variant-numeric:tabular-nums;line-height:1.2}
+.stat span{font-size:13px;color:var(--text-m)}
+
+/* check screen */
+.sec{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:700;margin:18px 4px 10px}
+.stepn{width:34px;height:34px;border-radius:50%;background:var(--g1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.sec .ok-mark{margin-left:auto;font-size:15px;color:var(--ok);background:var(--ok-l);border-radius:99px;padding:2px 10px}
+.ov-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ov{position:relative;min-height:128px;border-radius:14px;border:2.5px dashed var(--g2);background:var(--g4);color:var(--g1);font-size:16px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px;text-align:center;line-height:1.3;overflow:hidden}
+.ov.need{border-color:var(--bad);background:#FFF5F5;color:var(--bad)}
+.ov span.ic{font-size:34px}
+.ov img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ov .ov-cap{position:absolute;left:6px;right:6px;bottom:6px;background:rgba(0,0,0,.6);color:#fff;border-radius:8px;font-size:14px;padding:4px 6px}
+.ov-hint{font-size:14px;color:var(--text-m);margin-top:8px}
+.odo-inp{width:100%;height:64px;border:2.5px solid #D1D5DB;border-radius:14px;padding:0 16px;font-family:inherit;font-size:30px;font-weight:700;letter-spacing:1px;font-variant-numeric:tabular-nums;color:var(--text);background:#fff;outline:none}
+.odo-inp:focus{border-color:var(--g2);box-shadow:0 0 0 4px rgba(74,124,63,.2)}
+.odo-fmt{font-size:16px;color:var(--text-m);margin-top:6px}
+.odo-warn{background:var(--warn-l);color:var(--warn);border-radius:10px;padding:8px 12px;margin-top:8px;font-size:15px;font-weight:600}
+.adm{background:var(--bad-l);border-left:5px solid var(--bad);border-radius:10px;padding:8px 12px;margin:8px 0;font-size:16px;color:#7F1D1D}
+.adm b{color:var(--bad)}
+.btn-all{width:100%;min-height:68px;border-radius:16px;background:var(--ok);color:#fff;font-size:21px;font-weight:700;margin-bottom:6px;padding:0 12px;box-shadow:0 3px 10px rgba(21,128,61,.3)}
+.all-hint{font-size:15px;color:var(--text-m);text-align:center;margin-bottom:6px}
+
+.cat-hd{display:flex;align-items:center;justify-content:space-between;margin:16px 4px 8px}
+.cat-t{font-size:18px;font-weight:700}
+.cat-n{font-size:15px;font-weight:700;color:var(--text-m);background:#fff;border-radius:99px;padding:2px 12px}
+.cat-n.full{background:var(--ok-l);color:var(--ok)}
+
+.item{background:#fff;border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:8px;border:2px solid transparent;overflow:hidden;scroll-margin-top:140px}
+.item.is-ok{border-color:#BBF7D0;background:#FAFFFB}
+.item.is-warn{border-color:#FCD34D;background:#FFFDF5}
+.item.is-bad{border-color:#FCA5A5;background:#FFFAFA}
+.item.is-pending{border-color:#FCD34D}
+.item.flag{border-color:var(--bad);box-shadow:0 0 0 3px rgba(185,28,28,.15)}
+.it-hd{display:flex;align-items:center;gap:12px;padding:12px 14px;width:100%;text-align:left;min-height:64px}
+.it-ic{width:48px;height:48px;border-radius:12px;background:var(--g4);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+.it-main{flex:1;min-width:0}
+.it-name{font-size:19px;font-weight:700;line-height:1.3}
+.it-sub{font-size:15px;color:var(--text-m);line-height:1.4}
+.it-sub .exp-bad{color:var(--bad);font-weight:700}
+.it-age{display:block;font-size:14px;color:var(--text-l)}
+.gauge-ref{display:flex;align-items:center;gap:12px;background:var(--g4);border-radius:12px;padding:8px 12px;margin-bottom:10px;font-size:15px;line-height:1.45}
+.gauge-ref svg{flex-shrink:0}
+.gauge-ref b{color:var(--ok);font-size:16px}
+.evi{scroll-margin-bottom:130px;scroll-margin-top:150px}
+.it-qty{font-size:16px;font-weight:700;color:var(--g1);white-space:nowrap}
+.item.compact .it-hd{min-height:52px;padding:6px 12px}
+.item.compact .it-ic{width:36px;height:36px;font-size:22px;border-radius:10px}
+.item.compact .it-name{font-size:17px}
+.item.compact .it-sub{display:none}
+.item.compact .badge{margin-top:0}
+.item.compact .it-main{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:15px;font-weight:700;padding:3px 10px;border-radius:99px;margin-top:4px}
+.t-ok{background:var(--ok-l);color:var(--ok)}
+.t-warn{background:var(--warn-l);color:var(--warn)}
+.t-bad{background:var(--bad-l);color:var(--bad)}
+.t-pend{background:var(--warn-l);color:var(--warn)}
+.it-edit{font-size:15px;font-weight:700;color:var(--g1);background:var(--g4);border-radius:10px;padding:0 12px;min-height:44px;display:flex;align-items:center;flex-shrink:0}
+.it-body{padding:0 14px 14px}
+.prev{background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:12px;padding:8px 12px;margin-bottom:10px;font-size:16px;display:flex;gap:10px;align-items:center}
+.prev-tx{flex:1}
+.prev-tx b{color:var(--warn)}
+.prev img{width:52px;height:52px;border-radius:8px;object-fit:cover;cursor:zoom-in}
+.btn-same{width:100%;min-height:var(--tap);border-radius:14px;background:var(--warn);color:#fff;font-size:18px;font-weight:700;margin-bottom:8px}
+
+.quick{display:flex;gap:8px}
+.btn-ok{flex:1.6;min-height:var(--tap);border-radius:14px;background:var(--ok);color:#fff;font-size:19px;font-weight:700;padding:0 10px}
+.btn-prob{flex:1;min-height:var(--tap);border-radius:14px;background:#fff;border:2px solid var(--warn);color:var(--warn);font-size:16px;font-weight:700;padding:0 8px;line-height:1.2}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt-grid.c3{grid-template-columns:1fr 1fr 1fr}
+.opt{min-height:64px;border-radius:14px;border:2px solid var(--line);background:#fff;font-size:17px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px;line-height:1.2}
+.opt span{font-size:24px}
+.opt.on.o-ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.opt.on.o-warn{background:var(--warn);border-color:var(--warn);color:#fff}
+.opt.on.o-bad{background:var(--bad);border-color:var(--bad);color:#fff}
+.score{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.sc{min-height:var(--tap);border-radius:14px;border:2px solid var(--line);background:#fff;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.sc.lo{color:var(--bad)}.sc.mid{color:var(--warn)}.sc.hi{color:var(--ok)}
+.sc.on{color:#fff}.sc.on.lo{background:var(--bad);border-color:var(--bad)}.sc.on.mid{background:var(--warn);border-color:var(--warn)}.sc.on.hi{background:var(--ok);border-color:var(--ok)}
+.sc-leg{display:flex;justify-content:space-between;font-size:14px;color:var(--text-m);margin-top:6px}
+.ed-lbl{font-size:16px;font-weight:700;color:var(--text-m);margin:12px 0 6px}
+.ed-lbl:first-child{margin-top:0}
+.stepper{display:flex;align-items:center;gap:10px}
+.st-btn{width:64px;height:64px;border-radius:16px;background:var(--g4);border:2px solid var(--g3);color:var(--g1);font-size:34px;font-weight:700;line-height:1}
+.st-btn:disabled{opacity:.35}
+.st-num{min-width:64px;text-align:center;font-size:38px;font-weight:700;font-variant-numeric:tabular-nums}
+.st-of{font-size:17px;color:var(--text-m)}
+.seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.btn-cam{width:100%;min-height:64px;border-radius:14px;border:2.5px dashed var(--g2);background:var(--g4);color:var(--g1);font-size:19px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-cam.need{border-color:var(--bad);background:#FFF5F5;color:var(--bad)}
+.ph-row{display:flex;align-items:center;gap:12px}
+.ph-th{width:84px;height:84px;border-radius:12px;object-fit:cover;border:2px solid var(--line);cursor:zoom-in;flex-shrink:0;background:#eee}
+.ph-side{flex:1;min-width:0}
+.ph-st{font-size:15px;color:var(--text-m);margin-bottom:6px}
+.btn-re{min-height:48px;padding:0 16px;border-radius:12px;border:2px solid var(--g2);color:var(--g1);font-size:16px;font-weight:700;background:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:48px;padding:0 16px;border-radius:24px;border:2px solid var(--line);background:#fff;font-size:16px;font-weight:600;color:var(--text)}
+.chip.on{background:var(--g1);border-color:var(--g1);color:#fff}
+.note-inp{width:100%;min-height:52px;margin-top:8px;border:2px solid var(--line);border-radius:12px;padding:10px 14px;font-family:inherit;font-size:17px;outline:none;background:#fff}
+.note-inp:focus{border-color:var(--g2)}
+.btn-fin{width:100%;min-height:var(--tap);margin-top:14px;border-radius:14px;background:var(--g1);color:#fff;font-size:19px;font-weight:700}
+.btn-fin:disabled{background:#D1D5DB;color:#6B7280}
+.need-txt{font-size:15px;color:var(--bad);font-weight:600;text-align:center;margin-top:6px}
+
+/* summary / report */
+.pc{display:flex;gap:12px;align-items:flex-start;background:#fff;border-radius:var(--r);box-shadow:var(--shadow);padding:12px;margin-bottom:10px;border-left:6px solid var(--line)}
+.pc.t-warn{border-left-color:var(--warn);background:#fff}
+.pc.t-bad{border-left-color:var(--bad);background:#fff}
+.pc-ic{font-size:30px;line-height:1.1}
+.pc-main{flex:1;min-width:0}
+.pc-name{font-size:18px;font-weight:700}
+.pc-lbl{font-size:16px;font-weight:700}
+.pc.t-warn .pc-lbl{color:var(--warn)}.pc.t-bad .pc-lbl{color:var(--bad)}
+.pc-note{font-size:16px;color:var(--text-m);margin-top:2px}
+.pc-th{width:64px;height:64px;border-radius:10px;object-fit:cover;cursor:zoom-in}
+.btn-mini{min-height:44px;padding:0 14px;border-radius:10px;background:var(--g4);color:var(--g1);font-weight:700;font-size:16px;align-self:center}
+.kv{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:none}
+.kv-k{font-size:16px;color:var(--text-m);flex:1}
+.kv-v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.thumbs{display:flex;gap:8px}
+details.oks{background:#fff;border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:12px}
+details.oks summary{list-style:none;min-height:56px;display:flex;align-items:center;padding:0 16px;font-size:18px;font-weight:700;color:var(--ok);cursor:pointer}
+details.oks summary::-webkit-details-marker{display:none}
+details.oks summary::after{content:'▾';margin-left:auto;color:var(--text-l)}
+details.oks[open] summary::after{content:'▴'}
+.ok-li{display:flex;gap:10px;align-items:center;padding:8px 16px;border-top:1px solid var(--line);font-size:16px}
+.ok-li b{margin-left:auto;color:var(--ok);font-size:15px;white-space:nowrap}
+
+.state{text-align:center;padding:40px 20px}
+.state-ic{font-size:84px;line-height:1.1}
+.state-t{font-size:26px;font-weight:700;margin:12px 0 8px}
+.state-p{font-size:18px;color:var(--text-m);line-height:1.6}
+.done-ic{width:120px;height:120px;border-radius:50%;background:var(--ok);color:#fff;font-size:68px;display:flex;align-items:center;justify-content:center;margin:10px auto 0;box-shadow:0 0 0 12px var(--ok-l)}
+.done-ic.late{background:#CA8A04;box-shadow:0 0 0 12px #FEF9C3}
+
+.sk{background:linear-gradient(90deg,#ececec 25%,#f6f6f6 50%,#ececec 75%);background-size:200% 100%;animation:sh 1.2s infinite;border-radius:12px}
+@keyframes sh{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}.prog-bar i{transition:none}}
+.spin{width:22px;height:22px;border-radius:50%;border:3px solid rgba(255,255,255,.4);border-top-color:#fff;animation:rot .8s linear infinite;display:inline-block}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+#toastWrap{position:fixed;left:0;right:0;top:12px;z-index:80;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;padding:0 12px}
+.toast{pointer-events:auto;max-width:520px;width:100%;display:flex;align-items:center;gap:10px;background:#1F2937;color:#fff;border-radius:14px;padding:12px 14px;font-size:17px;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:tin .2s ease-out}
+.toast.ok{background:#14532D}.toast.warn{background:#92400E}.toast.error{background:#991B1B}
+.toast .tx{flex:1;white-space:pre-line}
+.toast .ta{min-height:40px;padding:0 14px;border-radius:10px;background:rgba(255,255,255,.2);color:#fff;font-weight:700}
+@keyframes tin{from{transform:translateY(-10px);opacity:0}}
+#modal{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;padding:16px;flex-direction:column;gap:12px}
+#modal.show{display:flex}
+#modal img{max-width:100%;max-height:75vh;border-radius:12px}
+#modal .btn-sec{max-width:320px}
+
+</style>
+</head>
+<body>
+<div id="offline-bar" class="offline hide">📡 ไม่มีสัญญาณเน็ต — ที่ทำไว้เก็บในเครื่องแล้ว มีเน็ตค่อยส่ง</div>
+<header class="hdr" id="hdr">
+  <div class="hdr-in">
+    <button class="hdr-back hide" id="hdr-back" aria-label="ย้อนกลับ" onclick="history.back()">‹</button>
+    <div class="hdr-ic" id="hdr-ic">🚚</div>
+    <div style="min-width:0">
+      <div class="hdr-t" id="hdr-t">เช็คก่อนออกรถ</div>
+      <div class="hdr-s" id="hdr-s">อุปกรณ์ติดรถ · ทุกวันที่รถวิ่ง</div>
+    </div>
+  </div>
+  <div id="hdr-prog"></div>
+</header>
+<div id="stale-bar" class="stale hide">แสดงข้อมูลล่าสุดที่เคยโหลดไว้ (ยังต่อเน็ตไม่ได้)</div>
+<main class="wrap" id="app"></main>
+<div class="bottom hide" id="bottom"><div class="bottom-in" id="bottom-in"></div></div>
+<div id="toastWrap"></div>
+<div id="modal" onclick="if(event.target===this)A.closeModal()"></div>
+<input type="file" id="cam" accept="image/*" capture="environment" hidden>
+
+<script>
+'use strict';
+/* =====================================================================
+   หน้าเช็คก่อนออกรถ (คนขับ) — ฉบับใช้งานจริง
+   ตัวตน (เลือกตามลำดับ):
+     1) ?t=<token>  ลิงก์ส่วนตัวรายวันจากการ์ด "ช" → ส่ง t ทุก request แทน userId · ไม่โหลด LIFF
+     2) เปิดใน LIFF (?liff=<LIFF_ID> หรือค่าคงที่ LIFF_ID_DEFAULT) → userId จาก liff.getProfile()
+     3) ไม่มีทั้งคู่ / LINK_EXPIRED → "พิมพ์ ช ในไลน์ SSB เพื่อเปิดหน้านี้"
+   Edge: vehicle-equipment (เรียกตรง ไม่แนบ key แบบ Driver_form) · สัญญา agent2-backend/api-contract.md
+   ===================================================================== */
+const VEQ_EDGE = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/vehicle-equipment';
+const LIFF_ID_DEFAULT = '';            // ยังไม่สร้าง LIFF ของหน้านี้ — ใส่ทีหลัง หรือส่งมาทาง ?liff=
+const LIFF_SDK = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
+const REQUIRE_PHOTO_ON_LOST = false;   // ของหายไม่บังคับรูป (เลือกหมายเหตุแทน)
+const REQUIRE_PHOTO_ON_FAIL = true;    // ตรวจสภาพ "ไม่ผ่าน" ต้องมีรูป + หมายเหตุ (ตามสัญญา)
+const MAX_PHOTO_AGE_MS = 5*60*1000;    // เหมือน Driver_form
+const MAX_EXIF_AGE_MS  = 30*60*1000;
+const DRAFT_VER = 2;
+const VEQ_START_DATE = '2026-11-16';   // ก่อนวันนี้ไม่ขึ้น 🔴 (backend ส่ง none อยู่แล้ว หน้าเว็บกันซ้ำ)
+const startDate = () => VEQ_START_DATE;
+const GET_TIMEOUT_MS = 15000, POST_TIMEOUT_MS = 45000;
+
+/* ---------- utils ---------- */
+const $ = id => document.getElementById(id);
+const TH_M  = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const TH_WD = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const TH_WS = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+const pad = n => String(n).padStart(2,'0');
+const isoDate = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parseD = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
+const addDays = (s,n) => { const d=parseD(s); d.setDate(d.getDate()+n); return isoDate(d); };
+function dayLabel(s, wd){ const d=parseD(s); return (wd?TH_WD[d.getDay()]+' ':'')+d.getDate()+' '+TH_M[d.getMonth()]+' '+(d.getFullYear()+543); }
+const hm = iso => { if(!iso) return ''; const d=new Date(iso); return pad(d.getHours())+':'+pad(d.getMinutes())+' น.'; };
+function fmtD(iso){ if(!iso) return ''; const d=new Date(iso); return d.getDate()+' '+TH_M[d.getMonth()]+' '+(d.getFullYear()+543); }
+function fmtDT(iso){ return iso ? fmtD(iso)+' · '+hm(iso) : ''; }
+const fmtNum = n => Number(n).toLocaleString('en-US');
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
+function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+
+/* ---------- แคตตาล็อก (veq_items) ---------- */
+const CAT_ORDER = ['ตรวจสภาพ','เอกสาร/บัตร','ความปลอดภัย','ยาง/ล้อ','เครื่องมือ','อิเล็กทรอนิกส์','อุปกรณ์ห้องโดยสาร','ผ้าใบ','Bulk โหลด','PPE'];
+const CAT_UI = {
+  'ตรวจสภาพ':{ic:'🔧',n:'ตรวจสภาพรถ'}, 'เอกสาร/บัตร':{ic:'📄',n:'เอกสาร / บัตร'}, 'ความปลอดภัย':{ic:'🦺',n:'ความปลอดภัย'},
+  'ยาง/ล้อ':{ic:'🛞',n:'ยาง / ล้อ'}, 'เครื่องมือ':{ic:'🧰',n:'เครื่องมือ'}, 'อิเล็กทรอนิกส์':{ic:'📹',n:'กล้อง / อิเล็กทรอนิกส์'},
+  'อุปกรณ์ห้องโดยสาร':{ic:'💺',n:'ในห้องคนขับ'}, 'ผ้าใบ':{ic:'⛺',n:'ผ้าใบ'}, 'Bulk โหลด':{ic:'🛢️',n:'อุปกรณ์โหลด (Bulk)'}, 'PPE':{ic:'⛑️',n:'ชุดป้องกัน (PPE)'}
+};
+// code: [ชื่อ, หมวด, หน่วย, check_mode, icon, flags]
+const CATALOG = {
+  TIRE_AIR:['ลมยาง','ตรวจสภาพ','','pass_fail','🛞',{in_ledger:false}],
+  LIGHTS:['ไฟหน้า / ท้าย / เลี้ยว','ตรวจสภาพ','','pass_fail','💡',{in_ledger:false}],
+  ENGINE_OIL:['น้ำมันเครื่อง','ตรวจสภาพ','','pass_fail','🛢️',{in_ledger:false}],
+  CLEANLINESS:['ความสะอาดรถ','ตรวจสภาพ','คะแนน','score','✨',{in_ledger:false}],
+  PT_CARD:['บัตร PT','เอกสาร/บัตร','ใบ','status','🪪'],
+  PLATE:['ป้ายทะเบียน หน้า-หลัง','เอกสาร/บัตร','แผ่น','count','🔢'],
+  CAR_DOCS:['เอกสารติดรถ','เอกสาร/บัตร','ชุด','count','📄'],
+  FUEL_CARD:['บัตรเติมน้ำมัน','เอกสาร/บัตร','ใบ','count','💳'],
+  WHEEL_CHOCK:['หมอนรองล้อ','ความปลอดภัย','อัน','count','🧱'],
+  CONE:['กรวย','ความปลอดภัย','อัน','count','🚧'],
+  WARN_TRIANGLE:['สามเหลี่ยมสะท้อนแสง','ความปลอดภัย','อัน','count','🔺'],
+  FIRE_EXT:['ถังดับเพลิง','ความปลอดภัย','ถัง','gauge','🧯',{has_expiry:true,photo_required:true}],
+  SPARE_TIRE:['ยางอะไหล่','ยาง/ล้อ','เส้น','count','🛞'],
+  SPARE_KEY:['กุญแจสำรอง','เครื่องมือ','ดอก','count','🔑'],
+  HAND_TRUCK:['รถเข็น','เครื่องมือ','คัน','count','🛒'],
+  RAIL_SLIDE:['รางเลื่อน','เครื่องมือ','ชุด','count','🛝'],
+  CARGO_STRAP:['สเตย์ / สายรัดของ','เครื่องมือ','เส้น','count','🪢'],
+  DTC_BOX:['DTC / กล่องรูดใบขับขี่','อิเล็กทรอนิกส์','เครื่อง','count','📟'],
+  DASHCAM:['กล้องติดรถ หน้า/หลัง','อิเล็กทรอนิกส์','ตัว','count','📹',{has_serial:true}],
+  CAB_AIR:['แอร์หัวเก๋ง','อุปกรณ์ห้องโดยสาร','ชุด','installed','❄️',{has_serial:true}],
+  TARP_5x8:['ผ้าใบคลุมกันน้ำ 5×8','ผ้าใบ','ผืน','count','⛺'],
+  LOAD_HOSE:['สายโหลด','Bulk โหลด','เส้น','count','➰'],
+  THERMOMETER:['เทอร์โมมิเตอร์วัดอุณหภูมิ','Bulk โหลด','อัน','count','🌡️'],
+  PIPE_CAP:['ฝาปิดท่อโหลด','Bulk โหลด','อัน','count','⭕'],
+  HOSE_CAP:['ฝาปิดสายโหลด','Bulk โหลด','อัน','count','🔘'],
+  HOSE_FILTER:['กรองปลายสายโหลด','Bulk โหลด','อัน','count','🧽'],
+  FUEL_CAN:['กระป๋องเติมน้ำมัน','Bulk โหลด','ใบ','count','🛢️'],
+  GLOVES:['ถุงมือ','PPE','คู่','count','🧤',{is_consumable:true}],
+  HAIR_NET:['หมวกคลุมผม','PPE','ใบ','count','🧢',{is_consumable:true}],
+  HARD_HAT:['หมวกเซฟตี้','PPE','ใบ','count','⛑️'],
+};
+const ICON = code => (CATALOG[String(code).split('__')[0]]||[])[4] || '📦';
+const CHIPS = {
+  broken:['แตก / หัก','ใช้งานไม่ได้','จอดับ / ไม่ติด','รั่ว / ซึม','ส่งซ่อมแล้ว'],
+  lost:['หายระหว่างทาง','ไม่เคยได้รับ','ใช้หมดแล้ว','อยู่ที่รถคันอื่น','แอดมินเก็บไว้'],
+  none:['ยังไม่ได้รับ','รอทำใหม่','อยู่ที่ออฟฟิศ'],
+  fail:['ลมอ่อน / ยางแบน','ไฟไม่ติด','น้ำมันต่ำ','เติม / แก้แล้ว','แจ้งช่างแล้ว'],
+  gauge:['เข็มตกแดง / ไม่มีแรงดัน','เข็มเกินแดงขวา','เกจแตก / มองไม่เห็น','ใช้ดับไฟไปแล้ว','แจ้งแอดมินแล้ว'],
+};
+const STATUS_OPTS = [['มี','🪪','มี (อยู่กับตัว)','ok'],['อยู่ที่รถ','🚚','อยู่ที่รถ','ok'],['ไม่มี','➖','ไม่มี','bad'],['หาย','❌','หาย','bad']];
+const INST_OPTS   = [['ใช้ได้','❄️','ติดตั้ง ใช้ได้','ok'],['เสีย','🔧','ติดตั้ง แต่เสีย','warn'],['ไม่ได้ติดตั้ง','➖','ไม่มีติดตั้ง','bad']];
+const PF_OPTS     = [['ผ่าน','👍','ผ่าน','ok'],['ไม่ผ่าน','👎','ไม่ผ่าน','bad']];
+// value_text ตามสัญญา: green / low / high / missing (ระบบแปลงเป็น condition เอง)
+const GAUGE_OPTS  = [['green','🟢','เข็มอยู่โซนเขียว','ok'],['low','🔴','ต่ำ (แดงซ้าย)','bad'],['high','🟡','สูงเกิน (แดงขวา)','warn'],['missing','❌','ไม่มีถัง / หาย','bad']];
+const GAUGE_COND  = {green:'ปกติ',low:'ชำรุด',high:'ชำรุด',missing:'หาย'};
+// ภาพเกจตัวอย่าง (SVG) ให้คนขับเทียบว่าโซนเขียวอยู่ตรงไหน
+const GAUGE_SVG = '<svg viewBox="0 0 120 74" width="120" height="74" role="img" aria-label="เกจตัวอย่าง: เข็มต้องชี้ในโซนเขียวตรงกลาง">'+
+  '<path d="M14 64 A46 46 0 0 1 36 25" fill="none" stroke="#DC2626" stroke-width="12"/>'+
+  '<path d="M36 25 A46 46 0 0 1 84 25" fill="none" stroke="#16A34A" stroke-width="12"/>'+
+  '<path d="M84 25 A46 46 0 0 1 106 64" fill="none" stroke="#DC2626" stroke-width="12"/>'+
+  '<line x1="60" y1="64" x2="60" y2="24" stroke="#111827" stroke-width="4" stroke-linecap="round"/><circle cx="60" cy="64" r="6" fill="#111827"/>'+
+  '<text x="6" y="73" font-size="10" fill="#B91C1C" font-family="Sarabun,sans-serif">ต่ำ</text><text x="98" y="73" font-size="10" fill="#B91C1C" font-family="Sarabun,sans-serif">สูง</text></svg>';
+const COND_OPTS   = [['ปกติ','👍','ปกติ','ok'],['ชำรุด','🔧','ชำรุด','warn'],['หาย','❌','หาย','bad']];
+const OV_SLOTS    = [{lbl:'ห้องโดยสาร',ic:'💺',need:true},{lbl:'ตู้เครื่องมือ / ท้ายรถ',ic:'🧰',need:false}];
+
+
+/* =====================================================================
+   ตัวตน — ลิงก์ส่วนตัว (?t=) หรือ LINE LIFF
+   ===================================================================== */
+// อ่านพารามิเตอร์ทั้งจาก query ตรง และจาก liff.state (LIFF ห่อพารามิเตอร์ไว้ตอน redirect ครั้งแรก)
+function qp(name){
+  try{
+    const q=new URLSearchParams(location.search); let v=q.get(name);
+    const st=q.get('liff.state'); if(!v && st) v=new URLSearchParams(st.split('?')[1]||'').get(name);
+    return v||null;
+  }catch(e){ return null; }
+}
+function loadScript(src){
+  return new Promise((ok,bad)=>{ const s=document.createElement('script'); s.src=src; s.async=true; s.onload=()=>ok(); s.onerror=()=>bad(new Error('LIFF_SDK')); document.head.appendChild(s); });
+}
+const auth = {
+  async getUser(){
+    const t=qp('t');
+    if(t) return {mode:'link', t};                       // ลิงก์ส่วนตัวรายวัน ไม่ต้องโหลด LIFF
+    const liffId=qp('liff') || LIFF_ID_DEFAULT;
+    if(!liffId) return null;
+    try{
+      if(!window.liff) await loadScript(LIFF_SDK);
+      await liff.init({liffId});
+      if(!liff.isLoggedIn()){
+        if(liff.isInClient()){ liff.login(); return new Promise(()=>{}); }
+        return null;                                      // เปิดนอก LINE และไม่ได้ล็อกอิน
+      }
+      const p=await liff.getProfile();
+      return p && p.userId ? {mode:'liff', userId:p.userId, displayName:p.displayName} : null;
+    }catch(e){ console.warn('LIFF', e && e.message); return null; }
+  },
+  close(){
+    try{ if(window.liff && liff.isInClient && liff.isInClient()){ liff.closeWindow(); return; } }catch(e){}
+    try{ window.close(); }catch(e){}
+    toast('ปิดหน้านี้ได้เลย','info');
+  }
+};
+// ตัวตนที่แนบไปทุก request: t (ลิงก์) หรือ userId (LIFF)
+const ident = () => S.user && S.user.mode==='link' ? {t:S.user.t} : {userId:S.user.userId};
+
+/* =====================================================================
+   api — Edge vehicle-equipment (ตาม agent2-backend/api-contract.md)
+   GET  ?action=myDaily&(t|userId)&date            · GET ?action=myHistory&(t|userId)&vehicleId&from&to
+   GET  ?action=checkDetail&(t|userId)&checkId
+   POST {action:'uploadPhoto', t|userId, vehicleId, date, kind, itemCode, unitNo, imageBase64} → {ok,url,path}
+   POST {action:'submitDaily', t|userId, vehicleId, date, odometer, odometer_photo, overview_photos[], note, client_draft_id, allOk, cleanliness, lines[]}
+   error: LINK_EXPIRED · NOT_DRIVER · INACTIVE · NO_VEHICLE · NOT_YOUR_VEHICLE · PHOTO_REQUIRED(missing[],stale[]) · DAY_CLOSED · BAD_DATE · INVALID(errors[]) · NO_ITEMS
+   ===================================================================== */
+function offlineErr(){ const e=new Error('OFFLINE'); e.offline=true; return e; }
+async function edgeFetch(url, opt, ms){
+  if(!navigator.onLine) throw offlineErr();
+  const ac=new AbortController(), tm=setTimeout(()=>ac.abort(), ms);
+  let r;
+  try{ r=await fetch(url, Object.assign({signal:ac.signal}, opt||{})); }
+  catch(e){ const x=new Error(e && e.name==='AbortError' ? 'TIMEOUT' : 'NETWORK'); x.offline=true; throw x; }
+  finally{ clearTimeout(tm); }
+  let j=null; try{ j=await r.json(); }catch(e){}
+  if(!j) throw new Error('HTTP '+r.status);
+  if(j.code==='LINK_EXPIRED') linkExpired();
+  return j;
+}
+function edgeGet(params){
+  const q=new URLSearchParams(Object.assign({}, params, ident()));
+  return edgeFetch(VEQ_EDGE+'?'+q.toString(), null, GET_TIMEOUT_MS);
+}
+function edgePost(body){
+  return edgeFetch(VEQ_EDGE, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(Object.assign({}, body, ident()))}, POST_TIMEOUT_MS);
+}
+const api = {
+  getMyDaily:     ({date})                 => edgeGet({action:'myDaily', date}),   // vehicleId ว่าง = คันประจำ
+  getMyHistory:   ({vehicleId, from, to})  => edgeGet({action:'myHistory', vehicleId, from, to}),
+  getCheckDetail: ({checkId})              => edgeGet({action:'checkDetail', checkId}),
+  uploadPhoto:    p                        => edgePost(Object.assign({action:'uploadPhoto'}, p)),
+  submitDaily:    payload                  => edgePost(Object.assign({action:'submitDaily'}, payload)),
+};
+// ลิงก์หมดอายุ (เลยวัน) → เก็บร่างไว้ แล้วบอกให้พิมพ์ ช ใหม่
+function linkExpired(){
+  if(S.screen==='expired') return;
+  try{ if(S.F && S.data) saveDraft(true); }catch(e){}
+  S.expired=true; setTimeout(()=>go('expired',{},true),0);
+}
+
+
+/* =====================================================================
+   state
+   ===================================================================== */
+const S = {
+  date: isoDate(new Date()),
+  user:null, uid:null, data:null, hist:null, stale:false, expired:false,
+  screen:'loading', params:{}, F:null, busy:false, camTarget:null, lastSubmit:null,
+};
+
+/* ---------- ฟอร์ม / ร่าง ---------- */
+const draftKey = () => 'ssb_veq_daily_v'+DRAFT_VER+'_'+S.uid+'_'+S.data.vehicle.id+'_'+S.date;
+function emptyLine(){ return {found:null,cond:null,value:null,chips:[],text:'',photo:null,photoUp:null,admin:null,touched:true,open:false,same:false}; }
+function splitNote(note, ln){
+  if(!note) return;
+  const all=[].concat(CHIPS.broken,CHIPS.lost,CHIPS.none,CHIPS.fail,CHIPS.gauge);
+  String(note).split(' · ').forEach(p=>{ if(all.indexOf(p)>=0) ln.chips.push(p); else ln.text = ln.text ? ln.text+' · '+p : p; });
+}
+function lineFromSaved(it, l, forEdit){
+  const ln=emptyLine(); if(!l) return ln;
+  const m=it.check_mode;
+  if(m==='count'){ ln.found=l.qty_found; ln.cond = l.condition==='ไม่มี' ? 'หาย' : (l.condition||'ปกติ'); }
+  else if(m==='status') ln.value = l.value_text || ({'ปกติ':'มี','หาย':'หาย','ไม่มี':'ไม่มี'})[l.condition] || null;
+  else if(m==='score') ln.value = l.qty_found;
+  else if(m==='installed') ln.value = l.value_text || (l.condition==='ชำรุด'?'เสีย':l.condition==='ไม่มี'?'ไม่ได้ติดตั้ง':'ใช้ได้');
+  else if(m==='pass_fail'){ const v=String(l.value_text||'').toLowerCase();
+    ln.value = (v==='pass'||v==='ผ่าน'||v==='ok') ? 'ผ่าน' : (v==='fail'||v==='ไม่ผ่าน'||v==='เสีย') ? 'ไม่ผ่าน' : l.condition ? (l.condition==='ปกติ'?'ผ่าน':'ไม่ผ่าน') : null; }
+  else if(m==='gauge') ln.value = l.value_text || (l.condition==='ปกติ'?'green':l.condition==='ชำรุด'?'low':'missing');
+  splitNote(l.note, ln);
+  if(l.photo_url){ ln.photo=l.photo_url; ln.photoUp='ok'; }
+  if(forEdit && l.admin_note){ ln.admin=l.admin_note; ln.touched=false; ln.open=true; }
+  return ln;
+}
+// gauge ที่ต้องมีหลายถัง → แยกการ์ด "ถังที่ 1/2" แต่ละถังมีเกจ+รูปของตัวเอง · ส่งกลับเป็น item_code เดิม + unit_no
+const UNIT_SEP='__';
+const MULTI = {};   // item_code ที่แยกเป็นหลายถัง
+const unitsOf = it => it.check_mode==='gauge' ? (+it.units || +it.qty_expected || 1) : 1;
+function expandItems(items){
+  const out=[];
+  (items||[]).forEach(it=>{
+    const nu=unitsOf(it);
+    if(it.unit_no || nu<=1){ out.push(it); return; }
+    MULTI[it.item_code]=true;
+    for(let n=1;n<=nu;n++){
+      const pu=(it.prev_units||[]).find(p=>p.unit_no===n) || null;
+      out.push(Object.assign({}, it, {item_code:it.item_code+UNIT_SEP+n, base_code:it.item_code, unit_no:n, qty_expected:1,
+        name:it.name+' · ถังที่ '+n, sort:it.sort+n/100, prev:pu, prev_units:undefined}));
+    }
+  });
+  return out;
+}
+// unit_no ตามสัญญา: รายการทั่วไป = 1 เสมอ → แยกคีย์เฉพาะรายการที่แตกเป็นหลายถัง
+const lineKey = l => (l.unit_no && MULTI[l.item_code]) ? l.item_code+UNIT_SEP+l.unit_no : l.item_code;
+const baseCode = code => String(code).split(UNIT_SEP)[0];
+const unitNo = code => { const p=String(code).split(UNIT_SEP); return p[1]?+p[1]:null; };
+const prevLine = it => Object.assign({qty_found:null, condition:null, value_text:null, note:null, photo_url:null}, it.prev||{});
+function prevProblem(it){
+  if(!it.prev || (!it.prev.condition && !it.prev.value_text)) return false;
+  const ln=lineFromSaved(it, prevLine(it), false); const inf=lineInfo(it, ln);
+  return inf.answered && inf.problem;
+}
+function newForm(){
+  const d=S.data, c=d.check;
+  const f={v:DRAFT_VER, ov:[null,null], odo:'', odoPhoto:null, odoUp:null, lines:{}, base_check_id:c?c.id:null,
+    draftId:'D'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), savedAt:null, adminOdo:null};
+  d.items.forEach(it=>{ f.lines[it.item_code]=emptyLine(); });
+  if(c && c.status!=='ตรวจแล้ว'){
+    const by={}; c.lines.forEach(l=>by[lineKey(l)]=l);
+    d.items.forEach(it=>{ f.lines[it.item_code]=lineFromSaved(it, by[it.item_code], true); });
+    f.odo = c.odometer!=null ? String(c.odometer) : '';
+    (c.overview_photos||[]).slice(0,2).forEach((u,i)=>{ f.ov[i]={src:u,up:'ok'}; });
+    if(c.status==='ต้องแก้ไข' && c.odometer_admin_note) f.adminOdo=c.odometer_admin_note;   // ล้างรูปหน้าปัดให้ถ่ายใหม่
+    else if(c.odometer_photo){ f.odoPhoto=c.odometer_photo; f.odoUp='ok'; }
+  }
+  return f;
+}
+function loadForm(){
+  const c=S.data.check;
+  try{
+    const raw=lsGet(draftKey());
+    if(raw){
+      const dr=JSON.parse(raw);
+      const newer = !c || !c.reviewed_at || (dr.savedAt && dr.savedAt > c.reviewed_at);
+      if(dr && dr.v===DRAFT_VER && dr.base_check_id===(c?c.id:null) && newer){
+        S.data.items.forEach(it=>{ if(!dr.lines[it.item_code]) dr.lines[it.item_code]=emptyLine(); });
+        return dr;
+      }
+    }
+  }catch(e){}
+  return newForm();
+}
+let _saveT=null;
+function saveDraft(now){
+  clearTimeout(_saveT);
+  const run=()=>{
+    if(!S.F) return;
+    S.F.savedAt=new Date().toISOString();
+    let ok=lsSet(draftKey(), JSON.stringify(S.F));
+    if(!ok){
+      const lite=JSON.parse(JSON.stringify(S.F));
+      Object.values(lite.lines).forEach(l=>{ if(l.photoUp!=='ok'){ l.photo=null; l.photoUp=null; } });
+      if(lite.odoUp!=='ok'){ lite.odoPhoto=null; lite.odoUp=null; }
+      lite.ov=lite.ov.map(o=>o&&o.up==='ok'?o:null);
+      ok=lsSet(draftKey(), JSON.stringify(lite));
+      if(ok) toast('เครื่องเต็ม — บันทึกร่างได้แต่ไม่รวมรูปที่ยังไม่อัปโหลด','warn');
+    }
+    const el=$('saved');
+    if(el && ok){ const d=new Date(); el.textContent='💾 บันทึกในเครื่องแล้ว '+pad(d.getHours())+':'+pad(d.getMinutes()); }
+    else if(el) el.textContent='⚠️ เครื่องนี้เก็บร่างไม่ได้ — ทำให้เสร็จแล้วส่งเลย';
+  };
+  if(now) run(); else _saveT=setTimeout(run,350);
+}
+function draftProgress(){
+  try{ const raw=lsGet(draftKey()); if(!raw) return null; const dr=JSON.parse(raw); const c=S.data.check;
+    if(dr.base_check_id!==(c?c.id:null)) return null;
+    S.data.items.forEach(it=>{ if(!dr.lines[it.item_code]) dr.lines[it.item_code]=emptyLine(); });
+    const keep=S.F; S.F=dr; const p=progress(); S.F=keep; return p.done>0?p:null;
+  }catch(e){ return null; }
+}
+function noteOf(ln){ return ln.chips.concat(ln.text.trim()?[ln.text.trim()]:[]).join(' · '); }
+
+/* ---------- ประเมินแต่ละรายการ ---------- */
+function lineInfo(it, ln){
+  const q=it.qty_expected, u=it.unit, m=it.check_mode;
+  const r={answered:false, problem:false, tone:'none', label:'ยังไม่เช็ค', ico:'', needPhoto:false, needNote:false, chipSet:null};
+  if(m==='count'){
+    if(ln.found!=null){
+      r.answered=true; const cond=ln.cond||'ปกติ', short=ln.found<q;
+      if(cond==='ชำรุด') Object.assign(r,{problem:true,tone:'warn',ico:'🔧',label:'ชำรุด · มี '+ln.found+'/'+q+' '+u,needPhoto:true,needNote:true,chipSet:'broken'});
+      else if(cond==='หาย'||short){ const miss=Math.max(q-ln.found,0);
+        Object.assign(r,{problem:true,tone:'bad',ico:'❌',label:(miss?'ขาด '+miss+' '+u:'แจ้งหาย')+' · มี '+ln.found+'/'+q,needPhoto:REQUIRE_PHOTO_ON_LOST,needNote:true,chipSet:'lost'}); }
+      else if(ln.found>q) Object.assign(r,{tone:'ok',ico:'✅',label:'มี '+ln.found+' '+u+' (เกิน '+(ln.found-q)+')'});
+      else Object.assign(r,{tone:'ok',ico:'✅',label:'ครบ '+q+' '+u});
+    }
+  } else if(m==='status'){
+    if(ln.value){ r.answered=true;
+      if(ln.value==='ไม่มี') Object.assign(r,{problem:true,tone:'bad',ico:'➖',label:'ไม่มี',needNote:true,chipSet:'none'});
+      else if(ln.value==='หาย') Object.assign(r,{problem:true,tone:'bad',ico:'❌',label:'หาย',needPhoto:REQUIRE_PHOTO_ON_LOST,needNote:true,chipSet:'lost'});
+      else Object.assign(r,{tone:'ok',ico:'✅',label:ln.value==='มี'?'มี (อยู่กับตัว)':'อยู่ที่รถ'}); }
+  } else if(m==='score'){
+    if(ln.value!=null){ const v=+ln.value; r.answered=true;
+      Object.assign(r,{tone:v>=7?'ok':v>=5?'warn':'bad',ico:v>=7?'✨':'🧽',label:v+' / 10 คะแนน'}); }
+  } else if(m==='installed'){
+    if(ln.value){ r.answered=true;
+      if(ln.value==='เสีย') Object.assign(r,{problem:true,tone:'warn',ico:'🔧',label:'ติดตั้ง แต่เสีย',needPhoto:true,needNote:true,chipSet:'broken'});
+      else if(ln.value==='ไม่ได้ติดตั้ง') Object.assign(r,{problem:true,tone:'bad',ico:'➖',label:'ไม่มีติดตั้ง',needNote:true,chipSet:'none'});
+      else Object.assign(r,{tone:'ok',ico:'✅',label:'ติดตั้ง ใช้ได้'}); }
+  } else if(m==='pass_fail'){
+    if(ln.value){ r.answered=true;
+      if(ln.value==='ไม่ผ่าน') Object.assign(r,{problem:true,tone:'bad',ico:'👎',label:'ไม่ผ่าน',needPhoto:REQUIRE_PHOTO_ON_FAIL,needNote:true,chipSet:'fail'});
+      else Object.assign(r,{tone:'ok',ico:'👍',label:'ผ่าน'}); }
+  }
+  else if(m==='gauge'){
+    if(ln.value){ r.answered=true;
+      if(ln.value==='low') Object.assign(r,{problem:true,tone:'bad',ico:'🔴',label:'เข็มต่ำ (แดงซ้าย)',needPhoto:true,needNote:true,chipSet:'gauge'});
+      else if(ln.value==='high') Object.assign(r,{problem:true,tone:'warn',ico:'🟡',label:'เข็มสูงเกิน (แดงขวา)',needPhoto:true,needNote:true,chipSet:'gauge'});
+      else if(ln.value==='missing') Object.assign(r,{problem:true,tone:'bad',ico:'❌',label:'ไม่มีถัง / หาย',needNote:true,chipSet:'lost'});
+      else Object.assign(r,{tone:'ok',ico:'🟢',label:'เข็มอยู่โซนเขียว'+(it.qty_expected>1?' ('+it.qty_expected+' ถัง)':'')}); }
+  }
+  // photo_required = ต้องมีรูปทุกครั้ง (เช่น เกจถังดับเพลิง) ยกเว้นตอนไม่มีของให้ถ่าย
+  if(r.answered && it.photo_required && !(r.chipSet==='lost'||r.chipSet==='none')) r.needPhoto=true;
+  const miss=[];
+  if(r.answered){
+    if(r.needPhoto && !ln.photo) miss.push('ถ่ายรูป');
+    if(r.needNote && !noteOf(ln)) miss.push('เลือกว่าเกิดอะไรขึ้น');
+  }
+  r.canFinish = r.answered && !miss.length;
+  if(r.answered && !ln.touched) miss.push('แก้ตามแอดมินแล้วกด "เรียบร้อย"');
+  r.missing=miss; r.done=r.answered && !miss.length; return r;
+}
+function odoInfo(){
+  const F=S.F, d=S.data, n=parseInt(F.odo,10), valid=!isNaN(n)&&n>0;
+  let warn='';
+  if(valid && d.last_odometer){
+    if(n<d.last_odometer) warn='⚠️ น้อยกว่าครั้งก่อน ('+fmtNum(d.last_odometer)+') — ดูเลขอีกครั้ง';
+    else if(n-d.last_odometer>3000) warn='⚠️ มากกว่าครั้งก่อน '+fmtNum(n-d.last_odometer)+' กม. — ดูเลขอีกครั้ง';
+  }
+  const miss=[]; if(!valid) miss.push('กรอกเลขไมล์'); if(!F.odoPhoto) miss.push('ถ่ายรูปหน้าปัด');
+  return {valid, n, warn, missing:miss, done:!miss.length};
+}
+const ovDone = () => !!(S.F.ov[0]||S.F.ov[1]);
+function progress(){
+  const items=S.data.items; let done=0;
+  items.forEach(it=>{ if(lineInfo(it,S.F.lines[it.item_code]).done) done++; });
+  if(odoInfo().done) done++;
+  if(ovDone()) done++;
+  return {done, total:items.length+2};
+}
+function problemsOf(lines){ return S.data.items.filter(it=>lineInfo(it,lines[it.item_code]).problem); }
+
+/* =====================================================================
+   routing
+   ===================================================================== */
+function go(scr, params, replace){
+  S.screen=scr; S.params=params||{};
+  try{ replace ? history.replaceState({scr,params:S.params},'') : history.pushState({scr,params:S.params},''); }catch(e){}
+  render(); window.scrollTo(0,0);
+}
+window.addEventListener('popstate', e=>{
+  const st=e.state||{scr:'home',params:{}};
+  if(S.screen==='done' && (st.scr==='summary'||st.scr==='check')){ go('home',{},true); return; }
+  S.screen=st.scr; S.params=st.params||{}; render();
+});
+function setHeader(o){
+  $('hdr-back').classList.toggle('hide', !o.back);
+  $('hdr-ic').classList.toggle('hide', !!o.back);
+  $('hdr-t').textContent=o.t||'เช็คก่อนออกรถ';
+  $('hdr-s').textContent=o.s||'อุปกรณ์ติดรถ · ทุกวันที่รถวิ่ง';
+  $('hdr-prog').innerHTML=o.prog||'';
+}
+function setBottom(html){ $('bottom').classList.toggle('hide', !html); $('bottom-in').innerHTML=html||''; }
+const plateTxt = v => v.plate_head + (v.plate_tail ? ' / '+v.plate_tail : '');
+function render(){
+  const s=S.screen;
+  $('stale-bar').classList.toggle('hide', !S.stale);
+  if(s==='loading') return rLoading();
+  if(s==='outside') return rState('💬','พิมพ์ ช ในไลน์ SSB เพื่อเปิดหน้านี้','แล้วกดปุ่ม 📋 เช็คก่อนออกรถ ในการ์ดที่ตอบกลับ');
+  if(s==='expired') return rState('💬','พิมพ์ ช ในไลน์ SSB เพื่อเปิดหน้านี้','ลิงก์นี้หมดอายุแล้ว (ใช้ได้เฉพาะวันที่ได้รับ)<br>ที่ทำค้างไว้ยังเก็บในเครื่อง');
+  if(s==='inactive') return rState('⏸️','บัญชียังไม่เปิดใช้งาน','ติดต่อแอดมินกลุ่มให้เปิดใช้งานก่อน<br>แล้วพิมพ์ ช ในไลน์ SSB อีกครั้ง', true);
+  if(s==='notyours') return rState('🔁','รถคันนี้ไม่ใช่รถประจำของคุณ','รถสแปร์ ให้แอดมินบันทึกแทน ไม่ต้องส่ง', true);
+  if(s==='notdriver') return rState('🙅','บัญชีนี้ยังไม่ใช่คนขับ','ให้แอดมินลงทะเบียนเป็นคนขับก่อน<br>แล้วเปิดหน้านี้อีกครั้ง', true);
+  if(s==='novehicle') return rNoVeh();
+  if(s==='error') return rState('📡','โหลดข้อมูลไม่ได้',(S.params.msg?esc(S.params.msg)+'<br>':'')+'เช็คสัญญาณเน็ต แล้วกดลองใหม่', true);
+  if(s==='home') return rHome();
+  if(s==='check') return rCheck();
+  if(s==='summary') return rSummary();
+  if(s==='done') return rDone();
+  if(s==='report') return rReport();
+}
+function rLoading(){ setHeader({}); setBottom('');
+  $('app').innerHTML='<div class="sk" style="height:150px;margin-bottom:12px"></div><div class="sk" style="height:200px;margin-bottom:12px"></div><div class="sk" style="height:150px"></div>'; }
+function rState(ic,t,p,retry){ setHeader({}); setBottom('');
+  $('app').innerHTML='<div class="state"><div class="state-ic">'+ic+'</div><div class="state-t">'+t+'</div><div class="state-p">'+p+'</div>'+(retry?'<button class="btn-sec" onclick="boot()">🔄 ลองใหม่</button>':'')+'</div>'; }
+function rNoVeh(){ setHeader({}); setBottom('');
+  const drv=(S.data&&S.data.driver)||{};
+  $('app').innerHTML='<div class="state"><div class="state-ic">🚚</div><div class="state-t">ยังไม่มีรถประจำ</div>'+
+    '<div class="state-p">'+(drv.name?'คุณ'+esc(drv.name)+' ':'')+'ยังไม่มีทะเบียนรถผูกกับชื่อในระบบ<br>ให้แอดมินกลุ่ม'+esc(drv.job_group||'')+' ผูกรถให้ก่อน<br>(รถสแปร์ แอดมินตรวจเอง ไม่ต้องส่ง)</div>'+
+    '<button class="btn-sec" onclick="boot()">🔄 ลองใหม่</button></div>'; }
+const grpLabel = g => ({'ไร่':'🌴 รถไร่','Bulk':'🛢️ รถ Bulk','Packing':'📦 รถ Packing'})[g]||g;
+function platesHTML(v){ return '<div class="plates"><div class="plate"><small>หัว</small><b>'+esc(v.plate_head)+'</b></div>'+(v.plate_tail?'<div class="plate"><small>หาง</small><b>'+esc(v.plate_tail)+'</b></div>':'')+'</div>'; }
+
+/* ---------- สถานะวันนี้ ---------- */
+function todayKey(d){
+  const c=d.check;
+  if(c && c.status==='ต้องแก้ไข') return 'ret';
+  if(c && c.status==='ตรวจแล้ว') return 'reviewed';
+  if(c) return c.on_time===false ? 'late' : 'ontime';   // null = ไม่รู้เวลาออกรถ → แสดง "✅ ส่งแล้ว"
+  const dep=d.departure||{};
+  if(dep.ran || d.will_be_late) return 'departed';
+  if(d.has_job_today===false) return 'norun';
+  return 'todo';
+}
+// สถานะ day ตามสัญญา: ok ✅ · late 🟡 · miss 🔴 · idle ➖ · warn ⚠️ · wait ⏳ · none ·
+const DAY_IC = {ok:'✅', late:'🟡', miss:'🔴', idle:'➖', warn:'⚠️', wait:'⏳', none:'·'};
+function rHome(){
+  const d=S.data, v=d.vehicle, c=d.check, k=todayKey(d);
+  setHeader({}); setBottom('');
+  const probs = c ? c.lines.filter(l=>l.condition!=='ปกติ'||l.qty_found<l.qty_expected).length : 0;
+  let body='';
+  if(k==='todo'||k==='departed'||k==='norun'){
+    const dp=draftProgress();
+    if(k==='todo') body='<span class="pill p-todo">⏳ ยังไม่ส่ง</span><div class="muted small">ส่งก่อนออกรถเที่ยวแรก'+(d.first_job_plan_at?' · งานแรกนัด <b>'+hm(d.first_job_plan_at)+'</b>':'')+'<br>ใช้เวลาประมาณ 1 นาที</div>';
+    if(k==='departed') body='<span class="pill p-warn">⚠️ รถออกแล้ว ยังไม่ส่ง</span><div class="note-box nb-warn">ออกรถเมื่อ '+hm((d.departure||{}).first_departure_at)+' — ส่งตอนนี้นับเป็น 🟡 ส่งหลังออกรถ</div>';
+    if(k==='norun') body='<span class="pill p-todo">➖ วันนี้ไม่มีงาน</span><div class="muted small">ไม่ต้องส่ง · ถ้าอยากเช็คไว้ก็ส่งได้</div>';
+    if(dp) body+='<div class="note-box nb-info">💾 มีที่ทำค้างไว้ '+dp.done+'/'+dp.total+' ข้อ</div>';
+    body+= k==='norun' ? '<button class="btn-sec" onclick="A.start()">'+(dp?'ทำต่อ':'เช็คได้ถ้าต้องการ')+'</button>'
+                       : '<button class="btn-main" onclick="A.start()">'+(dp?'▶ ทำต่อจากที่ค้างไว้':'▶ เริ่มเช็คก่อนออกรถ')+'</button>';
+  } else if(k==='ontime'||k==='late'||k==='reviewed'){
+    body = k==='late' ? '<span class="pill p-late">🟡 ส่งแล้ว (หลังออกรถ)</span>' : k==='reviewed' ? '<span class="pill p-ok">✅ แอดมินตรวจแล้ว</span>'
+      : c.on_time==null ? '<span class="pill p-ok">✅ ส่งแล้ว</span>' : '<span class="pill p-ok">✅ ส่งแล้ว ก่อนออกรถ</span>';   // on_time null = ไม่รู้เวลาออกรถ ไม่ระบุตรง/สาย
+    body+='<div class="muted small">ส่งเมื่อ '+hm(c.submitted_at)+(c.first_departure_at?' · ออกรถ '+hm(c.first_departure_at):'')+
+      (c.last_submitted_at && c.last_submitted_at!==c.submitted_at?' · แก้ล่าสุด '+hm(c.last_submitted_at):'')+'</div>';
+    if(probs) body+='<div class="note-box nb-warn">⚠️ แจ้งปัญหา '+probs+' รายการ</div>';
+    if(k==='late') body+='<div class="muted small" style="margin-top:6px">พรุ่งนี้ส่งก่อนออกรถนะครับ 🙏</div>';
+    body+='<button class="btn-sec" onclick="A.viewCurrent()">📄 ดูที่ส่งไป</button>';
+    if(d.can_submit && k!=='reviewed') body+='<button class="btn-plain" onclick="A.start()">✏️ แก้ไข (ได้ถึงเที่ยงคืน)</button>';
+  } else if(k==='ret'){
+    body='<span class="pill p-bad">↩️ แอดมินให้แก้</span><div class="reason"><b>เหตุผล ('+esc(c.reviewed_by||'แอดมิน')+')</b>'+esc(c.review_note||'')+'</div>'+
+      '<button class="btn-main" onclick="A.start()">✏️ แก้แล้วส่งใหม่</button>';
+  }
+  const spares = (d.vehicles||[]).filter(x=>x.id!==v.id);
+  const spare = spares.length ? '<div class="spare">🔁 รถสแปร์ '+spares.map(s=>esc(plateTxt(s))).join(', ')+' — แอดมินตรวจเอง ไม่ต้องส่ง</div>' : '';
+  $('app').innerHTML=
+    '<div class="card"><div class="veh-top"><span class="grp g-'+esc(v.job_group)+'">'+grpLabel(v.job_group)+'</span><span class="veh-type">'+esc((v.head_kind||'')+' '+(v.body_type||''))+'</span></div>'+
+      platesHTML(v)+'<div class="veh-drv">👤 '+esc(d.driver.name)+' <span class="muted small">· '+esc(d.driver.driver_id)+'</span></div>'+spare+'</div>'+
+    '<div class="card mc st-'+k+'"><div class="mc-lbl">เช็คก่อนออกรถ วันนี้</div><div class="mc-day">'+dayLabel(S.date,true)+'</div>'+body+'</div>'+
+    '<div class="h3">📅 ย้อนหลัง 14 วัน</div><div id="hist"><div class="sk" style="height:150px"></div></div>';
+  loadHist();
+}
+// สถิติจาก history ย่อใน myDaily (ใช้ตอน myHistory โหลดไม่ได้)
+function statsOf(days){
+  const sent=days.filter(x=>x.check_id), on=sent.filter(x=>x.on_time===true).length, late=sent.filter(x=>x.on_time===false).length;
+  const missed=days.filter(x=>x.code==='miss').length;
+  return {known_days:on+late+missed, sent:sent.length, on_time:on, late, unknown:sent.length-on-late, missed};
+}
+// กันซ้ำฝั่งหน้าเว็บ: ก่อนวันเริ่มนับ 🔴 → none
+const dayCode = x => (x.code==='miss' && x.date<startDate()) ? 'none' : x.code;
+async function loadHist(){
+  const el=$('hist'); if(!el) return;
+  let h=S.hist;
+  if(!h){
+    const to=addDays(S.date,-1), from=addDays(S.date,-14);
+    try{ h=await api.getMyHistory({vehicleId:S.data.vehicle.id, from, to}); if(!h||!h.ok) throw new Error('hist'); }
+    catch(e){ const days=(S.data.history||[]).filter(x=>x.date<S.date); h = days.length ? {days, stats:statsOf(days)} : null; }
+    S.hist=h;
+  }
+  if(!$('hist') || S.screen!=='home') return;
+  if(!h){ $('hist').innerHTML='<div class="muted small" style="margin:0 4px">ต่อเน็ตไม่ได้ — ดูย้อนหลังไม่ได้ตอนนี้</div>'; return; }
+  const days=h.days.filter(x=>x.date<S.date).sort((a,b)=>a.date<b.date?-1:1).slice(-14).map(x=>Object.assign({},x,{code:dayCode(x)}));   // เก่า → ใหม่ (ซ้าย → ขวา)
+  const sm=Object.assign(statsOf(days), h.stats||{});
+  if(sm.known_days==null) sm.known_days=statsOf(days).known_days;
+  sm.missed=days.filter(x=>x.code==='miss').length;
+  $('hist').innerHTML=
+    '<div class="stat"><div><b style="color:var(--ok)">'+sm.on_time+'/'+sm.known_days+'</b><span>ส่งก่อนออกรถ<br>(วันที่รู้เวลาออกรถ)</span></div>'+
+    '<div><b style="color:#A16207">'+sm.late+'</b><span>ส่งหลังออกรถ</span></div><div><b style="color:var(--bad)">'+sm.missed+'</b><span>วิ่งแต่ไม่ส่ง</span></div></div>'+
+    '<div class="days">'+days.map(x=>{ const dd=parseD(x.date);
+      return '<button class="day d-'+x.code+'" onclick="A.openDay(\''+x.date+'\')" aria-label="'+dayLabel(x.date,true)+'"><small>'+TH_WS[dd.getDay()]+'</small><b>'+dd.getDate()+'</b><i>'+(DAY_IC[x.code]||x.emoji||'·')+'</i></button>'; }).join('')+'</div>'+
+    '<div class="legend"><span>✅ ก่อนออกรถ</span><span>🟡 หลังออกรถ</span><span>⚠️ มีของขาด/ชำรุด</span><span>🔴 ไม่ส่ง</span><span>➖ ไม่วิ่ง</span><span>· ยังไม่เริ่มนับ</span></div>';
+}
+
+/* ---------- หน้าเช็ค ---------- */
+function progHTML(){
+  const p=progress(), pct=Math.round(p.done/p.total*100);
+  return '<div class="prog"><div class="prog-txt">เช็คแล้ว <b>'+p.done+'</b>/'+p.total+'</div><div class="prog-bar"><i class="'+(p.done===p.total?'full':'')+'" style="width:'+pct+'%"></i></div>'+
+    (p.done<p.total?'<button class="prog-next" onclick="A.nextTodo()">ข้อถัดไป ↓</button>':'')+'</div>';
+}
+function bottomHTML(){
+  const p=progress(), left=p.total-p.done, probs=problemsOf(S.F.lines).length;
+  const btn = left ? '<button class="btn-main todo" onclick="A.nextTodo()">ยังเหลือ '+left+' ข้อ — ไปทำ ↓</button>'
+    : probs ? '<button class="btn-main" onclick="A.toSummary()">ถัดไป: ดูปัญหา '+probs+' รายการก่อนส่ง ›</button>'
+    : '<button class="btn-main" id="btn-submit" onclick="A.submit()">📤 ส่งเช็คลิสต์วันนี้</button>';
+  return '<div class="saved" id="saved">'+(S.F.savedAt?'💾 บันทึกในเครื่องอัตโนมัติ':'ทำค้างไว้ได้ ข้อมูลไม่หาย')+'</div>'+btn;
+}
+function refreshProg(){ $('hdr-prog').innerHTML=progHTML(); const sv=$('saved')?.textContent; $('bottom-in').innerHTML=bottomHTML(); if(sv&&$('saved')) $('saved').textContent=sv; refreshAll(); }
+function catsOf(items){
+  const m={}; items.forEach(it=>{ (m[it.category]=m[it.category]||[]).push(it); });
+  Object.values(m).forEach(a=>a.sort((x,y)=>x.sort-y.sort));
+  return CAT_ORDER.filter(c=>m[c]).map(c=>({cat:c,items:m[c]})).concat(Object.keys(m).filter(c=>CAT_ORDER.indexOf(c)<0).map(c=>({cat:c,items:m[c]})));
+}
+const quickable = it => it.check_mode!=='score' && !it.photo_required && !prevProblem(it);
+function allBtnHTML(){
+  const n=S.data.items.filter(it=>!lineInfo(it,S.F.lines[it.item_code]).answered && quickable(it)).length;
+  const pp=S.data.items.filter(it=>!lineInfo(it,S.F.lines[it.item_code]).answered && prevProblem(it)).length;
+  const ph=S.data.items.filter(it=>!lineInfo(it,S.F.lines[it.item_code]).done && it.photo_required && !prevProblem(it));
+  const rest=[]; if(ph.length) rest.push(ph.map(it=>esc(it.name)).join(', ')+' (ต้องถ่ายรูปทุกวัน)'); if(pp) rest.push(pp+' ข้อที่ครั้งก่อนมีปัญหา');
+  if(!n) return rest.length?'<div class="all-hint">ยังเหลือ: '+rest.join(' · ')+' — ทำทีละข้อด้านล่าง</div>':'';
+  return '<button class="btn-all" onclick="A.allItems()">✅ ครบทุกรายการ ('+n+')</button>'+
+    '<div class="all-hint">ดูของในรถแล้ว แตะทีเดียว · มีอะไรขาด/เสีย ค่อยแก้ทีละข้อ'+(rest.length?'<br>ไม่รวม '+rest.join(' · '):'')+'</div>';
+}
+function refreshAll(){ const el=$('all-wrap'); if(el) el.innerHTML=allBtnHTML(); }
+function rCheck(){
+  if(!S.F) S.F=loadForm();
+  const d=S.data, v=d.vehicle, c=d.check, k=todayKey(d);
+  setHeader({back:true, t:'เช็คก่อนออกรถ · '+parseD(S.date).getDate()+' '+TH_M[parseD(S.date).getMonth()], s:plateTxt(v), prog:progHTML()});
+  setBottom(bottomHTML());
+  let h='';
+  if(c && c.status==='ต้องแก้ไข') h+='<div class="reason"><b>↩️ แอดมินให้แก้</b>'+esc(c.review_note||'')+'</div>';
+  else if(k==='departed') h+='<div class="note-box nb-warn">รถออกแล้ว '+hm((d.departure||{}).first_departure_at)+' — ส่งตอนนี้นับเป็น 🟡 ส่งหลังออกรถ</div>';
+  else if(k==='todo' && d.first_job_plan_at) h+='<div class="note-box nb-info">งานแรกนัด '+hm(d.first_job_plan_at)+' — ส่งก่อนออกรถ</div>';
+  h+='<div class="sec"><span class="stepn">1</span>รูปรวม<span id="ov-mark"></span></div><div class="card" id="ov-card">'+ovCardHTML()+'</div>';
+  h+='<div class="sec"><span class="stepn">2</span>เลขไมล์</div><div class="card" id="odo-card">'+odoCardHTML()+'</div>';
+  h+='<div class="sec"><span class="stepn">3</span>รายการเช็ค <span class="muted" style="font-size:16px;font-weight:600">('+d.items.length+')</span></div>';
+  h+='<div id="all-wrap">'+allBtnHTML()+'</div>';
+  catsOf(d.items).forEach((g,i)=>{ h+='<section class="cat" id="cat-'+i+'">'+catHTML(g)+'</section>'; });
+  $('app').innerHTML=h;
+  if(S.params.focus) setTimeout(()=>A.focus(S.params.focus),60);
+}
+function ovCardHTML(){
+  return '<div class="ov-grid">'+OV_SLOTS.map((s,i)=>{ const o=S.F.ov[i], need=s.need&&!ovDone();
+    if(o) return '<button class="ov" onclick="A.view(\''+i+'\',true)"><img src="'+o.src+'" alt="'+s.lbl+'"><span class="ov-cap">'+(o.up==='uploading'?'⏳ ':o.up==='local'?'📱 ':'✅ ')+s.lbl+'</span></button>';
+    return '<button class="ov'+(need?' need':'')+'" onclick="A.photo(\'__OV'+i+'__\')"><span class="ic">📷</span>'+s.ic+' '+s.lbl+(s.need?' <span class="req">*</span>':'<br><span style="font-weight:400;font-size:14px">(ถ้ามี)</span>')+'</button>'; }).join('')+'</div>'+
+    '<div class="ov-hint">ถ่ายให้เห็นของในห้องโดยสาร / ตู้เครื่องมือ อย่างน้อย 1 รูป · แตะรูปเพื่อดู/ถ่ายใหม่</div>';
+}
+function odoCardHTML(){
+  const F=S.F, d=S.data, oi=odoInfo();
+  return (F.adminOdo?'<div class="adm"><b>💬 แอดมิน:</b> '+esc(F.adminOdo)+'</div>':'')+
+    (d.last_odometer?'<div class="muted small" style="margin-bottom:8px">ครั้งก่อน: <b>'+fmtNum(d.last_odometer)+'</b> กม.'+(d.last_odometer_at?' ('+fmtD(d.last_odometer_at)+')':'')+'</div>':'')+
+    '<input class="odo-inp" id="odo" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="พิมพ์เลขไมล์" value="'+esc(F.odo)+'" oninput="A.odo(this)" aria-label="เลขไมล์">'+
+    '<div class="odo-fmt" id="odo-fmt">'+(oi.valid?'= '+fmtNum(oi.n)+' กม.':'ดูเลขบนหน้าปัด แล้วพิมพ์ตัวเลขอย่างเดียว')+'</div>'+
+    '<div id="odo-warn">'+(oi.warn?'<div class="odo-warn">'+oi.warn+'</div>':'')+'</div>'+
+    '<div class="ed-lbl" style="margin-top:14px">รูปหน้าปัดเลขไมล์ <span class="req">*</span></div>'+photoHTML('__ODO__', F.odoPhoto, F.odoUp, true);
+}
+function photoHTML(target, src, up, need){
+  if(!src) return '<button class="btn-cam'+(need?' need':'')+'" onclick="A.photo(\''+target+'\')">📷 ถ่ายรูป'+(need?' (ต้องมี)':'')+'</button>';
+  const st = up==='uploading'?'⏳ กำลังอัปโหลด...':up==='local'?'📱 เก็บในเครื่อง · มีเน็ตจะส่งเอง':'✅ แนบรูปแล้ว';
+  return '<div class="ph-row"><img class="ph-th" src="'+src+'" alt="รูปที่ถ่าย" onclick="A.viewSrc(this.src)"><div class="ph-side"><div class="ph-st">'+st+'</div>'+
+    '<button class="btn-re" onclick="A.photo(\''+target+'\')">📷 ถ่ายใหม่</button></div></div>';
+}
+function catHTML(g){
+  let done=0; g.items.forEach(it=>{ if(lineInfo(it,S.F.lines[it.item_code]).done) done++; });
+  const ui=CAT_UI[g.cat]||{ic:'📦',n:g.cat};
+  return '<div class="cat-hd"><div class="cat-t">'+ui.ic+' '+esc(ui.n)+'</div><div class="cat-n'+(done===g.items.length?' full':'')+'">'+done+'/'+g.items.length+'</div></div>'+g.items.map(itemHTML).join('');
+}
+function subHTML(it){
+  const parts=[];
+  if(it.check_mode==='count') parts.push('<span class="it-qty">ต้องมี '+it.qty_expected+' '+esc(it.unit)+'</span>');
+  if(it.check_mode==='status') parts.push('บัตรอยู่ไหน');
+  if(it.check_mode==='score') parts.push('ให้คะแนน 1–10');
+  if(it.check_mode==='installed') parts.push('แอร์ใช้งานได้ไหม');
+  if(it.check_mode==='pass_fail') parts.push('ตรวจแล้วผ่านไหม');
+  if(it.check_mode==='gauge') parts.push('ดูเข็มเกจ'+(it.qty_expected>1?' ทุกถัง ('+it.qty_expected+')':'')+' · 📷 ถ่ายเกจทุกครั้ง');
+  if(it.serial_no) parts.push('เลขเครื่อง '+esc(it.serial_no));
+  if(it.expiry_date){ const bad=new Date(it.expiry_date+'T23:59:59')<new Date();
+    parts.push(bad?'<span class="exp-bad">⚠️ หมดอายุแล้ว ('+fmtD(it.expiry_date)+') แจ้งแอดมิน</span>':'หมดอายุ '+fmtD(it.expiry_date)); }
+  if(it.is_consumable) parts.push('ของสิ้นเปลือง');
+  let h=parts.join(' · ');
+  if(it.in_use_days!=null) h+='<span class="it-age">⏱️ ใช้มาแล้ว '+(it.in_use_known?'':'≥ ')+fmtNum(it.in_use_days)+' วัน</span>';
+  return h;
+}
+function itemHTML(it){
+  const code=it.item_code, ln=S.F.lines[code], inf=lineInfo(it,ln), m=it.check_mode;
+  const showBody = ln.open || !inf.answered;
+  const canCollapse = inf.done && !ln.open;
+  const compact = canCollapse && !inf.problem && !ln.admin;
+  const cls = inf.done ? (inf.problem?'is-'+inf.tone:'is-ok') : (inf.answered?'is-pending':'');
+  const badge = inf.answered ? '<div class="badge t-'+(inf.done?inf.tone:'pend')+'">'+(inf.done?inf.ico+' '+esc(inf.label)+(ln.same?' (เหมือนเดิม)':''):'✋ ยังไม่เสร็จ')+'</div>' : '';
+  const tag = canCollapse?'button':'div';
+  let h='<div class="item '+cls+(compact?' compact':'')+(ln.admin&&!ln.touched?' flag':'')+'" id="it-'+code+'">'+
+    '<'+tag+' class="it-hd"'+(canCollapse?' onclick="A.edit(\''+code+'\')" aria-label="แก้ '+esc(it.name)+'"':'')+'>'+
+    '<div class="it-ic">'+ICON(code)+'</div><div class="it-main"><div class="it-name">'+esc(it.name)+'</div><div class="it-sub">'+subHTML(it)+'</div>'+badge+'</div>'+
+    (canCollapse?'<span class="it-edit">แก้</span>':'')+'</'+tag+'>';
+  if(ln.admin) h+='<div class="it-body" style="padding-bottom:0"><div class="adm"><b>💬 แอดมิน:</b> '+esc(ln.admin)+'</div></div>';
+  if(showBody){
+    h+='<div class="it-body">';
+    if(!inf.answered && prevProblem(it)){
+      const pl=lineFromSaved(it, prevLine(it), false), pi=lineInfo(it,pl), pn=noteOf(pl);
+      h+='<div class="prev"><div class="prev-tx">📌 ครั้งก่อน'+(it.prev.date?' ('+parseD(it.prev.date).getDate()+' '+TH_M[parseD(it.prev.date).getMonth()]+')':'')+': <b>'+pi.ico+' '+esc(pi.label)+'</b>'+(pn?'<br>“'+esc(pn)+'”':'')+'</div>'+
+        (it.prev.photo_url?'<img src="'+it.prev.photo_url+'" alt="รูปครั้งก่อน" onclick="A.viewSrc(this.src)">':'')+'</div>'+
+        '<button class="btn-same" onclick="A.same(\''+code+'\')">↺ ยังเหมือนเดิม'+(it.photo_required?' (ต้องถ่ายรูปใหม่)':'')+'</button>';
+    }
+    if(m==='count'){
+      if(!inf.answered && !ln.open){
+        h+='<div class="quick"><button class="btn-ok" onclick="A.ok(\''+code+'\')">✅ ครบ '+it.qty_expected+' '+esc(it.unit)+'</button>'+
+           '<button class="btn-prob" onclick="A.prob(\''+code+'\')">⚠️ ไม่ครบ<br>/ เสีย</button></div>';
+      } else {
+        const f=ln.found==null?it.qty_expected:ln.found;
+        h+='<div class="ed-lbl">นับได้จริงกี่'+esc(it.unit)+'</div><div class="stepper">'+
+          '<button class="st-btn" aria-label="ลด" onclick="A.step(\''+code+'\',-1)"'+(f<=0?' disabled':'')+'>−</button>'+
+          '<div class="st-num">'+f+'</div><button class="st-btn" aria-label="เพิ่ม" onclick="A.step(\''+code+'\',1)">+</button>'+
+          '<div class="st-of">จาก '+it.qty_expected+' '+esc(it.unit)+'</div></div>'+
+          '<div class="ed-lbl">สภาพ</div><div class="seg">'+COND_OPTS.map(o=>
+            '<button class="opt o-'+o[3]+((ln.cond||'ปกติ')===o[0]?' on':'')+'" onclick="A.cond(\''+code+'\',\''+o[0]+'\')"><span>'+o[1]+'</span>'+o[2]+'</button>').join('')+'</div>';
+        h+=eviHTML(it,ln,inf)+finHTML(code,inf);
+      }
+    } else if(m==='status'||m==='installed'||m==='pass_fail'){
+      const opts=m==='status'?STATUS_OPTS:m==='installed'?INST_OPTS:PF_OPTS;
+      h+='<div class="opt-grid'+(opts.length===3?' c3':'')+'">'+opts.map(o=>
+        '<button class="opt o-'+o[3]+(ln.value===o[0]?' on':'')+'" onclick="A.val(\''+code+'\',\''+o[0]+'\')"><span>'+o[1]+'</span>'+o[2]+'</button>').join('')+'</div>';
+      if(inf.answered && (inf.problem || ln.admin)) h+=eviHTML(it,ln,inf)+finHTML(code,inf);
+    } else if(m==='gauge'){
+      h+='<div class="gauge-ref">'+GAUGE_SVG+'<div><b>เข็มต้องอยู่โซนเขียว</b><br>ดูเข็มที่หน้าเกจ'+(it.qty_expected>1?' ทุกถัง แล้วตอบตามถังที่แย่ที่สุด':'')+'<br>แล้วถ่ายรูปหน้าเกจ</div></div>'+
+        '<div class="opt-grid">'+GAUGE_OPTS.map(o=>
+        '<button class="opt o-'+o[3]+(ln.value===o[0]?' on':'')+'" onclick="A.val(\''+code+'\',\''+o[0]+'\')"><span>'+o[1]+'</span>'+o[2]+'</button>').join('')+'</div>';
+      if(inf.answered) h+=eviHTML(it,ln,inf)+finHTML(code,inf);
+    } else if(m==='score'){
+      h+='<div class="score">'+[1,2,3,4,5,6,7,8,9,10].map(n=>
+        '<button class="sc '+(n>=7?'hi':n>=5?'mid':'lo')+(+ln.value===n?' on':'')+'" onclick="A.val(\''+code+'\','+n+')">'+n+'</button>').join('')+
+        '</div><div class="sc-leg"><span>1 = สกปรกมาก</span><span>10 = สะอาดมาก</span></div>';
+      if(ln.admin) h+=finHTML(code,inf);
+    }
+    h+='</div>';
+  }
+  return h+'</div>';
+}
+function eviHTML(it,ln,inf){
+  if(!inf.needPhoto && !inf.needNote && !ln.photo) return '';
+  let h='<div class="evi">';
+  if(inf.needPhoto || ln.photo || inf.problem) h+='<div class="ed-lbl">'+(it.check_mode==='gauge'?'📷 รูปหน้าเกจ ':'รูปถ่าย ')+(inf.needPhoto?'<span class="req">*</span>':'<span class="muted" style="font-weight:400">(ไม่บังคับ)</span>')+'</div>'+photoHTML(it.item_code, ln.photo, ln.photoUp, inf.needPhoto);
+  if(inf.needNote){
+    const set=CHIPS[inf.chipSet]||CHIPS.lost;
+    h+='<div class="ed-lbl">เกิดอะไรขึ้น <span class="req">*</span> <span class="muted" style="font-weight:400">(แตะเลือก)</span></div><div class="chips">'+
+      set.map(t=>'<button class="chip'+(ln.chips.indexOf(t)>=0?' on':'')+'" onclick="A.chip(\''+it.item_code+'\',this.dataset.t)" data-t="'+esc(t)+'">'+esc(t)+'</button>').join('')+'</div>'+
+      '<input class="note-inp" placeholder="พิมพ์เพิ่ม (ไม่บังคับ)" value="'+esc(ln.text)+'" oninput="A.text(\''+it.item_code+'\',this.value)" maxlength="120">';
+  }
+  return h+'</div>';
+}
+function finHTML(code,inf){
+  return '<button class="btn-fin" id="fin-'+code+'" onclick="A.fin(\''+code+'\')"'+(inf.canFinish||!inf.answered?'':' disabled')+'>✔ เรียบร้อย</button>'+
+    '<div class="need-txt" id="need-'+code+'">'+(inf.answered&&!inf.done?'ยังขาด: '+inf.missing.join(' · '):'')+'</div>';
+}
+const itemByCode = code => S.data.items.find(it=>it.item_code===code);
+function rerenderItem(code){
+  const it=itemByCode(code), groups=catsOf(S.data.items), gi=groups.findIndex(g=>g.cat===it.category);
+  const sec=$('cat-'+gi); if(sec) sec.innerHTML=catHTML(groups[gi]);
+  refreshProg();
+}
+
+/* ---------- สรุป / รายงาน ---------- */
+function reportBlocks(items, lines, o){
+  const rows=items.map(it=>({it, ln:lines[it.item_code], inf:lineInfo(it,lines[it.item_code])}));
+  const probs=rows.filter(r=>r.inf.answered && r.inf.problem);
+  const low=rows.filter(r=>r.it.check_mode==='score' && r.inf.answered && r.inf.tone!=='ok');
+  const oks=rows.filter(r=>r.inf.answered && !r.inf.problem && low.indexOf(r)<0);
+  let h='<div class="card">';
+  if(o.ov && o.ov.length) h+='<div class="kv"><div class="kv-k">📷 รูปรวม</div><div class="thumbs">'+o.ov.map(u=>'<img class="pc-th" src="'+u+'" alt="รูปรวม" onclick="A.viewSrc(this.src)">').join('')+'</div></div>';
+  h+='<div class="kv"><div class="kv-k">🛣️ เลขไมล์</div><div class="kv-v">'+(o.odo?fmtNum(o.odo)+' กม.':'—')+'</div>'+(o.odoPhoto?'<img class="pc-th" src="'+o.odoPhoto+'" alt="รูปหน้าปัด" onclick="A.viewSrc(this.src)">':'')+'</div>'+
+     '<div class="kv"><div class="kv-k">📦 รายการ</div><div class="kv-v">'+oks.length+'/'+items.length+' ปกติ</div></div></div>';
+  if(probs.length||low.length){
+    h+='<div class="h3" style="color:var(--bad)">⚠️ แจ้งแอดมิน ('+(probs.length+low.length)+')</div>';
+    probs.concat(low).forEach(r=>{ const note=noteOf(r.ln);
+      h+='<div class="pc t-'+r.inf.tone+'"><div class="pc-ic">'+ICON(r.it.item_code)+'</div><div class="pc-main"><div class="pc-name">'+esc(r.it.name)+'</div>'+
+        '<div class="pc-lbl">'+r.inf.ico+' '+esc(r.inf.label)+(r.ln.same?' (เหมือนเดิม)':'')+'</div>'+(note?'<div class="pc-note">“'+esc(note)+'”</div>':'')+
+        (r.ln.admin&&o.showAdmin?'<div class="adm"><b>💬 แอดมิน:</b> '+esc(r.ln.admin)+'</div>':'')+'</div>'+
+        (r.ln.photo?'<img class="pc-th" src="'+r.ln.photo+'" alt="รูป" onclick="A.viewSrc(this.src)">':'')+
+        (o.editable?'<button class="btn-mini" onclick="A.jump(\''+r.it.item_code+'\')">แก้</button>':'')+'</div>'; });
+  } else h+='<div class="card" style="text-align:center;font-size:19px;font-weight:700;color:var(--ok)">🎉 ครบทุกรายการ ไม่มีปัญหา</div>';
+  if(oks.length) h+='<details class="oks"><summary>✅ ปกติ '+oks.length+' รายการ</summary>'+
+    oks.map(r=>'<div class="ok-li"><span>'+ICON(r.it.item_code)+'</span><span>'+esc(r.it.name)+'</span><b>'+esc(r.inf.label)+'</b></div>').join('')+'</details>';
+  return h;
+}
+function rSummary(){
+  if(!S.F){ go('check',{},true); return; }
+  const d=S.data, F=S.F, oi=odoInfo();
+  setHeader({back:true, t:'ดูก่อนส่ง', s:plateTxt(d.vehicle)+' · '+dayLabel(S.date)});
+  const p=progress();
+  $('app').innerHTML=(p.done<p.total?'<div class="note-box nb-warn">ยังเหลือ '+(p.total-p.done)+' ข้อ — กลับไปทำให้ครบก่อนส่ง</div>':'')+
+    reportBlocks(d.items, F.lines, {ov:F.ov.filter(Boolean).map(o=>o.src), odo:oi.valid?oi.n:null, odoPhoto:F.odoPhoto, editable:true})+(oi.warn?'<div class="odo-warn">'+oi.warn+'</div>':'');
+  setBottom('<div class="saved">ส่งแล้วแก้ได้ถึงเที่ยงคืนวันนี้</div><button class="btn-main" id="btn-submit" onclick="A.submit()"'+(p.done<p.total?' disabled':'')+'>📤 ส่งเช็คลิสต์วันนี้</button>');
+}
+function rDone(){
+  const r=S.lastSubmit||{}, v=S.data.vehicle;
+  setHeader({}); setBottom('');
+  $('app').innerHTML='<div class="state"><div class="done-ic'+(r.on_time===false?' late':'')+'">✓</div>'+
+    '<div class="state-t" style="margin-top:26px">'+(r.on_time==null?'ส่งแล้ว ✅':r.on_time?'ส่งแล้ว ก่อนออกรถ ✅':'ส่งแล้ว (หลังออกรถ) 🟡')+'</div>'+
+    '<div class="state-p">'+dayLabel(S.date,true)+'<br>รถ '+esc(plateTxt(v))+' · '+hm(r.submitted_at)+'</div>'+
+    (r.problems?'<div class="note-box nb-warn" style="margin-top:14px;font-size:17px">⚠️ แจ้งปัญหา '+r.problems+' รายการ — แอดมินจะดูให้</div>':'<div class="note-box nb-ok" style="margin-top:14px">🎉 ครบทุกรายการ</div>')+
+    '<p class="state-p" style="margin-top:12px;font-weight:700;color:var(--g1)">ขับขี่ปลอดภัยครับ 🙏</p>'+
+    '<button class="btn-main" onclick="A.home()">🏠 กลับหน้าแรก</button><button class="btn-plain" onclick="auth.close()">ปิดหน้านี้</button></div>';
+}
+function reportItems(items, clines){
+  const raw={}; ((S.data&&S.data.items_raw)||[]).forEach(it=>raw[it.item_code]=it);
+  return (items||[]).map(it0=>{
+    const it=Object.assign({}, raw[it0.item_code]||{}, it0), ls=clines.filter(l=>l.item_code===it.item_code);
+    if(it.qty_expected==null && ls[0] && ls[0].qty_expected!=null && it.check_mode!=='gauge') it.qty_expected=ls[0].qty_expected;
+    if(it.check_mode==='gauge'){ const mx=Math.max(1,...ls.map(l=>+l.unit_no||1)); it.units=Math.max(mx, +it.units||1); if(it.units>1) it.qty_expected=it.units; }
+    if(!it.category) it.category='อื่นๆ';
+    if(it.sort==null) it.sort=999;
+    return it;
+  });
+}
+async function rReport(){
+  const p=S.params; setBottom('');
+  setHeader({back:true, t:'รายงานรายวัน', s:'กำลังโหลด...'});
+  $('app').innerHTML='<div class="sk" style="height:120px;margin-bottom:12px"></div><div class="sk" style="height:220px"></div>';
+  let res;
+  try{ res = p.current ? {ok:true, check:S.data.check, items:S.data.items} : await api.getCheckDetail({checkId:p.checkId}); }
+  catch(e){ $('app').innerHTML='<div class="state"><div class="state-ic">📡</div><div class="state-t">โหลดไม่ได้</div><div class="state-p">ต้องต่อเน็ตเพื่อดูรายงานย้อนหลัง</div><button class="btn-sec" onclick="render()">🔄 ลองใหม่</button></div>'; return; }
+  if(S.screen!=='report') return;
+  if(!res||!res.ok){ $('app').innerHTML='<div class="state"><div class="state-t">'+esc(res&&res.error||'ไม่พบรายงาน')+'</div></div>'; return; }
+  const c=res.check, lines={}, by={}, items=expandItems(reportItems(res.items, c.lines||[]));
+  c.lines.forEach(l=>by[lineKey(l)]=l);
+  items.forEach(it=>{ lines[it.item_code]=lineFromSaved(it, by[it.item_code], false); lines[it.item_code].admin=by[it.item_code]&&by[it.item_code].admin_note||null; });
+  setHeader({back:true, t:'รายงาน '+parseD(c.check_date).getDate()+' '+TH_M[parseD(c.check_date).getMonth()], s:plateTxt(S.data.vehicle)});
+  const pill = c.status==='ต้องแก้ไข' ? '<span class="pill p-bad">↩️ แอดมินให้แก้</span>' : c.on_time==null ? '<span class="pill p-ok">✅ ส่งแล้ว</span>' : c.on_time ? '<span class="pill p-ok">✅ ส่งก่อนออกรถ</span>' : '<span class="pill p-late">🟡 ส่งหลังออกรถ</span>';
+  let h='<div class="card mc st-'+(c.on_time===false?'late':'ontime')+'"><div class="mc-lbl">เช็คก่อนออกรถ</div><div class="mc-day">'+dayLabel(c.check_date,true)+'</div>'+pill+
+    '<div class="muted small">ส่ง '+hm(c.submitted_at)+(c.first_departure_at?' · ออกรถ '+hm(c.first_departure_at):'')+(c.reviewed_at?'<br>ตรวจโดย '+esc(c.reviewed_by)+' · '+fmtDT(c.reviewed_at):'')+'</div>'+
+    (c.status==='ต้องแก้ไข'?'<div class="reason"><b>เหตุผล</b>'+esc(c.review_note||'')+'</div>':'')+'</div>';
+  h+=reportBlocks(items, lines, {ov:c.overview_photos||[], odo:c.odometer, odoPhoto:c.odometer_photo, editable:false, showAdmin:true});
+  if(p.current && S.data.can_submit && c.status!=='ตรวจแล้ว') h+='<button class="btn-sec" onclick="A.start()">✏️ แก้ไข</button>';
+  $('app').innerHTML=h;
+}
+
+/* =====================================================================
+   รูปถ่าย (แพทเทิร์น Driver_form: กันรูปเก่า + ย่อก่อนส่ง)
+   ===================================================================== */
+function isFreshCapture(file){ if(!file || !file.lastModified) return true; return (Date.now()-file.lastModified) <= MAX_PHOTO_AGE_MS; }
+async function exifTakenAt(file){
+  try{
+    const b=new DataView(await file.slice(0,256*1024).arrayBuffer());
+    if(b.getUint16(0)!==0xFFD8) return null;
+    let p=2;
+    while(p+4<b.byteLength){
+      const mk=b.getUint16(p), len=b.getUint16(p+2);
+      if(mk===0xFFE1 && b.getUint32(p+4)===0x45786966){
+        const T=p+10, le=b.getUint16(T)===0x4949;
+        const u16=o=>b.getUint16(T+o,le), u32=o=>b.getUint32(T+o,le);
+        const str=(o,n)=>{let s='';for(let i=0;i<n-1;i++)s+=String.fromCharCode(b.getUint8(T+o+i));return s;};
+        const scan=(ifd,want)=>{const n=u16(ifd);const out={};for(let i=0;i<n;i++){const e=ifd+2+i*12,tag=u16(e);if(want.indexOf(tag)>=0)out[tag]=tag===0x8769?u32(e+8):str(u32(e+8),u32(e+4));}return out;};
+        const a=scan(u32(4),[0x0132,0x8769]); const ex=a[0x8769]?scan(a[0x8769],[0x9003]):{};
+        const s=ex[0x9003]||a[0x0132]; const m=s&&s.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+        return m?new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]):null;
+      }
+      if((mk&0xFF00)!==0xFF00) return null;
+      p+=2+len;
+    }
+  }catch(e){}
+  return null;
+}
+function resizeToDataURL(file, maxDim, quality){
+  return new Promise(resolve=>{
+    try{
+      const url=URL.createObjectURL(file), img=new Image();
+      img.onload=()=>{ try{
+        let w=img.naturalWidth, h=img.naturalHeight; const sc=Math.min(1,maxDim/Math.max(w,h));
+        w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+        const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const x=cv.getContext('2d');
+        x.fillStyle='#fff'; x.fillRect(0,0,w,h); x.drawImage(img,0,0,w,h);
+        URL.revokeObjectURL(url); resolve(cv.toDataURL('image/jpeg',quality));
+      }catch(e){ URL.revokeObjectURL(url); resolve(null); } };
+      img.onerror=()=>{ URL.revokeObjectURL(url); resolve(null); };
+      img.src=url;
+    }catch(e){ resolve(null); }
+  });
+}
+$('cam').addEventListener('change', async function(){
+  const file=this.files&&this.files[0], target=S.camTarget; this.value='';
+  if(!file||!target) return;
+  if(!isFreshCapture(file)){ toast('กรุณา "ถ่ายรูปสด" ด้วยกล้องเท่านั้น\nห้ามเลือกรูปเก่าจากคลังภาพ','warn',5000); return; }
+  const taken=await exifTakenAt(file);
+  if(taken && Date.now()-taken.getTime()>MAX_EXIF_AGE_MS){ toast('รูปนี้ถ่ายไว้ตั้งแต่ '+fmtDT(taken.toISOString())+'\nไม่ใช่รูปปัจจุบัน — ถ่ายใหม่ตอนนี้','warn',6000); return; }
+  const b64=await resizeToDataURL(file,1280,0.7);
+  if(!b64){ toast('อ่านรูปไม่ได้ ลองถ่ายใหม่','error'); return; }
+  gotPhoto(target,b64);
+});
+function upParams(k, b64){
+  const p={vehicleId:S.data.vehicle.id, date:S.date, kind:k.kind, itemCode:k.itemCode?baseCode(k.itemCode):'', imageBase64:b64};
+  if(k.itemCode) p.unitNo=unitNo(k.itemCode)||1;
+  return p;
+}
+function tgtKind(t){ if(t==='__ODO__') return {kind:'odometer'}; const m=/^__OV(\d)__$/.exec(t); if(m) return {kind:'overview', slot:+m[1]}; return {kind:'line', itemCode:t}; }
+function setPhoto(target, src, up){
+  const F=S.F, k=tgtKind(target);
+  if(k.kind==='odometer'){ F.odoPhoto=src; F.odoUp=up; }
+  else if(k.kind==='overview') F.ov[k.slot]= src?{src,up}:null;
+  else { const ln=F.lines[target]; ln.photo=src; ln.photoUp=up; ln.same=false; }
+}
+async function gotPhoto(target, b64){
+  const k=tgtKind(target);
+  setPhoto(target,b64,'uploading');
+  if(k.kind==='line'){   // รายการที่ต้องถ่ายรูปทุกครั้ง (เกจ) + ปกติ → ได้รูปแล้วพับเก็บเอง
+    const it=itemByCode(target), ln=S.F.lines[target], inf=lineInfo(it,ln);
+    if(inf.done && !inf.problem && !ln.admin) ln.open=false;
+  }
+  repaintTarget(target); saveDraft();
+  try{
+    const r=await api.uploadPhoto(upParams(k, b64));
+    if(!r||!r.ok) throw new Error(r&&r.error||'upload');
+    setPhoto(target,r.url,'ok');
+  }catch(e){ setPhoto(target,b64,'local'); }
+  repaintTarget(target); saveDraft();
+}
+function repaintTarget(target){
+  if(S.screen!=='check' || !S.F) return;
+  const k=tgtKind(target);
+  if(k.kind==='odometer'){ const c=$('odo-card'); if(c) c.innerHTML=odoCardHTML(); refreshProg(); }
+  else if(k.kind==='overview'){ const c=$('ov-card'); if(c) c.innerHTML=ovCardHTML(); refreshProg(); }
+  else rerenderItem(target);
+}
+
+/* =====================================================================
+   actions
+   ===================================================================== */
+const A = {
+  start(){ S.F=loadForm(); go('check'); },
+  home(){ S.F=null; S.hist=null; loadData(true); },
+  viewCurrent(){ go('report',{current:true}); },
+  openDay(date){
+    let x=S.hist&&S.hist.days.find(d=>d.date===date); if(!x) return; x=Object.assign({},x,{code:dayCode(x)});
+    if(x.check_id) return go('report',{checkId:x.check_id});
+    toast(dayLabel(date,true)+'\n'+(x.code==='miss'?'🔴 รถวิ่งแต่ไม่ได้ส่งเช็คลิสต์':x.code==='idle'?'➖ รถไม่วิ่ง ไม่ต้องส่ง':x.code==='none'&&x.date<startDate()?'· ก่อนเริ่มนับ ('+dayLabel(VEQ_START_DATE)+')':'· ยังไม่มีข้อมูล'),'info',3500);
+  },
+  odo(el){
+    const v=el.value.replace(/\D/g,'').slice(0,7); if(v!==el.value) el.value=v;
+    S.F.odo=v; const oi=odoInfo();
+    $('odo-fmt').textContent=oi.valid?'= '+fmtNum(oi.n)+' กม.':'ดูเลขบนหน้าปัด แล้วพิมพ์ตัวเลขอย่างเดียว';
+    $('odo-warn').innerHTML=oi.warn?'<div class="odo-warn">'+oi.warn+'</div>':'';
+    refreshProg(); saveDraft();
+  },
+  ok(code){ const it=itemByCode(code), ln=S.F.lines[code]; ln.found=it.qty_expected; ln.cond='ปกติ'; ln.open=false; ln.touched=true; ln.same=false; rerenderItem(code); saveDraft(); },
+  prob(code){ const it=itemByCode(code), ln=S.F.lines[code]; ln.found=Math.max(it.qty_expected-1,0); ln.cond='หาย'; ln.open=true; ln.same=false; rerenderItem(code); saveDraft(); },
+  same(code){
+    const it=itemByCode(code), keepAdmin=S.F.lines[code].admin;
+    const ln=lineFromSaved(it, prevLine(it), false); ln.same=true; ln.admin=keepAdmin; ln.touched=true;
+    if(it.photo_required){ ln.photo=null; ln.photoUp=null; }   // รูปเกจต้องถ่ายใหม่ทุกวัน (backend ปฏิเสธรูปที่ไม่ได้อัปวันนี้)
+    S.F.lines[code]=ln; const inf=lineInfo(it,ln); ln.open=!inf.done;
+    rerenderItem(code); saveDraft();
+  },
+  edit(code){ S.F.lines[code].open=true; rerenderItem(code); },
+  step(code,d){
+    const it=itemByCode(code), ln=S.F.lines[code], q=it.qty_expected;
+    if(ln.found==null) ln.found=q;
+    ln.found=Math.max(0,Math.min(99,ln.found+d)); if(!ln.cond) ln.cond='ปกติ';
+    if(ln.found<q && ln.cond==='ปกติ') ln.cond='หาย';
+    if(ln.found>=q && ln.cond==='หาย') ln.cond='ปกติ';
+    ln.same=false; rerenderItem(code); saveDraft();
+  },
+  cond(code,c){
+    const it=itemByCode(code), ln=S.F.lines[code], q=it.qty_expected;
+    if(ln.found==null) ln.found=q;
+    if(c==='ชำรุด' && ln.cond!=='ชำรุด' && ln.found<q) ln.found=q;   // ชำรุด = ของอยู่ครบแต่เสีย
+    ln.cond=c;
+    if(c==='หาย' && ln.found>=q) ln.found=Math.max(q-1,0);
+    if(c==='ปกติ' && ln.found<q) ln.found=q;
+    ln.same=false; rerenderItem(code); saveDraft();
+  },
+  val(code,v){
+    const it=itemByCode(code), ln=S.F.lines[code];
+    ln.value=v; ln.same=false; const inf=lineInfo(it,ln);
+    if(!inf.problem && !ln.admin && inf.canFinish){ ln.open=false; ln.touched=true; } else ln.open=true;
+    rerenderItem(code); saveDraft();
+    const nb=ln.open && document.querySelector('#it-'+code+' .evi');   // เลื่อนให้เห็นปุ่มถ่ายรูป/หมายเหตุที่เพิ่งโผล่
+    if(nb) setTimeout(()=>nb.scrollIntoView({behavior:'smooth', block:'nearest'}),30);
+  },
+  chip(code,t){ const ln=S.F.lines[code]; const i=ln.chips.indexOf(t); if(i>=0) ln.chips.splice(i,1); else ln.chips.push(t); rerenderItem(code); saveDraft(); },
+  text(code,v){
+    const ln=S.F.lines[code]; ln.text=v; const inf=lineInfo(itemByCode(code),ln);
+    const b=$('fin-'+code); if(b) b.disabled=!inf.canFinish;
+    const n=$('need-'+code); if(n) n.textContent=inf.done?'':'ยังขาด: '+inf.missing.join(' · ');
+    $('hdr-prog').innerHTML=progHTML(); saveDraft();
+  },
+  fin(code){
+    const it=itemByCode(code), ln=S.F.lines[code];
+    if(it.check_mode==='count' && ln.found==null){ ln.found=it.qty_expected; ln.cond='ปกติ'; }
+    ln.touched=true; const inf=lineInfo(it,ln);
+    if(!inf.done){ rerenderItem(code); toast('ยังขาด: '+inf.missing.join(' · '),'warn'); return; }
+    ln.open=false; rerenderItem(code); saveDraft();
+  },
+  allItems(){
+    const snap=JSON.stringify(S.F.lines); let n=0;
+    S.data.items.forEach(it=>{
+      const ln=S.F.lines[it.item_code]; if(lineInfo(it,ln).answered || !quickable(it)) return;
+      const m=it.check_mode;
+      if(m==='count'){ ln.found=it.qty_expected; ln.cond='ปกติ'; }
+      else if(m==='status') ln.value='มี';
+      else if(m==='installed') ln.value='ใช้ได้';
+      else if(m==='pass_fail') ln.value='ผ่าน';
+      ln.open=false; ln.touched=true; n++;
+    });
+    const groups=catsOf(S.data.items); groups.forEach((g,i)=>{ const s=$('cat-'+i); if(s) s.innerHTML=catHTML(g); });
+    refreshProg(); saveDraft();
+    toast('ติ๊กครบ '+n+' รายการ','ok',4500,{label:'↶ ยกเลิก',fn:()=>{ S.F.lines=JSON.parse(snap); groups.forEach((g,i)=>{ const s=$('cat-'+i); if(s) s.innerHTML=catHTML(g); }); refreshProg(); saveDraft(); }});
+  },
+  photo(target){
+    S.camTarget=target;
+    $('cam').click();
+  },
+  view(slot){   // รูปรวม: ดู + ถ่ายใหม่ + ลบ (ช่อง 2)
+    const i=+slot, o=S.F.ov[i]; if(!o) return;
+    const m=$('modal'); m.innerHTML='<img src="'+o.src+'" alt="รูปรวม"><button class="btn-sec" onclick="A.closeModal();A.photo(\'__OV'+i+'__\')">📷 ถ่ายใหม่</button>'+
+      (i>0||S.F.ov[1]?'<button class="btn-sec" onclick="A.closeModal();A.delOv('+i+')">🗑 เอารูปนี้ออก</button>':'')+'<button class="btn-sec" onclick="A.closeModal()">ปิด</button>';
+    m.classList.add('show');
+  },
+  delOv(i){ S.F.ov[i]=null; if(i===0 && S.F.ov[1]){ S.F.ov[0]=S.F.ov[1]; S.F.ov[1]=null; } repaintTarget('__OV0__'); saveDraft(); },
+  viewSrc(src){ const m=$('modal'); m.innerHTML='<img src="'+src+'" alt="รูปขยาย"><button class="btn-sec" onclick="A.closeModal()">ปิด</button>'; m.classList.add('show'); },
+  closeModal(){ const m=$('modal'); m.classList.remove('show'); m.innerHTML=''; },
+  nextTodo(){
+    if(!ovDone()) return A.focus('__OV__');
+    if(!odoInfo().done) return A.focus('__ODO__');
+    const it=catsOf(S.data.items).flatMap(g=>g.items).find(it=>!lineInfo(it,S.F.lines[it.item_code]).done);
+    if(it) A.focus(it.item_code);
+  },
+  focus(code){
+    if(S.screen!=='check') return go('check',{focus:code});
+    const id = code==='__OV__'?'ov-card':code==='__ODO__'?'odo-card':'it-'+code;
+    if(!$(id)) return;
+    if(id.indexOf('it-')===0){ const ln=S.F.lines[code]; if(lineInfo(itemByCode(code),ln).answered && !ln.open){ ln.open=true; rerenderItem(code); } }
+    const t=$(id); t.scrollIntoView({behavior:'smooth', block:'center'});
+    t.animate && t.animate([{boxShadow:'0 0 0 5px rgba(253,224,71,.9)'},{boxShadow:'0 0 0 0 rgba(253,224,71,0)'}],{duration:1400});
+  },
+  jump(code){ go('check',{focus:code}); },
+  toSummary(){ saveDraft(true); go('summary'); },
+  async submit(){
+    if(S.busy) return;
+    const d=S.data, F=S.F, p=progress();
+    if(p.done<p.total){ A.nextTodo(); return; }
+    if(!navigator.onLine){ toast('ยังไม่มีเน็ต — ที่ทำไว้เก็บในเครื่องแล้ว\nมีสัญญาณแล้วกดส่งอีกครั้ง','warn',5000); return; }
+    S.busy=true; const btn=$('btn-submit'); if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span> กำลังส่ง...'; }
+    try{
+      const pend=[];
+      if(F.odoUp!=='ok') pend.push('__ODO__');
+      F.ov.forEach((o,i)=>{ if(o && o.up!=='ok') pend.push('__OV'+i+'__'); });
+      d.items.forEach(it=>{ const ln=F.lines[it.item_code]; if(ln.photo && ln.photoUp!=='ok') pend.push(it.item_code); });
+      for(const t of pend){
+        const k=tgtKind(t), src = k.kind==='odometer'?F.odoPhoto:k.kind==='overview'?F.ov[k.slot].src:F.lines[t].photo;
+        const r=await api.uploadPhoto(upParams(k, src));
+        if(r && r.code==='LINK_EXPIRED') return;
+        if(!r||!r.ok) throw new Error('อัปโหลดรูปไม่สำเร็จ'+(r&&r.error?' ('+r.error+')':''));
+        setPhoto(t, r.url, 'ok');
+      }
+      const res=await api.submitDaily(buildPayload());
+      if(res && res.code==='LINK_EXPIRED') return;
+      if(!res||!res.ok){
+        if(res && res.code==='PHOTO_REQUIRED'){ photoRequired(res); return; }
+        if(res && res.code==='INVALID' && res.errors && res.errors.length) throw new Error(res.errors.join('\n'));
+        if(res&&(res.code==='LOCKED'||res.code==='DAY_CLOSED')){ toast(res.code==='DAY_CLOSED'?'เลยวันแล้ว ส่ง/แก้ของวันนี้ไม่ได้':'แอดมินตรวจรายงานวันนี้แล้ว แก้ไม่ได้','error',5000); lsDel(draftKey()); S.F=null; loadData(true); return; }
+        throw new Error(res&&res.error||'ส่งไม่สำเร็จ');
+      }
+      const probs=problemsOf(F.lines).length;
+      if(res.flag_odometer) toast('เลขไมล์น้อยกว่าครั้งก่อน — แอดมินจะตรวจอีกครั้ง','warn',4500);
+      lsDel(draftKey()); S.F=null; S.hist=null;
+      S.lastSubmit={submitted_at:res.submitted_at, on_time:res.on_time, problems:probs};
+      go('done',{},true);
+    }catch(e){
+      saveDraft(true);
+      if(S.expired) return;
+      toast((e.offline?'เน็ตหลุดระหว่างส่ง':'ส่งไม่สำเร็จ: '+e.message)+'\nข้อมูลยังอยู่ในเครื่อง ลองกดส่งอีกครั้ง','error',5500);
+    }finally{
+      S.busy=false; const b=$('btn-submit'); if(b){ b.disabled=false; b.innerHTML='📤 ส่งเช็คลิสต์วันนี้'; }
+    }
+  },
+};
+function buildPayload(){
+  const d=S.data, F=S.F; let clean=null;
+  const lines=d.items.map(it=>{
+    const ln=F.lines[it.item_code], m=it.check_mode, note=noteOf(ln)||null, photo_url=ln.photo||null, base={item_code:it.base_code||it.item_code, photo_url, note};
+    if(it.unit_no) base.unit_no=it.unit_no;   // ถังที่ n (รายการอื่นไม่ส่ง = 1)
+    if(m==='count') return Object.assign(base,{qty_expected:it.qty_expected, qty_found:ln.found, condition:ln.cond||'ปกติ', value_text:null});
+    if(m==='status'){ const c={'มี':'ปกติ','อยู่ที่รถ':'ปกติ','ไม่มี':'ไม่มี','หาย':'หาย'}[ln.value];
+      return Object.assign(base,{qty_expected:1, qty_found:c==='ปกติ'?1:0, condition:c, value_text:ln.value}); }
+    if(m==='score'){ clean=+ln.value; return Object.assign(base,{qty_expected:10, qty_found:+ln.value, condition:'ปกติ', value_text:String(ln.value)}); }
+    // gauge: ส่ง value_text อย่างเดียว ระบบแปลง condition เอง · ไม่เขียว = ชำรุด → ระบบตั้ง first_damage_date เอง ไม่ถามคนขับ
+    if(m==='gauge') return Object.assign(base,{value_text:ln.value});
+    if(m==='pass_fail') return Object.assign(base,{value_text:ln.value==='ผ่าน'?'pass':'fail'});   // ระบบแปลง condition เอง (pass=ปกติ · fail=ชำรุด)
+    const c={'ใช้ได้':'ปกติ','เสีย':'ชำรุด','ไม่ได้ติดตั้ง':'ไม่มี'}[ln.value];
+    return Object.assign(base,{qty_expected:1, qty_found:c==='ไม่มี'?0:1, condition:c, value_text:ln.value});
+  });
+  return {vehicleId:d.vehicle.id, date:S.date, odometer:parseInt(F.odo,10), odometer_photo:F.odoPhoto,
+    overview_photos:F.ov.filter(Boolean).map(o=>o.src), cleanliness:clean, note:'', client_draft_id:F.draftId, allOk:false, lines};   // allOk:false = ส่งครบทุกบรรทัดเอง
+}
+
+/* toast (แบบ Driver_form + ปุ่มยกเลิก) */
+function toast(msg,type,ms,action){
+  const wrap=$('toastWrap'), el=document.createElement('div'); el.className='toast '+(type||'info');
+  el.innerHTML='<span>'+(({ok:'✅',error:'❌',warn:'⚠️',info:'ℹ️'})[type]||'ℹ️')+'</span><span class="tx"></span>'; el.querySelector('.tx').textContent=msg;
+  if(action){ const b=document.createElement('button'); b.className='ta'; b.textContent=action.label; b.onclick=e=>{ e.stopPropagation(); action.fn(); el.remove(); }; el.appendChild(b); }
+  el.onclick=()=>el.remove(); wrap.appendChild(el);
+  setTimeout(()=>el.remove(), ms||(type==='error'?4200:2800));
+}
+
+// PHOTO_REQUIRED: missing = ไม่มีรูป · stale = รูปไม่ใช่ของวันนี้ → ล้างรูปให้ถ่ายใหม่
+function photoRequired(res){
+  const nameOf=k=>{ if(k==='overview') return 'รูปรวม'; if(k==='odometer') return 'รูปหน้าปัดเลขไมล์';
+    const [c,n]=String(k).split('#'); const key=n&&MULTI[c]?c+UNIT_SEP+n:c; const it=itemByCode(key); return it?it.name:k; };
+  const keyOf=k=>{ const [c,n]=String(k).split('#'); return n&&MULTI[c]?c+UNIT_SEP+n:c; };
+  const miss=(res.missing||[]), stale=(res.stale||[]);
+  stale.concat(miss).forEach(k=>{
+    if(k==='overview'){ if(stale.indexOf(k)>=0) S.F.ov=[null,null]; return; }
+    if(k==='odometer'){ S.F.odoPhoto=null; S.F.odoUp=null; return; }
+    const ln=S.F.lines[keyOf(k)]; if(ln){ ln.photo=null; ln.photoUp=null; ln.open=true; ln.touched=true; }
+  });
+  saveDraft(true);
+  const msg=(stale.length?'ต้องถ่ายรูปใหม่วันนี้ (ห้ามใช้รูปวันก่อน):\n'+stale.map(nameOf).join(', ')+'\n':'')+(miss.length?'ยังไม่มีรูป: '+miss.map(nameOf).join(', '):'');
+  toast(msg.trim()||(res.error||'ต้องมีรูป'),'error',7000);
+  go('check',{},true); setTimeout(()=>A.nextTodo(),120);
+}
+function updateOnline(){ $('offline-bar').classList.toggle('hide', navigator.onLine); }
+window.addEventListener('online', updateOnline); window.addEventListener('offline', updateOnline);
+
+/* =====================================================================
+   boot
+   ===================================================================== */
+async function loadData(replace){
+  const cacheKey='ssb_veq_cache2_'+(S.user.mode==='link' ? 'link' : S.user.userId);
+  S.date=isoDate(new Date());
+  S.screen='loading'; render();
+  let d;
+  try{ d=await api.getMyDaily({date:S.date}); S.stale=false; if(d && d.ok) lsSet(cacheKey, JSON.stringify(d)); }
+  catch(e){
+    if(S.expired) return;
+    try{ d=JSON.parse(lsGet(cacheKey)||'null'); }catch(_){ d=null; }
+    if(d && d.date===S.date) S.stale=true; else { S.data=null; go('error',{},replace); return; }
+  }
+  if(S.expired || (d && d.code==='LINK_EXPIRED')) return;
+  if(d && d.ok){ d.items_raw=d.items||[]; d.items=expandItems(d.items_raw); }
+  S.data=d;
+  if(!d || !d.ok){ const c=d&&d.code; go(c==='NO_VEHICLE'?'novehicle':c==='NOT_DRIVER'?'notdriver':c==='INACTIVE'?'inactive':c==='NOT_YOUR_VEHICLE'?'notyours':'error',{msg:d&&d.error||''},replace); return; }
+  // คีย์ร่างในเครื่อง: LIFF = userId · ลิงก์ = รหัสคนขับ (t เปลี่ยนทุกวัน ไม่ใช้เป็นคีย์)
+  S.uid = S.user.mode==='link' ? 'D_'+((d.driver&&d.driver.driver_id)||'x') : S.user.userId;
+  go('home',{},replace);
+  // เปิดจากปุ่มการ์ด "ช" (?src=kw) → เข้าหน้าวันนี้ทันที (ครั้งแรกที่โหลดเท่านั้น · กดย้อนกลับ = หน้าแรก)
+  if(S.entry==='kw'){
+    S.entry=null; const k=todayKey(d);
+    if(k==='todo'||k==='departed'||k==='ret') A.start();
+    else if(k==='ontime'||k==='late'||k==='reviewed') A.viewCurrent();
+    // norun = อยู่หน้าแรก ("วันนี้ไม่มีงาน ไม่ต้องส่ง")
+  }
+}
+S.entry=qp('src');
+async function boot(){
+  S.screen='loading'; render(); updateOnline();
+  if(S.expired){ go('expired',{},true); return; }
+  if(!S.user){ S.user=await auth.getUser(); }
+  if(!S.user){ go('outside',{},true); return; }
+  await loadData(true);
+}
+boot();
+</script>
+</body>
+</html>
