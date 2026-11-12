@@ -158,6 +158,10 @@ button:disabled{cursor:not-allowed}
 .it-name{font-size:19px;font-weight:700;line-height:1.3}
 .it-sub{font-size:15px;color:var(--text-m);line-height:1.4}
 .it-sub .exp-bad{color:var(--bad);font-weight:700}
+.fm-no{font-size:22px;font-weight:800;color:var(--g1)}
+.item.compact .fm-no{font-size:17px}
+.it-sub .fm-star{color:var(--bad);font-weight:700}
+.fm-stop{background:var(--bad-l);color:var(--bad);border-radius:10px;padding:8px 12px;margin:8px 0;font-weight:700;font-size:15px}
 .it-age{display:block;font-size:14px;color:var(--text-l)}
 .gauge-ref{display:flex;align-items:center;gap:12px;background:var(--g4);border-radius:12px;padding:8px 12px;margin-bottom:10px;font-size:15px;line-height:1.45}
 .gauge-ref svg{flex-shrink:0}
@@ -336,8 +340,9 @@ function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ ret
 function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
 
 /* ---------- แคตตาล็อก (veq_items) ---------- */
-const CAT_ORDER = ['ตรวจสภาพ','เอกสาร/บัตร','ความปลอดภัย','ยาง/ล้อ','เครื่องมือ','อิเล็กทรอนิกส์','อุปกรณ์ห้องโดยสาร','ผ้าใบ','Bulk โหลด','PPE'];
+const CAT_ORDER = ['FM-ก','FM-ข','FM-ค','ตรวจสภาพ','เอกสาร/บัตร','ความปลอดภัย','ยาง/ล้อ','เครื่องมือ','อิเล็กทรอนิกส์','อุปกรณ์ห้องโดยสาร','ผ้าใบ','Bulk โหลด','PPE'];
 const CAT_UI = {
+  'FM-ก':{ic:'🚚',n:'ก. ตรวจทุกครั้งก่อนออกงาน'}, 'FM-ข':{ic:'🔗',n:'ข. เฉพาะหัวลาก / รถพ่วง'}, 'FM-ค':{ic:'📅',n:'ค. ตรวจประจำสัปดาห์ (วันจันทร์)'},
   'ตรวจสภาพ':{ic:'🔧',n:'ตรวจสภาพรถ'}, 'เอกสาร/บัตร':{ic:'📄',n:'เอกสาร / บัตร'}, 'ความปลอดภัย':{ic:'🦺',n:'ความปลอดภัย'},
   'ยาง/ล้อ':{ic:'🛞',n:'ยาง / ล้อ'}, 'เครื่องมือ':{ic:'🧰',n:'เครื่องมือ'}, 'อิเล็กทรอนิกส์':{ic:'📹',n:'กล้อง / อิเล็กทรอนิกส์'},
   'อุปกรณ์ห้องโดยสาร':{ic:'💺',n:'ในห้องคนขับ'}, 'ผ้าใบ':{ic:'⛺',n:'ผ้าใบ'}, 'Bulk โหลด':{ic:'🛢️',n:'อุปกรณ์โหลด (Bulk)'}, 'PPE':{ic:'⛑️',n:'ชุดป้องกัน (PPE)'}
@@ -375,7 +380,7 @@ const CATALOG = {
   HAIR_NET:['หมวกคลุมผม','PPE','ใบ','count','🧢',{is_consumable:true}],
   HARD_HAT:['หมวกเซฟตี้','PPE','ใบ','count','⛑️'],
 };
-const ICON = code => (CATALOG[String(code).split('__')[0]]||[])[4] || '📦';
+const ICON = code => /^FM\d\d/.test(String(code)) ? '<span class="fm-no">'+parseInt(String(code).slice(2),10)+'</span>' : (CATALOG[String(code).split('__')[0]]||[])[4] || '📦';
 const CHIPS = {
   broken:['แตก / หัก','ใช้งานไม่ได้','จอดับ / ไม่ติด','รั่ว / ซึม','ส่งซ่อมแล้ว'],
   lost:['หายระหว่างทาง','ไม่เคยได้รับ','ใช้หมดแล้ว','อยู่ที่รถคันอื่น','แอดมินเก็บไว้'],
@@ -386,6 +391,9 @@ const CHIPS = {
 const STATUS_OPTS = [['มี','🪪','มี (อยู่กับตัว)','ok'],['อยู่ที่รถ','🚚','อยู่ที่รถ','ok'],['ไม่มี','➖','ไม่มี','bad'],['หาย','❌','หาย','bad']];
 const INST_OPTS   = [['ใช้ได้','❄️','ติดตั้ง ใช้ได้','ok'],['เสีย','🔧','ติดตั้ง แต่เสีย','warn'],['ไม่ได้ติดตั้ง','➖','ไม่มีติดตั้ง','bad']];
 const PF_OPTS     = [['ผ่าน','👍','ผ่าน','ok'],['ไม่ผ่าน','👎','ไม่ผ่าน','bad']];
+// FM-TR-10: ปกติ → ไปข้อถัดไป · ผิดปกติ → ติ๊กส่วนที่ผิดปกติ + รูป (อื่นๆ = ต้องพิมพ์อาการ)
+const FM_OPTS     = [['ผ่าน','👍','ปกติ','ok'],['ไม่ผ่าน','👎','ผิดปกติ','bad']];
+const FM_OTHER    = 'อื่นๆ';
 // value_text ตามสัญญา: green / low / high / missing (ระบบแปลงเป็น condition เอง)
 const GAUGE_OPTS  = [['green','🟢','เข็มอยู่โซนเขียว','ok'],['low','🔴','ต่ำ (แดงซ้าย)','bad'],['high','🟡','สูงเกิน (แดงขวา)','warn'],['missing','❌','ไม่มีถัง / หาย','bad']];
 const GAUGE_COND  = {green:'ปกติ',low:'ชำรุด',high:'ชำรุด',missing:'หาย'};
@@ -510,7 +518,7 @@ function lineFromSaved(it, l, forEdit){
   else if(m==='pass_fail'){ const v=String(l.value_text||'').toLowerCase();
     ln.value = (v==='pass'||v==='ผ่าน'||v==='ok') ? 'ผ่าน' : (v==='fail'||v==='ไม่ผ่าน'||v==='เสีย') ? 'ไม่ผ่าน' : l.condition ? (l.condition==='ปกติ'?'ผ่าน':'ไม่ผ่าน') : null; }
   else if(m==='gauge') ln.value = l.value_text || (l.condition==='ปกติ'?'green':l.condition==='ชำรุด'?'low':'missing');
-  splitNote(l.note, ln);
+  if(it.fm_no){ ln.chips=(l.fail_parts||[]).slice(); ln.text=l.note||''; } else splitNote(l.note, ln);
   if(l.photo_url){ ln.photo=l.photo_url; ln.photoUp='ok'; }
   if(forEdit && l.admin_note){ ln.admin=l.admin_note; ln.touched=false; ln.open=true; }
   return ln;
@@ -522,6 +530,7 @@ const unitsOf = it => it.check_mode==='gauge' ? (+it.units || +it.qty_expected |
 function expandItems(items){
   const out=[];
   (items||[]).forEach(it=>{
+    if(it.fm_no) it=Object.assign({}, it, {category:'FM-'+(it.fm_section||'ก')});   // FM-TR-10 แยกหมวด ก/ข/ค ตามเอกสาร
     const nu=unitsOf(it);
     if(it.unit_no || nu<=1){ out.push(it); return; }
     MULTI[it.item_code]=true;
@@ -629,6 +638,10 @@ function lineInfo(it, ln){
       if(ln.value==='เสีย') Object.assign(r,{problem:true,tone:'warn',ico:'🔧',label:'ติดตั้ง แต่เสีย',needPhoto:true,needNote:true,chipSet:'broken'});
       else if(ln.value==='ไม่ได้ติดตั้ง') Object.assign(r,{problem:true,tone:'bad',ico:'➖',label:'ไม่มีติดตั้ง',needNote:true,chipSet:'none'});
       else Object.assign(r,{tone:'ok',ico:'✅',label:'ติดตั้ง ใช้ได้'}); }
+  } else if(m==='pass_fail' && it.fm_no){
+    if(ln.value){ r.answered=true;
+      if(ln.value==='ไม่ผ่าน') Object.assign(r,{problem:true,tone:'bad',ico:it.fm_star?'⛔':'👎',label:'ผิดปกติ'+(ln.chips.length?' · '+ln.chips.join(', '):''),needPhoto:REQUIRE_PHOTO_ON_FAIL,chipSet:'fm'});
+      else Object.assign(r,{tone:'ok',ico:'👍',label:'ปกติ'}); }
   } else if(m==='pass_fail'){
     if(ln.value){ r.answered=true;
       if(ln.value==='ไม่ผ่าน') Object.assign(r,{problem:true,tone:'bad',ico:'👎',label:'ไม่ผ่าน',needPhoto:REQUIRE_PHOTO_ON_FAIL,needNote:true,chipSet:'fail'});
@@ -647,6 +660,11 @@ function lineInfo(it, ln){
   if(r.answered){
     if(r.needPhoto && !ln.photo) miss.push('ถ่ายรูป');
     if(r.needNote && !noteOf(ln)) miss.push('เลือกว่าเกิดอะไรขึ้น');
+    if(r.chipSet==='fm'){
+      const subs=(it.sub_parts||[]).filter(x=>x!==FM_OTHER);
+      if(subs.length && !ln.chips.length) miss.push('ติ๊กส่วนที่ผิดปกติ');
+      if((!subs.length || ln.chips.indexOf(FM_OTHER)>=0) && !ln.text.trim()) miss.push('พิมพ์อาการ');
+    }
   }
   r.canFinish = r.answered && !miss.length;
   if(r.answered && !ln.touched) miss.push('แก้ตามแอดมินแล้วกด "เรียบร้อย"');
@@ -821,7 +839,7 @@ function catsOf(items){
   Object.values(m).forEach(a=>a.sort((x,y)=>x.sort-y.sort));
   return CAT_ORDER.filter(c=>m[c]).map(c=>({cat:c,items:m[c]})).concat(Object.keys(m).filter(c=>CAT_ORDER.indexOf(c)<0).map(c=>({cat:c,items:m[c]})));
 }
-const quickable = it => it.check_mode!=='score' && !it.photo_required && !prevProblem(it);
+const quickable = it => it.check_mode!=='score' && !it.photo_required && !it.fm_no && !prevProblem(it);   // FM-TR-10 ต้องตรวจทีละข้อ
 function allBtnHTML(){
   const n=S.data.items.filter(it=>!lineInfo(it,S.F.lines[it.item_code]).answered && quickable(it)).length;
   const pp=S.data.items.filter(it=>!lineInfo(it,S.F.lines[it.item_code]).answered && prevProblem(it)).length;
@@ -876,6 +894,7 @@ function catHTML(g){
   return '<div class="cat-hd"><div class="cat-t">'+ui.ic+' '+esc(ui.n)+'</div><div class="cat-n'+(done===g.items.length?' full':'')+'">'+done+'/'+g.items.length+'</div></div>'+g.items.map(itemHTML).join('');
 }
 function subHTML(it){
+  if(it.fm_no) return (it.fm_star?'<span class="fm-star">★ ข้อห้ามออกรถ</span> · ':'')+esc(it.criteria||'');
   const parts=[];
   if(it.check_mode==='count') parts.push('<span class="it-qty">ต้องมี '+it.qty_expected+' '+esc(it.unit)+'</span>');
   if(it.check_mode==='status') parts.push('บัตรอยู่ไหน');
@@ -927,7 +946,7 @@ function itemHTML(it){
         h+=eviHTML(it,ln,inf)+finHTML(code,inf);
       }
     } else if(m==='status'||m==='installed'||m==='pass_fail'){
-      const opts=m==='status'?STATUS_OPTS:m==='installed'?INST_OPTS:PF_OPTS;
+      const opts=m==='status'?STATUS_OPTS:m==='installed'?INST_OPTS:it.fm_no?FM_OPTS:PF_OPTS;
       h+='<div class="opt-grid'+(opts.length===3?' c3':'')+'">'+opts.map(o=>
         '<button class="opt o-'+o[3]+(ln.value===o[0]?' on':'')+'" onclick="A.val(\''+code+'\',\''+o[0]+'\')"><span>'+o[1]+'</span>'+o[2]+'</button>').join('')+'</div>';
       if(inf.answered && (inf.problem || ln.admin)) h+=eviHTML(it,ln,inf)+finHTML(code,inf);
@@ -949,6 +968,15 @@ function itemHTML(it){
 function eviHTML(it,ln,inf){
   if(!inf.needPhoto && !inf.needNote && !ln.photo) return '';
   let h='<div class="evi">';
+  if(inf.chipSet==='fm'){
+    const subs=it.sub_parts||[FM_OTHER], other=ln.chips.indexOf(FM_OTHER)>=0, onlyOther=subs.length===1;
+    if(it.fm_star) h+='<div class="fm-stop">⛔ ข้อห้ามออกรถ — ระบบแจ้งแอดมินทันที รอแอดมินตรวจก่อนออกรถ</div>';
+    if(!onlyOther) h+='<div class="ed-lbl">ส่วนไหนผิดปกติ <span class="req">*</span> <span class="muted" style="font-weight:400">(ติ๊กได้หลายข้อ)</span></div><div class="chips">'+
+      subs.map(t=>'<button class="chip'+(ln.chips.indexOf(t)>=0?' on':'')+'" onclick="A.chip(\''+it.item_code+'\',this.dataset.t)" data-t="'+esc(t)+'">'+(ln.chips.indexOf(t)>=0?'☑ ':'☐ ')+esc(t)+'</button>').join('')+'</div>';
+    h+='<input class="note-inp" placeholder="'+(onlyOther||other?'พิมพ์อาการที่ผิดปกติ (ต้องกรอก)':'อาการเพิ่มเติม (ไม่บังคับ)')+'" value="'+esc(ln.text)+'" oninput="A.text(\''+it.item_code+'\',this.value)" maxlength="200">';
+    h+='<div class="ed-lbl">รูปถ่าย '+(inf.needPhoto?'<span class="req">*</span>':'')+'</div>'+photoHTML(it.item_code, ln.photo, ln.photoUp, inf.needPhoto);
+    return h+'</div>';
+  }
   if(inf.needPhoto || ln.photo || inf.problem) h+='<div class="ed-lbl">'+(it.check_mode==='gauge'?'📷 รูปหน้าเกจ ':'รูปถ่าย ')+(inf.needPhoto?'<span class="req">*</span>':'<span class="muted" style="font-weight:400">(ไม่บังคับ)</span>')+'</div>'+photoHTML(it.item_code, ln.photo, ln.photoUp, inf.needPhoto);
   if(inf.needNote){
     const set=CHIPS[inf.chipSet]||CHIPS.lost;
@@ -1184,6 +1212,10 @@ const A = {
     rerenderItem(code); saveDraft();
     const nb=ln.open && document.querySelector('#it-'+code+' .evi');   // เลื่อนให้เห็นปุ่มถ่ายรูป/หมายเหตุที่เพิ่งโผล่
     if(nb) setTimeout(()=>nb.scrollIntoView({behavior:'smooth', block:'nearest'}),30);
+    else if(it.fm_no && !ln.open){   // ปกติ → เลื่อนไปข้อถัดไปที่ยังไม่ได้ตรวจ
+      const its=S.data.items, i=its.indexOf(it), nx=its.slice(i+1).find(x=>!lineInfo(x,S.F.lines[x.item_code]).answered);
+      const el=nx && $('it-'+nx.item_code); if(el) setTimeout(()=>el.scrollIntoView({behavior:'smooth', block:'center'}),30);
+    }
   },
   chip(code,t){ const ln=S.F.lines[code]; const i=ln.chips.indexOf(t); if(i>=0) ln.chips.splice(i,1); else ln.chips.push(t); rerenderItem(code); saveDraft(); },
   text(code,v){
@@ -1294,6 +1326,8 @@ function buildPayload(){
     if(m==='score'){ clean=+ln.value; return Object.assign(base,{qty_expected:10, qty_found:+ln.value, condition:'ปกติ', value_text:String(ln.value)}); }
     // gauge: ส่ง value_text อย่างเดียว ระบบแปลง condition เอง · ไม่เขียว = ชำรุด → ระบบตั้ง first_damage_date เอง ไม่ถามคนขับ
     if(m==='gauge') return Object.assign(base,{value_text:ln.value});
+    if(m==='pass_fail' && it.fm_no){ const bad=ln.value!=='ผ่าน';
+      return Object.assign(base,{value_text:bad?'fail':'pass', note:bad?(ln.text.trim()||null):null, fail_parts:bad?ln.chips.slice():[]}); }
     if(m==='pass_fail') return Object.assign(base,{value_text:ln.value==='ผ่าน'?'pass':'fail'});   // ระบบแปลง condition เอง (pass=ปกติ · fail=ชำรุด)
     const c={'ใช้ได้':'ปกติ','เสีย':'ชำรุด','ไม่ได้ติดตั้ง':'ไม่มี'}[ln.value];
     return Object.assign(base,{qty_expected:1, qty_found:c==='ไม่มี'?0:1, condition:c, value_text:ln.value});
