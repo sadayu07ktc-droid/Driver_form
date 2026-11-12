@@ -721,7 +721,7 @@ function rNoVeh(){ setHeader({}); setBottom('');
     '<div class="state-p">'+(drv.name?'คุณ'+esc(drv.name)+' ':'')+'ยังไม่มีทะเบียนรถผูกกับชื่อในระบบ<br>ให้แอดมินกลุ่ม'+esc(drv.job_group||'')+' ผูกรถให้ก่อน<br>(รถสแปร์ แอดมินตรวจเอง ไม่ต้องส่ง)</div>'+
     '<button class="btn-sec" onclick="boot()">🔄 ลองใหม่</button></div>'; }
 const grpLabel = g => ({'ไร่':'🌴 รถไร่','Bulk':'🛢️ รถ Bulk','Packing':'📦 รถ Packing'})[g]||g;
-function platesHTML(v){ return '<div class="plates"><div class="plate"><small>หัว</small><b>'+esc(v.plate_head)+'</b></div>'+(v.plate_tail?'<div class="plate"><small>หาง</small><b>'+esc(v.plate_tail)+'</b></div>':'')+'</div>'; }
+function platesHTML(v){ return '<div class="plates"><div class="plate"><small>'+(v.plate_tail?'หัว':'ทะเบียน')+'</small><b>'+esc(v.plate_head)+'</b></div>'+(v.plate_tail?'<div class="plate"><small>หาง</small><b>'+esc(v.plate_tail)+'</b></div>':'')+'</div>'; }
 
 /* ---------- สถานะวันนี้ ---------- */
 function todayKey(d){
