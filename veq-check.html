@@ -470,7 +470,7 @@ const auth = {
       await liff.init({liffId});
       if(!liff.isLoggedIn()){
         if(liff.isInClient()){ liff.login(); return new Promise(()=>{}); }
-        return null;                                      // เปิดนอก LINE และไม่ได้ล็อกอิน
+        S.liffOut=liffId; return null;                    // เปิดนอก LINE และไม่ได้ล็อกอิน (สแกน QR ด้วยกล้องแล้วไปเปิดในเบราว์เซอร์) → หน้าปุ่มเปิดในแอป LINE
       }
       const p=await liff.getProfile();
       return p && p.userId ? {mode:'liff', userId:p.userId, displayName:p.displayName} : null;
@@ -756,6 +756,7 @@ function render(){
   const s=S.screen;
   $('stale-bar').classList.toggle('hide', !S.stale);
   if(s==='loading') return rLoading();
+  if(s==='outside' && S.liffOut) return rOpenLine(S.liffOut);
   if(s==='outside') return rState('💬','พิมพ์ ช ในไลน์ SSB เพื่อเปิดหน้านี้','แล้วกดปุ่ม 📋 เช็คก่อนออกรถ ในการ์ดที่ตอบกลับ');
   if(s==='expired') return rState('💬','พิมพ์ ช ในไลน์ SSB เพื่อเปิดหน้านี้','ลิงก์นี้หมดอายุแล้ว (ใช้ได้เฉพาะวันที่ได้รับ)<br>ที่ทำค้างไว้ยังเก็บในเครื่อง');
   if(s==='inactive') return rState('⏸️','บัญชียังไม่เปิดใช้งาน','ติดต่อแอดมินกลุ่มให้เปิดใช้งานก่อน<br>แล้วพิมพ์ ช ในไลน์ SSB อีกครั้ง', true);
@@ -772,6 +773,13 @@ function render(){
 }
 function rLoading(){ setHeader({}); setBottom('');
   $('app').innerHTML='<div class="sk" style="height:150px;margin-bottom:12px"></div><div class="sk" style="height:200px;margin-bottom:12px"></div><div class="sk" style="height:150px"></div>'; }
+// QR ติดหน้ารถ (liff.line.me/…/veq-check?liff=…) เปิดในเบราว์เซอร์ → ให้กดเปิดในแอป LINE หรือล็อกอิน LINE ในเบราว์เซอร์นี้
+function rOpenLine(liffId){ setHeader({}); setBottom('');
+  const q='veq-check?liff='+encodeURIComponent(liffId)+'&src=qr', app='https://line.me/R/app/'+encodeURIComponent(liffId)+'/'+q;
+  $('app').innerHTML='<div class="state"><div class="state-ic">📱</div><div class="state-t">เปิดในแอป LINE</div>'+
+    '<div class="state-p">หน้านี้เปิดในเบราว์เซอร์ ระบบเลยยังไม่รู้ว่าเป็นใคร<br>กดปุ่มด้านล่างเพื่อเปิดในแอป LINE<br><span class="muted small">ครั้งหน้า: เปิด LINE → กดสแกน QR</span></div>'+
+    '<a class="btn-main" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="'+app+'">💬 เปิดในแอป LINE</a>'+
+    '<button class="btn-sec" onclick="A.liffLogin()">🔑 เข้าสู่ระบบ LINE ในเบราว์เซอร์นี้</button></div>'; }
 function rState(ic,t,p,retry){ setHeader({}); setBottom('');
   $('app').innerHTML='<div class="state"><div class="state-ic">'+ic+'</div><div class="state-t">'+t+'</div><div class="state-p">'+p+'</div>'+(retry?'<button class="btn-sec" onclick="boot()">🔄 ลองใหม่</button>':'')+'</div>'; }
 function rNoVeh(){ setHeader({}); setBottom('');
@@ -1221,6 +1229,7 @@ const vehKey = id => 'ssb_veq_vok_'+S.uid+'_'+S.date+'_'+id;
 function vehAsk(){ const d=S.data; return !!(d && d.ok && !d.as_admin && S.date===d.today && !d.check && d.vehicle_source!=='today' && !lsGet(vehKey(d.vehicle.id))); }
 function vqOpen(html){ const m=$('modal'); m.innerHTML='<div class="vq">'+html+'</div>'; m.classList.add('show'); }
 const A = {
+  liffLogin(){ try{ liff.login({redirectUri: location.href}); }catch(e){ toast('เข้าสู่ระบบไม่ได้ ลองกด เปิดในแอป LINE','error'); } },
   start(force){ if(!force && vehAsk()) return A.vehAskShow(); S.F=loadForm(); go('check'); },
   // 🚚 ถามก่อนเริ่มเช็ค "วันนี้ขับทะเบียนนี้ใช่ไหม" (ครั้งเดียวต่อวันต่อคัน) · ไม่ใช่ → เลือกหน่วยงาน → รถว่าง
   vehAskShow(){ const v=S.data.vehicle;
