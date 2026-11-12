@@ -222,6 +222,24 @@ button:disabled{cursor:not-allowed}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{min-height:48px;padding:0 16px;border-radius:24px;border:2px solid var(--line);background:#fff;font-size:16px;font-weight:600;color:var(--text)}
 .chip.on{background:var(--g1);border-color:var(--g1);color:#fff}
+/* 📋 FM-TR-16 รายเดือน */
+.mrow{padding:14px}
+.mr-h{display:flex;align-items:center;gap:10px;font-size:18px;line-height:1.3}
+.mr-no{min-width:32px;height:32px;border-radius:10px;background:var(--g4);color:var(--g1);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.mr-tick{margin-left:auto;color:var(--ok);font-weight:700;font-size:22px}
+.m-ok{border-left:5px solid var(--ok)}
+.mr-hint{margin:4px 0 0 42px}
+.mr-st{margin:10px 0 8px}
+.mr-st .st-btn{width:56px;height:56px}
+.mr-st .st-num{font-size:32px;min-width:52px}
+.mr-zero{margin-top:4px;min-height:36px;padding:0 10px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-size:14px;font-weight:600;color:var(--text-m)}
+.mr-cond .chip{flex:1;min-width:0;padding:0 6px;font-size:15px}
+.mr-sc{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.mr-sc .chip{padding:0}
+.chip:disabled{opacity:.55}
+.mr-note,.mr-odo{width:100%;min-height:52px;border-radius:12px;border:2px solid var(--line);padding:0 14px;font-size:18px;margin-top:10px;background:#fff;color:var(--text)}
+.mr-odo{font-size:24px;font-weight:700;margin-top:0}
+.mr-miss{margin-top:8px;color:var(--warn);font-weight:700;font-size:15px}
 .note-inp{width:100%;min-height:52px;margin-top:8px;border:2px solid var(--line);border-radius:12px;padding:10px 14px;font-family:inherit;font-size:17px;outline:none;background:#fff}
 .note-inp:focus{border-color:var(--g2)}
 .btn-fin{width:100%;min-height:var(--tap);margin-top:14px;border-radius:14px;background:var(--g1);color:#fff;font-size:19px;font-weight:700}
@@ -503,6 +521,8 @@ const api = {
   submitDaily:    payload                  => edgePost(Object.assign({action:'submitDaily'}, payload)),
   pickList:       ({group})                => edgeGet({action:'pickList', group}),          // รถว่างวันนี้ (ตัดคันที่คนอื่นใช้แล้ว)
   pickVehicle:    ({vehicleId})            => edgePost({action:'pickVehicle', vehicleId}),   // วันนี้ขับคันนี้ (เฉพาะเช็คลิสต์ ไม่เกี่ยวค่าแรง)
+  getMyMonthly:   ({vehicleId})            => edgeGet({action:'myMonthly', vehicleId}),      // 📋 FM-TR-16 เดือนนี้
+  submitMonthly:  payload                  => edgePost(Object.assign({action:'submitMonthly'}, payload)),
 };
 // ลิงก์หมดอายุ (เลยวัน) → เก็บร่างไว้ แล้วบอกให้พิมพ์ ช ใหม่
 function linkExpired(){
@@ -748,6 +768,7 @@ function render(){
   if(s==='summary') return rSummary();
   if(s==='done') return rDone();
   if(s==='report') return rReport();
+  if(s==='monthly') return rMonthly();
 }
 function rLoading(){ setHeader({}); setBottom('');
   $('app').innerHTML='<div class="sk" style="height:150px;margin-bottom:12px"></div><div class="sk" style="height:200px;margin-bottom:12px"></div><div class="sk" style="height:150px"></div>'; }
@@ -808,6 +829,7 @@ function rHome(){
       platesHTML(v)+'<div class="veh-drv">👤 '+esc(d.driver.name)+' <span class="muted small">· '+esc(d.driver.driver_id)+'</span></div>'+spare+
       (!d.as_admin && S.date===d.today ? '<button class="veh-pick" onclick="A.vehNo()">🔁 วันนี้ขับคันอื่น? เปลี่ยนทะเบียน</button>' : '')+'</div>'+
     '<div class="card mc st-'+k+'"><div class="mc-lbl">เช็คก่อนออกรถ วันนี้</div><div class="mc-day">'+dayLabel(S.date,true)+'</div>'+body+'</div>'+
+    monthCardHTML(d)+
     '<div class="h3">📅 ย้อนหลัง 14 วัน</div><div id="hist"><div class="sk" style="height:150px"></div></div>';
   loadHist();
 }
@@ -1468,6 +1490,114 @@ function resetLocal(){
   lsSet('ssb_veq_reset', RESET_VER);
 }
 if(lsGet('ssb_veq_reset')!==RESET_VER || qp('reset')==='1') resetLocal();
+/* =====================================================================
+   📋 FM-TR-16 ตรวจเช็คอุปกรณ์ติดรถ — เดือนละ 1 ครั้ง (คนขับนับของจริง · แอดมินสุ่มมาตรวจซ้ำ)
+   GET  myMonthly&vehicleId → {period, items[{item_code,no,name,unit,check_mode,qty_expected,qty_on_hand,now,prev}], check, last_odometer, can_submit}
+   POST submitMonthly {vehicleId, odometer, note, client_draft_id, lines[{item_code,qty_found,condition,note}]} · ส่งซ้ำในเดือนเดียวกัน = แก้ฉบับเดิม
+   ===================================================================== */
+const TH_MF = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const monthTxt = p => { const a=String(p||'').split('-'); return a.length===2 ? TH_MF[+a[1]-1]+' '+(+a[0]+543) : p; };
+const M_CONDS = [['ปกติ','✅ ปกติ'],['ชำรุด','🔧 ชำรุด'],['หาย','❌ หาย/ไม่มี']];
+const M = {
+  key(){ return 'ssb_veq_m1_'+S.uid+'_'+S.M.vehicle.id+'_'+S.M.period; },
+  open(){ S.M=null; S.MF=null; go('monthly'); },
+  async load(){
+    try{
+      const d=await api.getMyMonthly({vehicleId:S.data.vehicle.id});
+      if(!d || !d.ok) throw new Error((d&&d.error)||'โหลดไม่ได้');
+      S.M=d; S.MF=M.form(); if(S.screen==='monthly') rMonthly();
+    }catch(e){ if(S.screen==='monthly') $('app').innerHTML='<div class="state"><div class="state-ic">📡</div><div class="state-t">โหลดฟอร์มรายเดือนไม่ได้</div><div class="state-p">'+esc(e.offline?'เช็คสัญญาณเน็ต':e.message)+'</div><button class="btn-sec" onclick="M.open()">🔄 ลองใหม่</button></div>'; }
+  },
+  form(){
+    const d=S.M, f={odo:d.check&&d.check.odometer!=null?String(d.check.odometer):'', note:(d.check&&d.check.note)||'', draftId:'M'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), lines:{}};
+    d.items.forEach(it=>{ const n=it.now; f.lines[it.item_code] = n ? {q:n.qty_found, cond:n.condition==='ไม่มี'?'หาย':(n.condition||'ปกติ'), note:n.note||''} : {q:null, cond:'ปกติ', note:''}; });
+    try{ const raw=lsGet(M.key()); if(raw){ const dr=JSON.parse(raw); if(dr && dr.base===(d.check?d.check.id:null) && dr.lines){ d.items.forEach(it=>{ if(dr.lines[it.item_code]) f.lines[it.item_code]=dr.lines[it.item_code]; }); f.odo=dr.odo||f.odo; f.note=dr.note||f.note; } } }catch(e){}
+    return f;
+  },
+  save(){ try{ lsSet(M.key(), JSON.stringify({base:S.M.check?S.M.check.id:null, odo:S.MF.odo, note:S.MF.note, lines:S.MF.lines})); }catch(e){} },
+  info(it){
+    const ln=S.MF.lines[it.item_code];
+    if(it.check_mode==='score') return {done:ln.q!=null, miss:ln.q==null?'ให้คะแนน':''};
+    if(ln.q==null) return {done:false, miss:'ใส่จำนวน'};
+    if(ln.cond==='ชำรุด' && !String(ln.note||'').trim()) return {done:false, miss:'พิมพ์อาการที่ชำรุด'};
+    return {done:true, miss:''};
+  },
+  odoOk(){ const n=parseInt(S.MF.odo,10); return S.M.as_admin || (!isNaN(n) && n>0); },
+  prog(){ const t=S.M.items.length+1; let d=M.odoOk()?1:0; S.M.items.forEach(it=>{ if(M.info(it).done) d++; }); return {done:d, total:t}; },
+  rowHTML(it){
+    const ln=S.MF.lines[it.item_code], c=it.item_code, inf=M.info(it), ro=!S.M.can_submit;
+    const hint=[]; if(it.qty_on_hand!=null) hint.push('ในระบบ '+it.qty_on_hand+' '+esc(it.unit)); if(it.prev && it.prev.qty_found!=null) hint.push('เดือนก่อน '+it.prev.qty_found);
+    let h='<div class="card mrow'+(inf.done?' m-ok':'')+'" id="mr-'+c+'"><div class="mr-h"><span class="mr-no">'+it.no+'</span><b>'+esc(it.name)+'</b>'+(inf.done?'<span class="mr-tick">✓</span>':'')+'</div>'+
+      (hint.length?'<div class="muted small mr-hint">'+hint.join(' · ')+'</div>':'');
+    if(it.check_mode==='score'){
+      h+='<div class="ed-lbl">ให้คะแนน 1–10</div><div class="mr-sc">'+[1,2,3,4,5,6,7,8,9,10].map(n=>'<button class="chip'+(ln.q===n?' on':'')+'"'+(ro?' disabled':'')+' onclick="M.score(\''+c+'\','+n+')">'+n+'</button>').join('')+'</div>';
+    } else {
+      h+='<div class="stepper mr-st"><button class="st-btn" aria-label="ลด"'+(ro||ln.q==null||ln.q<=0?' disabled':'')+' onclick="M.step(\''+c+'\',-1)">−</button>'+
+        '<div class="st-num">'+(ln.q==null?'–':ln.q)+'</div><button class="st-btn" aria-label="เพิ่ม"'+(ro?' disabled':'')+' onclick="M.step(\''+c+'\',1)">+</button>'+
+        '<div class="st-of">'+esc(it.unit||'')+(ln.q==null&&!ro?'<br><button class="mr-zero" onclick="M.zero(\''+c+'\')">ไม่มี (0)</button>':'')+'</div></div>'+
+        '<div class="chips mr-cond">'+M_CONDS.map(o=>'<button class="chip'+(ln.cond===o[0]?' on':'')+'"'+(ro?' disabled':'')+' onclick="M.cond(\''+c+'\',\''+o[0]+'\')">'+o[1]+'</button>').join('')+'</div>';
+      if(ln.cond!=='ปกติ') h+='<input class="mr-note" placeholder="'+(ln.cond==='ชำรุด'?'แจ้งอาการที่ชำรุด (ต้องกรอก)':'หมายเหตุ (ถ้ามี)')+'" value="'+esc(ln.note||'')+'"'+(ro?' disabled':'')+' oninput="M.note(\''+c+'\',this.value)">';
+    }
+    if(!inf.done && inf.miss && ln.q!=null) h+='<div class="mr-miss">⚠️ '+inf.miss+'</div>';
+    return h+'</div>';
+  },
+  redraw(c){ const it=S.M.items.find(x=>x.item_code===c), el=$('mr-'+c); if(it && el) el.outerHTML=M.rowHTML(it); M.save(); M.bottom(); },
+  step(c,dlt){ const ln=S.MF.lines[c]; ln.q=Math.max(0,(ln.q==null?0:ln.q)+dlt); M.redraw(c); },
+  zero(c){ const ln=S.MF.lines[c]; ln.q=0; M.redraw(c); },
+  score(c,n){ S.MF.lines[c].q=n; M.redraw(c); },
+  cond(c,v){ const ln=S.MF.lines[c]; ln.cond=v; if(v==='หาย' && ln.q==null) ln.q=0; M.redraw(c); },
+  note(c,v){ S.MF.lines[c].note=v; M.save(); const it=S.M.items.find(x=>x.item_code===c), el=$('mr-'+c);
+    if(el){ el.classList.toggle('m-ok', M.info(it).done); const ms=el.querySelector('.mr-miss'); if(ms && M.info(it).done) ms.remove(); } M.bottom(); },
+  odo(v){ S.MF.odo=String(v).replace(/[^0-9]/g,''); M.save(); M.bottom(); },
+  mnote(v){ S.MF.note=v; M.save(); },
+  bottom(){
+    if(S.screen!=='monthly' || !S.M) return;
+    if(!S.M.can_submit){ setBottom(''); return; }
+    const p=M.prog(), left=p.total-p.done;
+    $('hdr-prog').innerHTML='<div class="prog"><div class="prog-txt">กรอกแล้ว <b>'+p.done+'</b>/'+p.total+'</div><div class="prog-bar"><i class="'+(left?'':'full')+'" style="width:'+Math.round(p.done/p.total*100)+'%"></i></div></div>';
+    setBottom(left ? '<button class="btn-main todo" onclick="M.nextTodo()">ยังเหลือ '+left+' ข้อ — ไปทำ ↓</button>'
+      : '<button class="btn-main" id="m-submit" onclick="M.submit()">📤 '+(S.M.check?'ส่งใหม่ (แก้ไข)':'ส่งเช็ครายเดือน')+'</button>');
+  },
+  nextTodo(){
+    if(!M.odoOk()){ const o=$('m-odo'); if(o){ o.scrollIntoView({behavior:'smooth',block:'center'}); o.focus(); } return; }
+    const it=S.M.items.find(x=>!M.info(x).done); const el=it&&$('mr-'+it.item_code); if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+  },
+  async submit(){
+    if(S.busy) return; const b=$('m-submit'); S.busy=true; if(b){ b.disabled=true; b.textContent='กำลังส่ง…'; }
+    const lines=S.M.items.map(it=>{ const ln=S.MF.lines[it.item_code];
+      return it.check_mode==='score' ? {item_code:it.item_code, qty_found:ln.q} : {item_code:it.item_code, qty_found:ln.q, condition:ln.cond, note:String(ln.note||'').trim()||null}; });
+    try{
+      const r=await api.submitMonthly({vehicleId:S.M.vehicle.id, odometer:S.MF.odo?+S.MF.odo:null, note:String(S.MF.note||'').trim()||null, client_draft_id:S.MF.draftId, lines});
+      if(!r || !r.ok){ toast((r&&r.error||'ส่งไม่สำเร็จ')+(r&&r.errors?' · '+r.errors.slice(0,3).join(' · '):''),'error',6000); return; }
+      try{ localStorage.removeItem(M.key()); }catch(e){}
+      if(S.data) S.data.monthly=Object.assign({}, S.data.monthly||{}, {sent:true, status:r.status, submitted_at:r.submitted_at});
+      toast(r.resubmit?'✅ แก้ไขเช็ครายเดือนแล้ว':'✅ ส่งเช็ครายเดือนแล้ว ขอบคุณครับ','ok');
+      S.M=null; S.MF=null; await M.load();
+    }catch(e){ toast(e.offline?'ส่งไม่ได้ — เช็คสัญญาณเน็ต แล้วกดส่งอีกครั้ง (ข้อมูลยังอยู่)':'ส่งไม่สำเร็จ: '+e.message,'error',6000); }
+    finally{ S.busy=false; M.bottom(); }
+  },
+};
+function rMonthly(){
+  const v=S.data&&S.data.vehicle;
+  setHeader({back:true, t:'📋 เช็คอุปกรณ์รายเดือน', s:(v?plateTxt(v)+' · ':'')+'FM-TR-16'}); setBottom('');
+  if(!S.M){ $('app').innerHTML='<div class="sk" style="height:120px;margin-bottom:12px"></div><div class="sk" style="height:300px"></div>'; M.load(); return; }
+  const d=S.M, c=d.check;
+  let top='<div class="card"><div class="mc-lbl">ตรวจเช็คอุปกรณ์ติดรถ · เดือน'+esc(monthTxt(d.period))+'</div>'+
+    '<div class="muted small">นับของที่อยู่ในรถจริง ใส่จำนวน + สภาพ · ชำรุดให้พิมพ์อาการ · แอดมินจะสุ่มมาตรวจซ้ำ</div>'+
+    (c ? '<div class="note-box nb-ok">✅ ส่งแล้ว '+esc(dayLabel(c.check_date,true))+' '+hm(c.submitted_at)+(d.can_submit?' · แก้ได้ถึงสิ้นเดือน':'')+'</div>' : '')+
+    '<div class="ed-lbl">1. เลขไมล์</div><input id="m-odo" class="mr-odo" inputmode="numeric" placeholder="เลขไมล์ตอนตรวจ" value="'+esc(S.MF.odo)+'"'+(d.can_submit?'':' disabled')+' oninput="M.odo(this.value)">'+
+    (d.last_odometer?'<div class="muted small">ครั้งก่อน '+fmtNum(d.last_odometer)+'</div>':'')+'</div>';
+  $('app').innerHTML=top+d.items.map(M.rowHTML).join('')+
+    '<div class="card"><div class="ed-lbl">หมายเหตุเพิ่มเติม</div><input class="mr-note" placeholder="(ถ้ามี)" value="'+esc(S.MF.note)+'"'+(d.can_submit?'':' disabled')+' oninput="M.mnote(this.value)"></div>';
+  M.bottom();
+}
+function monthCardHTML(d){
+  const mo=d.monthly; if(!mo) return '';
+  const sd = mo.submitted_at ? parseD(String(mo.submitted_at).slice(0,10)) : null;
+  return '<div class="card"><div class="mc-lbl">📋 เช็คอุปกรณ์ติดรถ รายเดือน</div><div class="muted small">เดือน'+esc(monthTxt(mo.period))+' · เดือนละ 1 ครั้ง (FM-TR-16)</div>'+
+    (mo.sent ? '<span class="pill p-ok">✅ ส่งแล้ว'+(sd?' '+sd.getDate()+' '+TH_M[sd.getMonth()]:'')+'</span>' : '<span class="pill p-todo">⏳ เดือนนี้ยังไม่ส่ง</span>')+
+    '<button class="'+(mo.sent?'btn-sec':'btn-main')+'" onclick="M.open()">'+(mo.sent?'📄 ดู / แก้ไข':'▶ เริ่มเช็ครายเดือน')+'</button></div>';
+}
 async function boot(){
   S.screen='loading'; render(); updateOnline();
   if(S.expired){ go('expired',{},true); return; }
