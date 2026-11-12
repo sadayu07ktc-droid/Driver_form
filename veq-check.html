@@ -1459,6 +1459,13 @@ async function loadData(replace){
   }
 }
 S.entry=qp('src');
+// 🧹 ล้างค่าที่เครื่องจำไว้ (ร่างเช็คลิสต์ / ตอบ "ใช่" / แคช) · เปลี่ยน RESET_VER = ล้างทุกเครื่องครั้งเดียว · ?reset=1 = ล้างเครื่องนี้
+const RESET_VER = '20261112b';
+function resetLocal(){
+  try{ Object.keys(localStorage).filter(k=>k.indexOf('ssb_veq_')===0 && k!=='ssb_veq_reset').forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  lsSet('ssb_veq_reset', RESET_VER);
+}
+if(lsGet('ssb_veq_reset')!==RESET_VER || qp('reset')==='1') resetLocal();
 async function boot(){
   S.screen='loading'; render(); updateOnline();
   if(S.expired){ go('expired',{},true); return; }
