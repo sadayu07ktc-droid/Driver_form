@@ -204,6 +204,7 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .btn-sm{padding:9px 14px;border-radius:10px;border:none;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
 .btn-sm.start{flex:1;background:var(--g2);color:#fff}
 .btn-sm.cancel{background:var(--white);color:var(--red);border:1.5px solid var(--red)}
+body.devv .btn-sm.cancel{display:none}   /* 👁️ โหมด DEV ไม่มีปุ่มยกเลิก */
 /* Tom Select — ช่องเลือกราคาน้ำมัน (ค้นหาได้ ไม่บังจอ) */
 .ts-control{background:var(--bg)!important;border:1.5px solid var(--border)!important;border-radius:10px!important;padding:10px 12px!important;font-size:14px;font-family:'Sarabun',sans-serif;color:var(--text);min-height:auto!important;flex-wrap:nowrap!important;overflow:hidden!important}
 .ts-control:focus-within{border-color:var(--active)!important;box-shadow:none!important;background:var(--white)!important}
@@ -296,6 +297,22 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 </div>
 
 <script>
+// 👁️ โหมด DEV ดูแทนคนขับ (เมนู Developer · dev-drivers.html · 12 พ.ย.) — ?asDriver=<uid คนขับ>&order=<ORD-…>
+//    ดูอย่างเดียว: บล็อกทุกคำขอที่ไม่ใช่ GET (บันทึก/สถานะ/รูป/OCR/QR) · ปิดคิวออฟไลน์ · ไม่ใช้ LIFF · ต้องเป็น DEV (บัตร ssb_session_v1 + Edge dev-drivers)
+//    คนขับปกติ (ไม่มี ?asDriver) ไม่โดนอะไรเลย
+const DEVV=(function(){ try{ const q=new URLSearchParams(location.search), u=q.get('asDriver');
+  return (u && /^U[0-9a-f]{32}$/.test(u)) ? {uid:u, order:String(q.get('order')||'')} : null; }catch(e){ return null; } })();
+if(DEVV){
+  const _f=window.fetch.bind(window);
+  window.fetch=function(url,opt){
+    const m=String((opt&&opt.method)||(url&&url.method)||'GET').toUpperCase();
+    if(m!=='GET' && m!=='HEAD'){
+      console.warn('[DEV view] บล็อกการบันทึก', String(url&&url.url||url).slice(0,120));
+      return Promise.resolve(new Response(JSON.stringify({success:false, ok:false, status:'err', error:'👁️ โหมด DEV ดูอย่างเดียว — ไม่บันทึก'}), {status:200, headers:{'Content-Type':'application/json'}}));
+    }
+    return _f(url,opt);
+  };
+}
 const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
 const LIFF_ID='2010274217-SozYWeE5';
 // ⚡ ส่วน "อ่านข้อมูล" ย้ายไป Supabase Edge driver-form (ผลเหมือน GAS ทุกช่อง · เร็วกว่า ~10 เท่า · ไม่กินโควต้า GAS) · 2026-10-09
@@ -370,8 +387,57 @@ function showMaintenance(){
 function _lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function _lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 
+// 👁️ โหมด DEV — เช็คสิทธิ์ DEV จากบัตรล็อกอินแดชบอร์ด แล้วโหลดงานของคนขับคนนั้น (ไม่ผ่าน LIFF)
+const DEV_DRV_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/dev-drivers';
+async function devViewInit(){
+  document.body.classList.add('devv');
+  const bar=document.createElement('div'); bar.id='devv-bar';
+  bar.style.cssText='position:sticky;top:0;z-index:60;background:#7C2D12;color:#fff;text-align:center;padding:7px 10px;font-size:12.5px;font-weight:700';
+  bar.textContent='👁️ โหมด DEV ดูแทนคนขับ · ดูอย่างเดียว ไม่บันทึก';
+  document.body.insertBefore(bar, document.body.firstChild);
+  const stop=msg=>{ document.getElementById('drv-name').textContent=msg; const jl=document.getElementById('job-loading'); if(jl) jl.classList.add('hide'); const sp=document.getElementById('drv-spin'); if(sp) sp.style.display='none'; };
+  let me='';
+  try{ const s=JSON.parse(_lsGet('ssb_session_v1')||'null'); if(s && s.uid && (!s.t || Date.now()-s.t < 7*864e5)) me=s.uid; }catch(e){}
+  if(!me){ stop('⛔ เปิดจากเมนู Developer ในแดชบอร์ดเท่านั้น'); return; }
+  try{
+    const r=await fetch(DEV_DRV_URL+'?action=me&userId='+encodeURIComponent(me)).then(x=>x.json());
+    if(!r || !r.dev){ stop('⛔ หน้านี้สำหรับ DEV เท่านั้น'); return; }
+  }catch(e){ stop('⚠️ ตรวจสิทธิ์ไม่สำเร็จ'); return; }
+  U.displayName='';
+  await loadDriver(DEVV.uid);
+  DEVV.me=me;
+  if(DEVV.order){
+    if(allOrders.find(o=>o['Order ID']===DEVV.order)){ openJob(DEVV.order); devvLoadLw(DEVV.order); }
+    else bar.textContent='👁️ โหมด DEV · งาน '+DEVV.order+' ไม่อยู่ในคิวคนขับแล้ว (จบ/ยกเลิก) — ดูข้อมูลในแผงแก้ไขด้านข้าง';
+  }
+}
+// 👁️ โหมด DEV — ออเดอร์ไม่มีเลขไมล์/ดุม/สภาพรถ (อยู่ใน log_weight) → ดึงจาก dev-drivers แล้ววาดไทม์ไลน์ใหม่
+async function devvLoadLw(orderId){
+  try{
+    const r=await fetch(DEV_DRV_URL+'?action=job&userId='+encodeURIComponent(DEVV.me)+'&order='+encodeURIComponent(orderId)).then(x=>x.json());
+    const lw=r && r.lw; if(!lw || !order || order['Order ID']!==orderId) return;
+    const M={start:'start', rampDrop:'ramp_place', client:'customer', ramp:'ramp_return', factory:'dest'};
+    Object.entries(M).forEach(([k,c])=>{
+      const mi=lw['mile_'+c], hu=lw['hub_'+c], ld=lw['load_'+c];
+      if(mi!=null || hu!=null) readings[k]={mile:mi??'', hub:hu??''};
+      if(ld==='เบา'||ld==='หนัก') loadStates[k]=ld;
+    });
+    renderTimeline();
+  }catch(e){ console.warn('devvLoadLw', e); }
+}
+// 👁️ โหมด DEV — สรุปค่าที่คนขับบันทึกแล้วต่อจุด (ไมล์/ดุมล้อ/สภาพรถ) ใต้หัวการ์ดในไทม์ไลน์
+function devvRecHtml(key){
+  if(!DEVV) return '';
+  const r=readings[key]||{}, ld=loadStates[key]||'', t=[];
+  if(r.mile) t.push('ไมล์ '+r.mile);
+  if(r.hub) t.push('ดุมล้อ '+r.hub);
+  if(ld) t.push(ld==='หนัก'?'🟤 หนัก':'⚪ เบา');
+  return t.length ? `<div style="margin-top:4px;font-size:12px;color:#7C2D12;background:#FFF7ED;border-radius:8px;padding:4px 8px">📝 บันทึกแล้ว: ${t.join(' · ')}</div>` : '';
+}
+
 async function init(){
   buildPriceList();
+  if(DEVV){ await devViewInit(); return; }
   _queueBadge();            // มีงานค้างจากครั้งก่อนไหม
   if(navigator.onLine) _queueFlush();   // เปิดแอปแล้วมีเน็ต → ส่งที่ค้างเลย
   // ⚡ จำ uid เดิม → ยิง maintenance+user+order ทันที (ขนานกับ LIFF init) ไม่ต้องรอ LINE เสร็จก่อน
@@ -659,6 +725,7 @@ function renderJobList(){
 //    แต่ทำทีละงาน: ถ้ามีงานอื่น "กำลังวิ่ง" (เริ่มแล้วยังไม่จบ) ต้องจบก่อน
 const RUNNING_STATUSES = ['เริ่มงานแล้ว','ถึงลานวางกระบะ','ถึงลูกค้า','ออกจากลูกค้า','ถึงลานขากลับ'];
 async function confirmStartJob(orderId){
+  if(DEVV){ openJob(orderId); devvLoadLw(orderId); return; }   // 👁️ โหมด DEV — เปิดดูเลย ไม่ถาม/ไม่กันงานซ้อน
   const o = allOrders.find(x=>x['Order ID']===orderId) || {};
   // ⛔ กันเริ่มซ้อน — มีงานอื่นวิ่งค้างอยู่ ต้องทำให้จบก่อน
   const running = allOrders.find(x =>
@@ -934,7 +1001,7 @@ function renderTimeline(){
       <div class="tl-head">
         <span class="tl-step-label">${step.label}</span>
         <span class="tl-step-time">${state==='done'?(fmtDateTime(getStepTime(step.key))||'✅'):state==='active'?'กำลังดำเนินการ':'รอดำเนินการ'}</span>
-      </div>
+      </div>${devvRecHtml(step.key)}
       ${state==='active'?`<div class="tl-body">${buildForm(step.key)}</div>`:''}
     `;
     wrap.appendChild(dot);wrap.appendChild(line);wrap.appendChild(card);
@@ -2220,6 +2287,7 @@ const OFFLINE_KEY='ssb_offline_queue';
 function _queueRead(){ try{return JSON.parse(localStorage.getItem(OFFLINE_KEY)||'[]');}catch(e){return[];} }
 function _queueWrite(a){ try{localStorage.setItem(OFFLINE_KEY,JSON.stringify(a));}catch(e){} }
 function _queueAdd(payload){
+  if(DEVV) return;   // 👁️ โหมด DEV ไม่เก็บคิว
   const q=_queueRead();
   q.push({payload, t:Date.now()});
   _queueWrite(q);
@@ -2237,6 +2305,7 @@ function _queueBadge(){
   else el.style.display='none';
 }
 async function _queueFlush(){
+  if(DEVV) return;   // 👁️ โหมด DEV ไม่ส่งคิวค้างของเครื่องนี้
   let q=_queueRead();
   if(!q.length) return;
   const keep=[];
