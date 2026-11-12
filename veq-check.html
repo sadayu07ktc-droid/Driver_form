@@ -1211,7 +1211,7 @@ const A = {
     if(!r||!r.ok){ vqOpen('<div class="vq-t">โหลดรายการรถไม่ได้</div><div class="vq-s">'+esc(r&&r.error||'เน็ตมีปัญหา ลองใหม่')+'</div><button class="btn-sec" onclick="A.vehNo()">🔄 ลองใหม่</button><button class="btn-plain" onclick="A.closeModal()">ปิด</button>'); return; }
     const reg=(r.regular||[])[0];
     const back = r.picked && reg ? '<button class="vq-o mine" onclick="A.vehPick('+Number(reg.id)+')"><span>'+esc(plateTxt(reg))+'<small>กลับไปขับคันประจำ</small></span><span class="n">คันประจำ</span></button>' : '';
-    vqOpen('<div class="vq-t">วันนี้ขับรถหน่วยงานไหน?</div><div class="vq-s">โชว์เฉพาะรถที่ยังว่างวันนี้</div><div class="vq-g">'+back+
+    vqOpen('<div class="vq-t">วันนี้ขับรถหน่วยงานไหน?</div><div class="vq-s">โชว์เฉพาะรถที่วันนี้ยังไม่มีงาน และยังไม่ออกวิ่ง</div><div class="vq-g">'+back+
       (r.groups||[]).map((g,i)=>'<button class="vq-o" '+(g.free?'':'disabled ')+'onclick="A.vehGroup('+i+')"><span>'+grpLabel(g.group)+'</span><span class="n">ว่าง '+g.free+' คัน</span></button>').join('')+
       '</div><button class="btn-plain" onclick="A.closeModal()">ยกเลิก</button>');
     S.vqGroups=(r.groups||[]).map(g=>g.group); },
