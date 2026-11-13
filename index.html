@@ -907,7 +907,7 @@ function getSteps(){
     if(!pkInfo) out.push({key:'client',label:'📦 จุดส่ง (กำลังโหลดใบงาน…)'});
     else pkSlots().forEach(sl=>{ const ss=pkStopsOf(sl);
       const ico=ss.every(x=>x.kind==='pickup')?'🔄':ss.every(x=>x.kind==='dist_only')?'🧾':'📦';
-      out.push({key:sl,label:ico+' จุด '+ss.map(x=>x.seq).join('–')+' · '+ss.map(x=>x.name).join(' + ')}); });
+      out.push({key:sl,label:ico+' จุด '+ss.map(x=>x.no||x.seq).join('–')+' · '+ss.map(x=>x.name).join(' + ')}); });
     out.push({key:'factory',label:'🏁 กลับถึง SSB'});
     return out;
   }
@@ -1017,7 +1017,7 @@ function stepLabel(step,state){
 function pkArrHtml(key){
   if(!isPkJob() || !pkInfo || ['rampDrop','client','ramp'].indexOf(key)<0) return '';
   const arr={}; (pkInfo.arrivals||[]).forEach(a=>arr[a.seq]=a);
-  const rows=pkStopsOf(key).map(x=>{ const a=arr[x.seq]; return a?`<div>📍 จุด ${x.seq} ถึง ${a.at} ${checkinChip(a.src,a.distM)}</div>`:''; }).filter(Boolean);
+  const rows=pkStopsOf(key).map(x=>{ const a=arr[x.seq]; return a?`<div>📍 จุด ${x.no||x.seq} ถึง ${a.at} ${checkinChip(a.src,a.distM)}</div>`:''; }).filter(Boolean);
   return rows.length?`<div style="margin-top:4px;font-size:12px;color:#14532d;line-height:1.8">${rows.join('')}</div>`:'';
 }
 
@@ -1114,15 +1114,21 @@ let pkSaved = {};   // seq → ข้อมูลที่บันทึกแ�
 const pkEsc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pkTel = p => { p=String(p||''); return p.length===10?p.slice(0,3)+'-'+p.slice(3,6)+'-'+p.slice(6):p.length===9?p.slice(0,2)+'-'+p.slice(2,5)+'-'+p.slice(5):p; };
 const pkDocTxt = s => [(s.docs||[]).join(' · '),s.docColor&&('Invoice '+s.docColor)].filter(Boolean).join(' + ');
+async function pkSetFirst(seq,btn){ const cur=((pkInfo&&pkInfo.stops)||[]).find(s=>s.kind==='drop'); if(btn.disabled||(cur&&cur.seq===seq)) return; btn.disabled=true;
+  try{ const r=await fetch(PK_EDGE,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'setFirst',userId:U.userId,orderId:order['Order ID'],seq})}); const d=await r.json();
+    if(!d.ok) throw new Error(d.error||'ไม่สำเร็จ'); toast('✅ เปลี่ยนร้านแรกแล้ว'); await loadPkInfo(); }
+  catch(e){ toast('❌ '+(e.message||e)); btn.disabled=false; } }
 function pkJobCard(){
   if(!pkInfo) return '<div class="net-badge"><div class="net-lbl">📦 กำลังโหลดใบงาน Packing…</div></div>';
   const rows=[];
   if(pkInfo.testMode) rows.push('<div style="background:#FDE8E8;color:#B42318;border-radius:8px;padding:6px 8px;font-size:12px;margin-bottom:6px">🧪 เทสระบบ — ยังไม่ใช่งานจริง</div>');
-  pkInfo.stops.forEach(s=>rows.push(`<div style="font-size:13px;line-height:1.6"><b>${s.seq}. ${pkEsc(s.name)}</b> <span style="color:#6b7280">${
+  pkInfo.stops.forEach(s=>rows.push(`<div style="font-size:13px;line-height:1.6"><b>${s.no||s.seq}. ${pkEsc(s.name)}</b> <span style="color:#6b7280">${
     s.kind==='pickup'?'· ขากลับ รับของ':s.kind==='dist_only'?'· วางบิล/รับเช็ค':s.kind==='tbd'?'· ⚠️ รอแอดมินแจ้งที่':[s.pallets&&s.pallets+' เลท',s.cases&&s.cases+' ลัง'].filter(Boolean).join(' · ')}</span>${pkDocTxt(s)?`<div style="color:#7A5B00">📄 นำไปจากโรงงาน: <b>${pkEsc(pkDocTxt(s))}</b></div>`:''}</div>`));
   if(pkInfo.helpers) rows.push(`<div style="font-size:13px">👷 เด็กรถ: <b>${pkEsc(pkInfo.helpers)}</b>${pkInfo.helperTime?' · นัด '+pkEsc(pkInfo.helperTime):''}</div>`);
   /* 📞 13 พ.ย. เบอร์เด็กรถเต็ม กดโทรได้ (Edge pk-driver helperPhones) */
   (pkInfo.helperPhones||[]).forEach(p=>{const d=String(p.ph||'').replace(/\D/g,'');if(d.length>=9)rows.push(`<div style="font-size:13px">📞 ${pkEsc(p.n)} <a href="tel:${d}" style="color:#1E4FA3;font-weight:700;text-decoration:underline">${pkEsc(p.ph)}</a></div>`);});
+  /* 🔀 13 พ.ย. ถึงร้านไหนก่อน → ร้านนั้นเป็นจุดที่ 1 (GPS จับให้เองด้วย · เปลี่ยนได้จนกว่าจะบันทึกจุดแรก) */
+  if(pkInfo.canReorder){ const ds=pkInfo.stops.filter(s=>s.kind==='drop'); rows.push(`<div style="font-size:13px;margin-top:6px">🔀 ถึงร้านไหนก่อน? <span style="color:#6b7280">(GPS จับให้เองด้วย)</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${ds.map((s,i)=>`<button type="button" onclick="pkSetFirst(${s.seq},this)" style="border:1px solid ${i===0?'#1B4332':'#cbd5e1'};background:${i===0?'#E8F3EC':'#fff'};color:#1B4332;border-radius:999px;padding:5px 10px;font-size:13px;font-weight:${i===0?700:500}">${i===0?'✅ ':''}${pkEsc(s.name)}</button>`).join('')}</div></div>`); }
   if(pkInfo.docs&&pkInfo.docs.length&&!pkInfo.stops.some(s=>(s.docs||[]).length)) rows.push(`<div style="font-size:13px;color:#7A5B00">📄 นำไปจากโรงงาน: <b>${pkInfo.docs.join(' · ')}</b></div>`);
   if(pkInfo.extras) rows.push(`<div style="font-size:13px;color:#6b7280">งานเสริม: ${pkEsc(pkInfo.extras)}</div>`);
   return `<div class="net-badge" style="text-align:left"><div class="net-lbl">📦 ใบงาน Packing #${pkInfo.lineNo}</div>${rows.join('')}</div>`;
@@ -1138,7 +1144,7 @@ function formPkStop(slot){
   const ss=pkStopsOf(slot);
   const blocks=ss.map(s=>{
     const n=s.seq, log=(pkInfo.logs||[]).find(l=>l.seq===n)||{};
-    let h=`<div class="sec-lbl">${s.kind==='pickup'?'🔄':s.kind==='dist_only'?'🧾':'📦'} จุด ${n} · ${pkEsc(s.name)}</div>`;
+    let h=`<div class="sec-lbl">${s.kind==='pickup'?'🔄':s.kind==='dist_only'?'🧾':'📦'} จุด ${s.no||n} · ${pkEsc(s.name)}</div>`;
     const info=[s.pallets&&s.pallets+' เลท',s.cases&&s.cases+' ลัง',s.task&&'งาน: '+s.task].filter(Boolean);
     if(info.length) h+=`<div style="font-size:13px;color:#4A5B53;margin:-4px 2px 8px">${pkEsc(info.join(' · '))}</div>`;
     if(s.team||(s.phones||[]).length) h+=`<div style="font-size:13px;margin:0 2px 8px">📞 ทีมลง ${pkEsc(s.team||'')} ${(s.phones||[]).map(p=>`<a href="tel:${p}" style="color:#1E4FA3;font-weight:700;text-decoration:underline;margin-right:8px">${pkTel(p)}</a>`).join('')}</div>`;
@@ -3185,7 +3191,7 @@ function showDashboard(){
   if(isPkJob()){   // 📦 สรุปรายจุดที่บันทึกแล้ว (ค่าลงจริง/ตัดชั้น/พาเลทคืน/ถังเปล่า)
     rows.push({section:'📦 จุดส่ง'});
     ((pkInfo&&pkInfo.stops)||[]).forEach(s=>{ const l=pkSaved[s.seq]||{};
-      rows.push({k:'จุด '+s.seq+' · '+s.name, v:[l.fee_paid!=null&&l.fee_paid!==''?'ค่าลง '+Number(l.fee_paid).toLocaleString()+' บาท':'', l.layer_cut?'ตัดชั้น':'', l.pallets_transferred?'โอนพาเลท '+l.pallets_transferred:'', l.pallets_returned?'พาเลทคืน '+l.pallets_returned:'', l.drums_returned?'ถัง '+l.drums_returned:''].filter(Boolean).join(' · ')||(l.saved?'บันทึกแล้ว':'—')}); });
+      rows.push({k:'จุด '+(s.no||s.seq)+' · '+s.name, v:[l.fee_paid!=null&&l.fee_paid!==''?'ค่าลง '+Number(l.fee_paid).toLocaleString()+' บาท':'', l.layer_cut?'ตัดชั้น':'', l.pallets_transferred?'โอนพาเลท '+l.pallets_transferred:'', l.pallets_returned?'พาเลทคืน '+l.pallets_returned:'', l.drums_returned?'ถัง '+l.drums_returned:''].filter(Boolean).join(' · ')||(l.saved?'บันทึกแล้ว':'—')}); });
   }else if(isBulkJob()){
     rows.push({section:'⚖️ ชั่ง / ใบชั่งปลายทาง'});
     rows.push({k:'สถานะ', v:'บันทึกแล้วตอนออกจากลูกค้า', highlight:true});
