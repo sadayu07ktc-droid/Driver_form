@@ -206,6 +206,18 @@ button:disabled{cursor:not-allowed}
 .sc-leg{display:flex;justify-content:space-between;font-size:14px;color:var(--text-m);margin-top:6px}
 .ed-lbl{font-size:16px;font-weight:700;color:var(--text-m);margin:12px 0 6px}
 .ed-lbl:first-child{margin-top:0}
+/* 🔧 เคสแจ้งซ่อม */
+.rep-row{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;font:inherit;color:inherit}
+.rep-t{font-size:17px;line-height:1.35}
+.rep-pill{font-size:15px;margin:6px 0 2px}
+.rep-go{margin-top:6px;font-size:15px;font-weight:700;color:var(--g1)}
+.rep-tag{display:inline-block;margin-top:4px;font-size:14px;font-weight:700;color:var(--bad);background:var(--bad-l);border-radius:99px;padding:2px 10px}
+.rep-act{background:var(--warn-l);color:#78350F}.rep-act b{color:var(--warn)}
+.rep-kv{font-size:16px;margin:4px 0}
+.rep-ph{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px}
+.rep-add{width:84px;height:84px;border-radius:12px;border:2px dashed var(--g2);color:var(--g1);font-weight:700;background:#fff;font-size:15px}
+.rep-x{position:absolute;top:-6px;right:-6px;width:26px;height:26px;border-radius:50%;background:var(--bad);color:#fff;font-weight:700;border:0}
+.rep-retry{font-size:13px;color:var(--bad);background:none;border:0;font-weight:700}
 .stepper{display:flex;align-items:center;gap:10px}
 .st-btn{width:64px;height:64px;border-radius:16px;background:var(--g4);border:2px solid var(--g3);color:var(--g1);font-size:34px;font-weight:700;line-height:1}
 .st-btn:disabled{opacity:.35}
@@ -523,6 +535,7 @@ const api = {
   pickVehicle:    ({vehicleId})            => edgePost({action:'pickVehicle', vehicleId}),   // วันนี้ขับคันนี้ (เฉพาะเช็คลิสต์ ไม่เกี่ยวค่าแรง)
   getMyMonthly:   ({vehicleId})            => edgeGet({action:'myMonthly', vehicleId}),      // 📋 FM-TR-16 เดือนนี้
   submitMonthly:  payload                  => edgePost(Object.assign({action:'submitMonthly'}, payload)),
+  submitFix:      payload                  => edgePost(Object.assign({action:'submitFix'}, payload)),          // 🔧 แก้แล้ว ส่งรูปให้แอดมินตรวจ
 };
 // ลิงก์หมดอายุ (เลยวัน) → เก็บร่างไว้ แล้วบอกให้พิมพ์ ช ใหม่
 function linkExpired(){
@@ -770,6 +783,7 @@ function render(){
   if(s==='done') return rDone();
   if(s==='report') return rReport();
   if(s==='monthly') return rMonthly();
+  if(s==='fix') return rFix();
 }
 function rLoading(){ setHeader({}); setBottom('');
   $('app').innerHTML='<div class="sk" style="height:150px;margin-bottom:12px"></div><div class="sk" style="height:200px;margin-bottom:12px"></div><div class="sk" style="height:150px"></div>'; }
@@ -837,7 +851,7 @@ function rHome(){
       platesHTML(v)+'<div class="veh-drv">👤 '+esc(d.driver.name)+' <span class="muted small">· '+esc(d.driver.driver_id)+'</span></div>'+spare+
       (!d.as_admin && S.date===d.today ? '<button class="veh-pick" onclick="A.vehNo()">🔁 วันนี้ขับคันอื่น? เปลี่ยนทะเบียน</button>' : '')+'</div>'+
     '<div class="card mc st-'+k+'"><div class="mc-lbl">เช็คก่อนออกรถ วันนี้</div><div class="mc-day">'+dayLabel(S.date,true)+'</div>'+body+'</div>'+
-    monthCardHTML(d)+
+    R.card(d)+monthCardHTML(d)+
     '<div class="h3">📅 ย้อนหลัง 14 วัน</div><div id="hist"><div class="sk" style="height:150px"></div></div>';
   loadHist();
 }
@@ -977,7 +991,8 @@ function itemHTML(it){
   const tag = canCollapse?'button':'div';
   let h='<div class="item '+cls+(compact?' compact':'')+(ln.admin&&!ln.touched?' flag':'')+'" id="it-'+code+'">'+
     '<'+tag+' class="it-hd"'+(canCollapse?' onclick="A.edit(\''+code+'\')" aria-label="แก้ '+esc(it.name)+'"':'')+'>'+
-    '<div class="it-ic">'+ICON(code)+'</div><div class="it-main"><div class="it-name">'+esc(it.name)+'</div><div class="it-sub">'+subHTML(it)+'</div>'+badge+'</div>'+
+    '<div class="it-ic">'+ICON(code)+'</div><div class="it-main"><div class="it-name">'+esc(it.name)+'</div><div class="it-sub">'+subHTML(it)+'</div>'+badge+
+    (R.of(code)?'<div class="rep-tag">🔧 ยังไม่ได้รับการแก้ไข · '+esc(R.of(code).status_label.replace(/^\S+\s/,''))+'</div>':'')+'</div>'+
     (canCollapse?'<span class="it-edit">แก้</span>':'')+'</'+tag+'>';
   if(ln.admin) h+='<div class="it-body" style="padding-bottom:0"><div class="adm"><b>💬 แอดมิน:</b> '+esc(ln.admin)+'</div></div>';
   if(showBody){
@@ -1184,6 +1199,7 @@ $('cam').addEventListener('change', async function(){
   if(taken && Date.now()-taken.getTime()>MAX_EXIF_AGE_MS){ toast('รูปนี้ถ่ายไว้ตั้งแต่ '+fmtDT(taken.toISOString())+'\nไม่ใช่รูปปัจจุบัน — ถ่ายใหม่ตอนนี้','warn',6000); return; }
   const b64=await resizeToDataURL(file,1280,0.7);
   if(!b64){ toast('อ่านรูปไม่ได้ ลองถ่ายใหม่','error'); return; }
+  if(target==='__FIX__'){ R.gotPhoto(b64); return; }   // 🔧 รูปหลังแก้เคสแจ้งซ่อม
   gotPhoto(target,b64);
 });
 function upParams(k, b64){
@@ -1606,6 +1622,87 @@ function monthCardHTML(d){
   return '<div class="card"><div class="mc-lbl">📋 เช็คอุปกรณ์ติดรถ รายเดือน</div><div class="muted small">เดือน'+esc(monthTxt(mo.period))+' · เดือนละ 1 ครั้ง (FM-TR-16)</div>'+
     (mo.sent ? '<span class="pill p-ok">✅ ส่งแล้ว'+(sd?' '+sd.getDate()+' '+TH_M[sd.getMonth()]:'')+'</span>' : '<span class="pill p-todo">⏳ เดือนนี้ยังไม่ส่ง</span>')+
     '<button class="'+(mo.sent?'btn-sec':'btn-main')+'" onclick="M.open()">'+(mo.sent?'📄 ดู / แก้ไข':'▶ เริ่มเช็ครายเดือน')+'</button></div>';
+}
+/* =====================================================================
+   🔧 เคสแจ้งซ่อม (13 พ.ย.) — ข้อที่แจ้ง "ไม่ผ่าน" = เคส · แอดมินสั่งแก้ → คนขับแก้แล้วถ่ายรูปส่ง → แอดมินตรวจปิดเคส
+   myDaily.repairs[] (ค้าง + ปิดแล้ว 3 วัน) · POST submitFix {repairId, photos[], note} · รูป uploadPhoto kind=fix (เก็บถาวร)
+   ===================================================================== */
+const R = {
+  all(){ return (S.data&&S.data.repairs)||[]; },
+  live(){ return R.all().filter(r=>r.status!=='closed'); },
+  of(code){ return R.live().find(r=>r.item_code===code) || null; },
+  get(){ const id=+(S.params&&S.params.id); return R.all().find(r=>r.id===id) || null; },
+  pill(r){ const c={open:'p-warn',assigned:'p-bad',fixed:'p-todo',closed:'p-ok'}[r.status]||'p-todo'; return '<span class="pill '+c+' rep-pill">'+esc(r.status_label)+'</span>'; },
+  title(r){ return (r.fm_no?'ข้อ '+r.fm_no+(r.fm_star?'★':'')+' ':'')+esc(r.name)+(r.unit_no>1?' ถัง '+r.unit_no:'')+(r.parts&&r.parts.length?': <b>'+esc(r.parts.join(', '))+'</b>':''); },
+  thumbs(urls){ return (urls&&urls.length)?'<div class="thumbs" style="flex-wrap:wrap;margin-top:8px">'+urls.map(u=>'<img class="ph-th" src="'+esc(u)+'" alt="รูป" onclick="A.viewSrc(this.src)">').join('')+'</div>':''; },
+  card(d){
+    const rs=(d.repairs||[]); if(!rs.length) return '';
+    const live=rs.filter(r=>r.status!=='closed'), todo=live.filter(r=>r.status==='assigned').length;
+    let h='<div class="card"><div class="mc-lbl">🔧 แจ้งซ่อมของรถคันนี้</div>'+
+      (live.length ? '<div class="note-box '+(todo?'nb-warn':'nb-info')+'">ยังไม่ได้รับการแก้ไข '+live.length+' รายการ'+(todo?' · แอดมินสั่งแก้ '+todo+' รายการ':'')+'</div>' : '<div class="note-box nb-ok">✅ แก้ไขครบแล้ว</div>');
+    h+=rs.map(r=>'<button class="rep-row" onclick="R.open('+r.id+')"><div class="rep-t">'+R.title(r)+'</div>'+R.pill(r)+
+      '<div class="muted small">แจ้ง '+esc(dayLabel(r.check_date))+(r.seen_count>1?' · แจ้งซ้ำ '+r.seen_count+' วัน':'')+
+      (r.status==='assigned'&&r.due_date?' · ต้องเสร็จ '+esc(dayLabel(r.due_date))+(r.overdue?' ⚠️ เลยกำหนด':''):'')+'</div>'+
+      (r.status==='assigned'?'<div class="rep-go">🛠️ ดูวิธีแก้ / ส่งรูปแก้แล้ว ›</div>':'')+'</button>').join('');
+    return h+'</div>';
+  },
+  open(id){ S.fix={id:id, photos:[], note:''}; go('fix',{id:id}); },
+  canFix(r){ return !!r && (r.status==='open'||r.status==='assigned'); },
+  ready(){ const f=S.fix; return !!f && f.photos.length>0 && f.photos.every(p=>p.up==='ok'); },
+  shoot(){ S.camTarget='__FIX__'; $('cam').click(); },
+  async upload(p){
+    const r=R.get(); if(!r) return;
+    p.up='uploading'; rFix();
+    try{
+      const x=await api.uploadPhoto({vehicleId:r.vehicle_id, date:S.data.today, kind:'fix', itemCode:r.item_code, unitNo:r.unit_no||1, imageBase64:p.b64});
+      if(!x||!x.ok) throw new Error(x&&x.error||'upload');
+      p.url=x.url; p.up='ok';
+    }catch(e){ p.up='local'; }
+    if(S.screen==='fix') rFix();
+  },
+  gotPhoto(b64){ if(!S.fix||S.fix.photos.length>=4) return; const p={b64:b64, up:'uploading'}; S.fix.photos.push(p); R.upload(p); },
+  retry(i){ const p=S.fix&&S.fix.photos[i]; if(p) R.upload(p); },
+  del(i){ if(S.fix){ S.fix.photos.splice(i,1); rFix(); } },
+  async send(){
+    const r=R.get(), f=S.fix; if(!r||!R.ready()||S.busy) return;
+    S.busy=true; const b=$('fx-send'); if(b){ b.disabled=true; b.textContent='กำลังส่ง…'; }
+    try{
+      const x=await api.submitFix({repairId:r.id, photos:f.photos.map(p=>p.url), note:String(f.note||'').trim()||null});
+      if(!x||!x.ok){ toast((x&&x.error)||'ส่งไม่สำเร็จ','error',6000); return; }
+      const i=S.data.repairs.findIndex(y=>y.id===r.id); if(i>=0) S.data.repairs[i]=x.repair;
+      S.fix=null; toast('✅ ส่งให้แอดมินตรวจแล้ว ขอบคุณครับ','ok');
+    }catch(e){ toast(e.offline?'ส่งไม่ได้ — เช็คสัญญาณเน็ต แล้วกดส่งอีกครั้ง (รูปยังอยู่)':'ส่งไม่สำเร็จ: '+e.message,'error',6000); }
+    finally{ S.busy=false; if(S.screen==='fix') rFix(); }
+  },
+};
+function rFix(){
+  const r=R.get(), v=S.data&&S.data.vehicle;
+  setHeader({back:true, t:'🔧 แจ้งซ่อม', s:v?plateTxt(v):''});
+  if(!r){ setBottom(''); $('app').innerHTML='<div class="state"><div class="state-ic">🔍</div><div class="state-t">ไม่พบเคสนี้</div><button class="btn-sec" onclick="go(\'home\',{},true)">กลับหน้าแรก</button></div>'; return; }
+  if(!S.fix||S.fix.id!==r.id) S.fix={id:r.id, photos:[], note:''};
+  let h='<div class="card"><div class="rep-t" style="font-size:19px">'+R.title(r)+'</div>'+R.pill(r)+
+    (r.note?'<div class="muted">“'+esc(r.note)+'”</div>':'')+
+    '<div class="muted small">แจ้งโดย '+esc(r.reported_by||'-')+' · '+esc(dayLabel(r.check_date,true))+(r.seen_count>1?' · แจ้งซ้ำ '+r.seen_count+' วัน':'')+'</div>'+
+    R.thumbs(r.photo_url?[r.photo_url]:[])+'</div>';
+  if(r.status==='open') h+='<div class="card"><div class="note-box nb-info">⏳ รอแอดมินดูและสั่งการ<br><span style="font-weight:400">ถ้าแก้เองเรียบร้อยแล้ว ถ่ายรูปส่งได้เลย</span></div></div>';
+  if(r.action) h+='<div class="card"><div class="mc-lbl">🛠️ แอดมินสั่งแก้'+(r.assigned_by?' ('+esc(r.assigned_by)+')':'')+'</div>'+
+    '<div class="reason rep-act"><b>วิธีแก้</b>'+esc(r.action)+'</div>'+
+    (r.action_place?'<div class="rep-kv">📍 ที่: <b>'+esc(r.action_place)+'</b></div>':'')+
+    (r.due_date?'<div class="rep-kv">⏰ ภายใน: <b>'+esc(dayLabel(r.due_date,true))+'</b>'+(r.overdue?' <span style="color:var(--bad);font-weight:700">เลยกำหนด</span>':'')+'</div>':'')+
+    (r.vehicle_state?'<div class="rep-kv">🚦 สถานะรถ: <b>'+esc(r.vehicle_state)+'</b></div>':'')+'</div>';
+  if(r.status==='fixed') h+='<div class="card"><div class="note-box nb-ok">📸 ส่งรูปแก้แล้ว '+esc(fmtDT(r.fixed_at))+'<br><span style="font-weight:400">รอแอดมินตรวจปิดเคส</span></div>'+R.thumbs(r.fix_photos)+(r.fix_note?'<div class="muted">“'+esc(r.fix_note)+'”</div>':'')+'</div>';
+  if(r.status==='closed') h+='<div class="card"><div class="note-box nb-ok">✅ ปิดเคสแล้ว '+esc(fmtDT(r.closed_at))+(r.closed_by?' โดย '+esc(r.closed_by):'')+'</div>'+(r.close_note?'<div class="muted">“'+esc(r.close_note)+'”</div>':'')+R.thumbs(r.fix_photos)+'</div>';
+  if(R.canFix(r)){
+    const f=S.fix;
+    h+='<div class="card"><div class="ed-lbl">📸 รูปหลังแก้ (อย่างน้อย 1 · ไม่เกิน 4 รูป)</div><div class="thumbs" style="flex-wrap:wrap">'+
+      f.photos.map((p,i)=>'<div class="rep-ph"><img class="ph-th" src="'+esc(p.url||p.b64)+'" alt="รูปหลังแก้" onclick="A.viewSrc(this.src)">'+
+        (p.up==='uploading'?'<div class="muted small">กำลังส่ง…</div>':p.up==='local'?'<button class="rep-retry" onclick="R.retry('+i+')">ส่งไม่ได้ ↻</button>':'')+
+        '<button class="rep-x" onclick="R.del('+i+')" aria-label="ลบรูป">✕</button></div>').join('')+
+      (f.photos.length<4?'<button class="rep-add" onclick="R.shoot()">📷<br>ถ่ายรูป</button>':'')+'</div>'+
+      '<div class="ed-lbl">แก้อะไรไป (ถ้ามี)</div><input class="mr-note" value="'+esc(f.note)+'" placeholder="เช่น เปลี่ยนถังใหม่แล้ว" oninput="S.fix.note=this.value"></div>';
+    setBottom('<button class="btn-main" id="fx-send" onclick="R.send()"'+(R.ready()&&!S.busy?'':' disabled')+'>📤 แก้แล้ว ส่งให้แอดมินตรวจ</button>');
+  } else setBottom('');
+  $('app').innerHTML=h;
 }
 async function boot(){
   S.screen='loading'; render(); updateOnline();
