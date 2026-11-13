@@ -1121,6 +1121,8 @@ function pkJobCard(){
   pkInfo.stops.forEach(s=>rows.push(`<div style="font-size:13px;line-height:1.6"><b>${s.seq}. ${pkEsc(s.name)}</b> <span style="color:#6b7280">${
     s.kind==='pickup'?'· ขากลับ รับของ':s.kind==='dist_only'?'· วางบิล/รับเช็ค':s.kind==='tbd'?'· ⚠️ รอแอดมินแจ้งที่':[s.pallets&&s.pallets+' เลท',s.cases&&s.cases+' ลัง'].filter(Boolean).join(' · ')}</span>${pkDocTxt(s)?`<div style="color:#7A5B00">📄 นำไปจากโรงงาน: <b>${pkEsc(pkDocTxt(s))}</b></div>`:''}</div>`));
   if(pkInfo.helpers) rows.push(`<div style="font-size:13px">👷 เด็กรถ: <b>${pkEsc(pkInfo.helpers)}</b>${pkInfo.helperTime?' · นัด '+pkEsc(pkInfo.helperTime):''}</div>`);
+  /* 📞 13 พ.ย. เบอร์เด็กรถเต็ม กดโทรได้ (Edge pk-driver helperPhones) */
+  (pkInfo.helperPhones||[]).forEach(p=>{const d=String(p.ph||'').replace(/\D/g,'');if(d.length>=9)rows.push(`<div style="font-size:13px">📞 ${pkEsc(p.n)} <a href="tel:${d}" style="color:#1E4FA3;font-weight:700;text-decoration:underline">${pkEsc(p.ph)}</a></div>`);});
   if(pkInfo.docs&&pkInfo.docs.length&&!pkInfo.stops.some(s=>(s.docs||[]).length)) rows.push(`<div style="font-size:13px;color:#7A5B00">📄 นำไปจากโรงงาน: <b>${pkInfo.docs.join(' · ')}</b></div>`);
   if(pkInfo.extras) rows.push(`<div style="font-size:13px;color:#6b7280">งานเสริม: ${pkEsc(pkInfo.extras)}</div>`);
   return `<div class="net-badge" style="text-align:left"><div class="net-lbl">📦 ใบงาน Packing #${pkInfo.lineNo}</div>${rows.join('')}</div>`;
