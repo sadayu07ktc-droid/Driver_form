@@ -1055,6 +1055,11 @@ function renderTimeline(){
   }
 }
 
+function fuelPhotoGo(){   // เลื่อนไปช่องรูปใบเติมน้ำมันโรงงาน + กรอบแดงชั่วคราว
+  const b=document.getElementById('box-fuel-factory-photo'); if(!b) return;
+  b.scrollIntoView({behavior:'smooth',block:'center'});
+  b.style.outline='2px solid #dc2626'; setTimeout(()=>{ b.style.outline=''; },2500);
+}
 function photoBox(id,label,key){
   return `<label class="photo-box" id="box-${id}" for="inp-${id}">
     <input type="file" id="inp-${id}" accept="image/*" capture="environment" onchange="onPhoto(this,'box-${id}','lbl-${id}','${key}')">
@@ -1720,7 +1725,7 @@ function formFactory(){
           <select class="inp" id="fuel-factory-price"></select>
         </div>
       </div>
-      <label class="lbl mt8">รูปใบเติมน้ำมัน</label>
+      <label class="lbl mt8">รูปใบเติมน้ำมัน <span class="req">*</span> <span style="font-weight:400;color:#6b7280">${noFarmWeigh()?'(ถ้าเติม ต้องแนบ)':''}</span></label>
       ${photoBox('fuel-factory-photo','แนบรูปใบเติมน้ำมัน','fuel-factory')}
       <div class="net-badge hide" id="fuel-factory-total-badge">
         <div class="net-lbl">ยอดรวมน้ำมันโรงงาน</div>
@@ -2938,7 +2943,7 @@ function formFB_factory(){
           <select class="inp" id="fuel-factory-price"></select>
         </div>
       </div>
-      <label class="lbl mt8">รูปใบเติมน้ำมัน</label>
+      <label class="lbl mt8">รูปใบเติมน้ำมัน <span class="req">*</span></label>
       ${photoBox('fuel-factory-photo','แนบรูปใบเติมน้ำมัน','fuel-factory')}
       <div class="net-badge hide" id="fuel-factory-total-badge">
         <div class="net-lbl">ยอดรวมน้ำมันโรงงาน</div>
@@ -2976,6 +2981,7 @@ async function submitFB_client(){
   const fLiter=getVal('fuel-factory-liter'), fPrice=getVal('fuel-factory-price');
   if(!fLiter){toast('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
   if(!fPrice){toast('กรุณากรอกราคาน้ำมันโรงงาน');return;}
+  if(!photos['fuel-factory']){toast('กรุณาถ่ายรูปใบเติมน้ำมันโรงงานด้วยครับ');fuelPhotoGo();return;}   // 🧾 12 พ.ย. บังคับรูปบิล
 
   const ra=await postGAS({action:'driverArrived',orderId:order['Order ID'],userId:U.userId},'🏭 กำลังบันทึกถึงโรงงาน...');
   if(!ra?.success){toast('❌ '+(ra?.error||'บันทึกถึงโรงงานไม่สำเร็จ'));return;}
@@ -3046,6 +3052,8 @@ function prepareFactory(){
   if(!factoryNoPalm && !noFarmWeigh() && !fLiter){toast('กรุณากรอกจำนวนลิตรน้ำมันโรงงาน');return;}
   if(!factoryNoPalm && !noFarmWeigh() && !fPrice){toast('กรุณากรอกราคาน้ำมันโรงงาน');return;}
   if(noFarmWeigh() && fLiter && !fPrice){toast('กรอกลิตรแล้ว — เลือกราคาน้ำมันด้วยครับ');return;}   // 🛢️ Bulk: เติมหรือไม่เติมก็ได้ แต่ถ้าเติมต้องครบ
+  // 🧾 12 พ.ย. (คุณน้อง): กรอกลิตรน้ำมันโรงงาน = ต้องแนบรูปใบเติม ทุกประเภทงาน (หลังบ้านอ่านเลขบิลจากรูปนี้)
+  if(Number(fLiter)>0 && !photos['fuel-factory']){toast('กรุณาถ่ายรูปใบเติมน้ำมันโรงงานด้วยครับ');fuelPhotoGo();return;}
 
   collectedData={};
   
