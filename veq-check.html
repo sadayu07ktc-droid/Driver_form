@@ -1710,6 +1710,9 @@ async function boot(){
   if(!S.user){ S.user=await auth.getUser(); }
   if(!S.user){ go('outside',{},true); return; }
   await loadData(true);
+  // 🔧 มาจากปุ่มการ์ด LINE เคสแจ้งซ่อม (&fix=เลขเคส) → เปิดหน้าเคสนั้นเลย
+  const fx=+(qp('fix')||0);
+  if(fx && R.all().some(r=>r.id===fx)) R.open(fx);
 }
 boot();
 </script>
