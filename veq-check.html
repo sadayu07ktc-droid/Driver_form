@@ -213,6 +213,10 @@ button:disabled{cursor:not-allowed}
 .rep-go{margin-top:6px;font-size:15px;font-weight:700;color:var(--g1)}
 .rep-tag{display:inline-block;margin-top:4px;font-size:14px;font-weight:700;color:var(--bad);background:var(--bad-l);border-radius:99px;padding:2px 10px}
 .rep-act{background:var(--warn-l);color:#78350F}.rep-act b{color:var(--warn)}
+.rep-ask{background:var(--warn-l);border-left:5px solid var(--warn);border-radius:10px;padding:8px 12px;margin:2px 0 8px;font-size:15px;color:#78350F;line-height:1.45}
+.rep-ask b{display:block;color:var(--warn);font-size:16px;margin-bottom:2px}
+.rep-done{background:#fff;border:2px solid var(--warn);border-radius:14px;padding:12px 14px;margin-top:14px;text-align:left}
+.rep-done .rep-t{margin-bottom:8px}
 .rep-kv{font-size:16px;margin:4px 0}
 .rep-ph{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px}
 .rep-add{width:84px;height:84px;border-radius:12px;border:2px dashed var(--g2);color:var(--g1);font-weight:700;background:#fff;font-size:15px}
@@ -985,7 +989,8 @@ function itemHTML(it){
   const code=it.item_code, ln=S.F.lines[code], inf=lineInfo(it,ln), m=it.check_mode;
   const showBody = ln.open || !inf.answered;
   const canCollapse = inf.done && !ln.open;
-  const compact = canCollapse && !inf.problem && !ln.admin;
+  const rc = (inf.answered && !inf.problem) ? R.ofItem(it) : null;   // 🔧 ติ๊กผ่านข้อที่เคสแจ้งซ่อมยังค้าง (17 พ.ย.)
+  const compact = canCollapse && !inf.problem && !ln.admin && !rc;
   const cls = inf.done ? (inf.problem?'is-'+inf.tone:'is-ok') : (inf.answered?'is-pending':'');
   const badge = inf.answered ? '<div class="badge t-'+(inf.done?inf.tone:'pend')+'">'+(inf.done?inf.ico+' '+esc(inf.label)+(ln.same?' (เหมือนเดิม)':''):'✋ ยังไม่เสร็จ')+'</div>' : '';
   const tag = canCollapse?'button':'div';
@@ -994,6 +999,8 @@ function itemHTML(it){
     '<div class="it-ic">'+ICON(code)+'</div><div class="it-main"><div class="it-name">'+esc(it.name)+'</div><div class="it-sub">'+subHTML(it)+'</div>'+badge+
     (R.of(code)?'<div class="rep-tag">🔧 ยังไม่ได้รับการแก้ไข · '+esc(R.of(code).status_label.replace(/^\S+\s/,''))+'</div>':'')+'</div>'+
     (canCollapse?'<span class="it-edit">แก้</span>':'')+'</'+tag+'>';
+  if(rc) h+='<div class="it-body" style="padding-bottom:0"><div class="rep-ask"><b>🔧 แก้แล้วใช่ไหม? เคสแจ้งซ่อมข้อนี้ยังไม่ปิด</b>'+
+    'ติ๊ก "ผ่าน" อย่างเดียว เคสยังค้างอยู่ — ส่งเช็คลิสต์เสร็จแล้ว ระบบจะพาไปส่งรูปหลังแก้ให้แอดมินตรวจปิดเคส</div></div>';
   if(ln.admin) h+='<div class="it-body" style="padding-bottom:0"><div class="adm"><b>💬 แอดมิน:</b> '+esc(ln.admin)+'</div></div>';
   if(showBody){
     h+='<div class="it-body">';
@@ -1113,6 +1120,11 @@ function rDone(){
     '<div class="state-t" style="margin-top:26px">'+(r.on_time==null?'ส่งแล้ว ✅':r.on_time?'ส่งแล้ว ก่อนออกรถ ✅':'ส่งแล้ว (หลังออกรถ) 🟡')+'</div>'+
     '<div class="state-p">'+dayLabel(S.date,true)+'<br>รถ '+esc(plateTxt(v))+' · '+hm(r.submitted_at)+'</div>'+
     (r.problems?'<div class="note-box nb-warn" style="margin-top:14px;font-size:17px">⚠️ แจ้งปัญหา '+r.problems+' รายการ — แอดมินจะดูให้</div>':'<div class="note-box nb-ok" style="margin-top:14px">🎉 ครบทุกรายการ</div>')+
+    // 🔧 ติ๊กผ่านข้อที่เคสแจ้งซ่อมค้าง → ถามให้ส่งรูปหลังแก้ (17 พ.ย. คุณน้องสั่ง)
+    (r.fixAsk||[]).map(id=>{ const c=R.all().find(x=>x.id===id); if(!c||!R.canFix(c)) return '';
+      return '<div class="rep-done"><div class="rep-ask" style="margin:0 0 8px"><b>🔧 แก้แล้วใช่ไหม?</b>วันนี้ติ๊ก "ผ่าน" แต่เคสแจ้งซ่อมยังไม่ปิด<br>ส่งรูปหลังแก้ให้แอดมินตรวจปิดเคสด้วยครับ</div>'+
+        '<div class="rep-t">'+R.title(c)+'</div>'+
+        '<button class="btn-main" style="margin-top:4px" onclick="R.open('+c.id+')">📸 แก้แล้ว ถ่ายรูปส่งแอดมิน ›</button></div>'; }).join('')+
     '<p class="state-p" style="margin-top:12px;font-weight:700;color:var(--g1)">ขับขี่ปลอดภัยครับ 🙏</p>'+
     '<button class="btn-main" onclick="A.home()">🏠 กลับหน้าแรก</button><button class="btn-plain" onclick="auth.close()">ปิดหน้านี้</button></div>';
 }
@@ -1414,10 +1426,10 @@ const A = {
         if(res&&(res.code==='LOCKED'||res.code==='DAY_CLOSED')){ toast(res.code==='DAY_CLOSED'?'เลยวันแล้ว ส่ง/แก้ของวันนี้ไม่ได้':'แอดมินตรวจรายงานวันนี้แล้ว แก้ไม่ได้','error',5000); lsDel(draftKey()); S.F=null; loadData(true); return; }
         throw new Error(res&&res.error||'ส่งไม่สำเร็จ');
       }
-      const probs=problemsOf(F.lines).length;
+      const probs=problemsOf(F.lines).length, fixAsk=R.askList(d.items, F.lines);
       if(res.flag_odometer) toast('เลขไมล์น้อยกว่าครั้งก่อน — แอดมินจะตรวจอีกครั้ง','warn',4500);
       lsDel(draftKey()); S.F=null; S.hist=null;
-      S.lastSubmit={submitted_at:res.submitted_at, on_time:res.on_time, problems:probs};
+      S.lastSubmit={submitted_at:res.submitted_at, on_time:res.on_time, problems:probs, fixAsk:fixAsk};
       go('done',{},true);
     }catch(e){
       saveDraft(true);
@@ -1631,6 +1643,13 @@ const R = {
   all(){ return (S.data&&S.data.repairs)||[]; },
   live(){ return R.all().filter(r=>r.status!=='closed'); },
   of(code){ return R.live().find(r=>r.item_code===code) || null; },
+  // เคสที่คนขับยังส่งรูปแก้ได้ (open/assigned) ของรายการในฟอร์ม · รายการแยกถัง = base_code + unit_no
+  ofItem(it){ const c=it.base_code||it.item_code, u=+it.unit_no||1; return R.live().find(r=>r.item_code===c && (+r.unit_no||1)===u && R.canFix(r)) || null; },
+  // หลังส่งใบ: ข้อที่ติ๊กผ่านแต่เคสยังค้าง → ชวนส่งรูปหลังแก้ · ไม่เอารูปใบตรวจมาใช้ (รูปบรรทัดปกติถูกลบหลัง 30 วัน · รูปแก้ FIX_ ถาวร)
+  askList(items, lines){
+    return [...new Set(items.map(it=>{ const inf=lineInfo(it,lines[it.item_code]); if(!inf.answered||inf.problem) return 0;
+      const r=R.ofItem(it); return r ? r.id : 0; }).filter(Boolean))];
+  },
   get(){ const id=+(S.params&&S.params.id); return R.all().find(r=>r.id===id) || null; },
   pill(r){ const c={open:'p-warn',assigned:'p-bad',fixed:'p-todo',closed:'p-ok'}[r.status]||'p-todo'; return '<span class="pill '+c+' rep-pill">'+esc(r.status_label)+'</span>'; },
   title(r){ return (r.fm_no?'ข้อ '+r.fm_no+(r.fm_star?'★':'')+' ':'')+esc(r.name)+(r.unit_no>1?' ถัง '+r.unit_no:'')+(r.parts&&r.parts.length?': <b>'+esc(r.parts.join(', '))+'</b>':''); },
