@@ -1017,8 +1017,24 @@ function stepLabel(step,state){
 function pkArrHtml(key){
   if(!isPkJob() || !pkInfo || ['rampDrop','client','ramp'].indexOf(key)<0) return '';
   const arr={}; (pkInfo.arrivals||[]).forEach(a=>arr[a.seq]=a);
-  const rows=pkStopsOf(key).map(x=>{ const a=arr[x.seq]; return a?`<div>📍 จุด ${x.no||x.seq} ถึง ${a.at} ${checkinChip(a.src,a.distM)}</div>`:''; }).filter(Boolean);
+  const rows=pkStopsOf(key).map(x=>{ const a=arr[x.seq]; return a?`<div>📍 จุด ${x.no||x.seq} ถึง ${a.at} ${checkinChip(a.src,a.distM)}${(x.no||x.seq)===1?pkApptTxt(a.at,pkInfo.unloadTime):''}${pkDepTxt(a)}</div>`:''; }).filter(Boolean);
   return rows.length?`<div style="margin-top:4px;font-size:12px;color:#14532d;line-height:1.8">${rows.join('')}</div>`:'';
+}
+// 🚪 20 พ.ย. เวลาออกจากจุด (GPS · stop_departures) + อยู่กี่นาที + เทียบนัด — ชุดเดียวกับ Order_Status / dev-drivers (memory ssb-checkin-status-points)
+//   a.at / a.leftAt = "dd/MM HH:mm" · leftAt ว่าง+inside = ยังอยู่ในหมุด · exits>1 = วนกลับ (เวลาออก = ครั้งล่าสุด) · leftFinal = ถึงจุดถัดไป/โรงงานแล้ว
+function pkHmMs(t){ const m=String(t||'').match(/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})/); return m?Date.UTC(2000,+m[2]-1,+m[1],+m[3],+m[4]):NaN; }
+function pkDur(min){ min=Math.max(0,Math.round(min)); const h=Math.floor(min/60),m=min%60; return h?h+'ชม.'+(m?' '+m+'น.':''):m+'น.'; }
+function pkApptTxt(at,appt){
+  const a=pkHmMs(at), m=String(appt||'').match(/(\d{1,2})[.:](\d{2})/); if(isNaN(a)||!m) return '';
+  const d0=new Date(a); let diff=(a-Date.UTC(2000,d0.getUTCMonth(),d0.getUTCDate(),+m[1],+m[2]))/60000;
+  if(diff>720) diff-=1440; else if(diff<-720) diff+=1440;
+  return Math.abs(diff)<=5?` <span style="color:#15803d">· ตรงนัด</span>`:diff<0?` <span style="color:#15803d">· ก่อนนัด ${pkDur(-diff)}</span>`:` <span style="color:#dc2626">· สายกว่านัด ${pkDur(diff)}</span>`;
+}
+function pkDepTxt(a){
+  if(!a || (!a.leftAt && !a.inside)) return '';
+  if(!a.leftAt) return `<div style="font-size:11.5px;color:#0369a1;padding-left:18px">ยังอยู่ในหมุด${a.exits?' · เคยออก '+a.exits+' ครั้ง':''}</div>`;
+  const stay=!isNaN(pkHmMs(a.at))&&!isNaN(pkHmMs(a.leftAt))?' · อยู่ '+pkDur((pkHmMs(a.leftAt)-pkHmMs(a.at))/60000):'';
+  return `<div style="font-size:11.5px;color:${a.leftFinal?'#334155':'#0369a1'};padding-left:18px">🚪 ออก${a.leftFinal?'':'ล่าสุด'} ${a.leftAt}${stay}${a.exits>1?' · ออก '+a.exits+' ครั้ง':''}</div>`;
 }
 
 function renderTimeline(){
