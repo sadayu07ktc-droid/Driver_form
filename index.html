@@ -1032,12 +1032,17 @@ function pkApptTxt(at,appt){
 }
 // 🚀 23 พ.ย. เวลาออกจาก SSB จริง (GPS · pkInfo.ssbOut จาก Edge pk-driver · dtc_s2s) — ชุดเดียวกับ Order_Status / dev-drivers
 //   เวลาหลักของขั้น "ออกจาก SSB" = GPS · บรรทัดเล็ก = เวลาที่กดเริ่มงาน (ห่าง ≥10 นาที บอกส่วนต่าง) · ไม่มี GPS = เวลากดแบบเดิม
-function pkSsbIso(key){ return key==='start'&&isPkJob()&&pkInfo&&pkInfo.ssbOut&&pkInfo.ssbOut.iso?pkInfo.ssbOut.iso:''; }
+//   🟠 24 พ.ย. งานไร่/Bulk ด้วย (order._ssbOut จาก Edge driver-form) + ป้าย "เริ่มงานในระบบล่าช้า" เมื่อกดเริ่มหลังรถออก ≥30 นาที
+//      คนขับเห็นแค่ป้าย+เวลา ไม่เห็นตัวเลขเลขไมล์/ดุมล้อเทียบ DTC (คุณน้องเคาะ 24 พ.ย.) · เกณฑ์ 30 นาที = view v_trip_odo
+function ssbOutOf(){ return isPkJob()?(pkInfo&&pkInfo.ssbOut)||null:(order&&order._ssbOut)||null; }
+function pkSsbIso(key){ const so=key==='start'?ssbOutOf():null; return so&&so.iso?so.iso:''; }
 function pkSsbHtml(key){
   const iso=pkSsbIso(key); if(!iso) return '';
   const pressed=getStepTime('start'), g=_toDate(iso), p=pressed?_toDate(pressed):null, d=g&&p&&!isNaN(g)&&!isNaN(p)?(p-g)/60000:NaN;
   const diff=isNaN(d)||Math.abs(d)<10?'':d>0?' · หลัง GPS '+pkDur(d):' · ก่อน GPS '+pkDur(-d);
-  return `<div style="margin-top:4px;font-size:12px;color:#14532d;line-height:1.8">${checkinChip('GPS อัตโนมัติ',null)} <span style="font-size:11.5px;color:#334155">รถออกจาก ${escHtml(pkInfo.ssbOut.station||'SSB')}</span>`
+  const late=!isNaN(d)&&d>=30;
+  return `<div style="margin-top:4px;font-size:12px;color:#14532d;line-height:1.8">${checkinChip('GPS อัตโนมัติ',null)} <span style="font-size:11.5px;color:#334155">รถออกจาก ${escHtml(ssbOutOf().station||'SSB')}</span>`
+    +(late?`<div><span style="display:inline-block;font-size:11.5px;font-weight:700;color:#9a3412;background:#ffedd5;border:1px solid #fdba74;border-radius:999px;padding:1px 9px">🟠 เริ่มงานในระบบล่าช้า ${pkDur(d)}</span></div>`:'')
     +(pressed?`<div style="font-size:11.5px;color:${!isNaN(d)&&Math.abs(d)>=30?'#b45309':'#64748b'};padding-left:2px">👆 กดเริ่มงาน ${fmtDateTime(pressed)}${diff}</div>`:'')+`</div>`;
 }
 function pkDepTxt(a){
