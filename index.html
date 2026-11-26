@@ -205,6 +205,13 @@ label.lbl{font-size:12px;font-weight:600;color:var(--text-m);display:block;margi
 .btn-sm.start{flex:1;background:var(--g2);color:#fff}
 .btn-sm.cancel{background:var(--white);color:var(--red);border:1.5px solid var(--red)}
 body.devv .btn-sm.cancel{display:none}   /* 👁️ โหมด DEV ไม่มีปุ่มยกเลิก */
+/* 👁️ 26 พ.ย. DEV กดดูฟอร์มทุกขั้น (เสร็จแล้ว/ยังไม่ถึง) — ดูอย่างเดียว ส่วนที่ซ่อนอยู่กางให้เห็นหมด */
+.devv-pv-btn{display:block;width:calc(100% - 24px);margin:0 12px 10px;padding:7px 10px;border:1px dashed #C2410C;border-radius:10px;background:#FFF7ED;color:#7C2D12;font:700 13px 'Sarabun',sans-serif;cursor:pointer}
+.tl-card.devv-open{opacity:1}
+.devv-peek{position:relative;border-top:1px dashed #FDBA74;background:repeating-linear-gradient(135deg,#fff,#fff 12px,#FFFBF5 12px,#FFFBF5 24px)}
+.devv-peek-tag{font-size:11.5px;font-weight:700;color:#9A3412;padding:8px 12px 0}
+.devv-peek input,.devv-peek select,.devv-peek textarea,.devv-peek button,.devv-peek .chip,.devv-peek .photo-box{opacity:.75}
+.devv-peek div[style*="display:none"],.devv-peek div.hide{display:block!important}
 /* Tom Select — ช่องเลือกราคาน้ำมัน (ค้นหาได้ ไม่บังจอ) */
 .ts-control{background:var(--bg)!important;border:1.5px solid var(--border)!important;border-radius:10px!important;padding:10px 12px!important;font-size:14px;font-family:'Sarabun',sans-serif;color:var(--text);min-height:auto!important;flex-wrap:nowrap!important;overflow:hidden!important}
 .ts-control:focus-within{border-color:var(--active)!important;box-shadow:none!important;background:var(--white)!important}
@@ -433,6 +440,20 @@ function devvRecHtml(key){
   if(r.hub) t.push('ดุมล้อ '+r.hub);
   if(ld) t.push(ld==='หนัก'?'🟤 หนัก':'⚪ เบา');
   return t.length ? `<div style="margin-top:4px;font-size:12px;color:#7C2D12;background:#FFF7ED;border-radius:8px;padding:4px 8px">📝 บันทึกแล้ว: ${t.join(' · ')}</div>` : '';
+}
+// 👁️ 26 พ.ย. คุณน้อง "ทุกสถานะ DEV ต้องกดดูได้ — แต่ละงาน/ลูกค้า สเต็ปไม่เหมือนกัน"
+//   ขั้นที่เสร็จแล้ว/ยังไม่ถึง มีปุ่ม "ดูหน้าต่างนี้" → กางฟอร์มของขั้นนั้น (buildForm ตัวเดียวกับคนขับ) แบบดูอย่างเดียว (inert)
+//   id/for ในฟอร์มที่กาง เติม devpv- กันชนกับฟอร์มขั้นที่กำลังทำ + ตัวโหลดเบื้องหลัง (ทะเบียน/QR น้ำมัน) หาไม่เจอ = ไม่ยิงอะไรเพิ่ม
+let devvPeek={};
+function devvPeekToggle(key){ devvPeek[key]=!devvPeek[key]; renderTimeline(); }
+function devvPeekHtml(key){
+  // loadStateChip ตั้งค่า default ลง loadStates ตอนวาด → เก็บไว้ก่อนแล้วคืน กันป้าย "📝 บันทึกแล้ว" โชว์ค่าที่คนขับยังไม่ได้บันทึก
+  const ls=Object.assign({},loadStates);
+  let h=''; try{ h=buildForm(key)||''; }catch(e){ h='<div style="padding:10px;color:#a32d2d">วาดฟอร์มขั้นนี้ไม่ได้: '+escHtml(e.message||e)+'</div>'; }
+  finally{ Object.keys(loadStates).forEach(k=>{ if(!(k in ls)) delete loadStates[k]; }); Object.assign(loadStates, ls); }
+  if(!h.trim()) h='<div style="padding:4px 0 8px;font-size:13px;color:#64748b">ขั้นนี้ไม่มีช่องให้คนขับกรอก</div>';
+  h=h.replace(/\b(id|for)="([^"]+)"/g,'$1="devpv-$2"').replace('กำลังโหลดทะเบียน...','(ช่องเลือก/ยืนยันทะเบียนรถที่ใช้วันนี้)');
+  return `<div class="devv-peek"><div class="devv-peek-tag">👁️ หน้าต่างที่คนขับจะเห็น · ดูอย่างเดียว</div><div class="tl-body" inert>${h}</div></div>`;
 }
 
 async function init(){
@@ -1059,13 +1080,16 @@ function renderTimeline(){
     const wrap=document.createElement('div');wrap.className='tl-item';
     const dot=document.createElement('div');dot.className=`tl-dot ${state}`;dot.textContent=state==='done'?'✓':'';
     const line=document.createElement('div');line.className='tl-line';
-    const card=document.createElement('div');card.className=`tl-card ${state}-card`;
+    const card=document.createElement('div');
+    const pv=DEVV && state!=='active', pvOpen=pv && !!devvPeek[step.key];
+    card.className=`tl-card ${state}-card${pvOpen?' devv-open':''}`;
     card.innerHTML=`
       <div class="tl-head">
         <span class="tl-step-label">${stepLabel(step,state)}</span>
         <span class="tl-step-time">${state==='done'?(fmtDateTime(pkSsbIso(step.key)||getStepTime(step.key))||'✅'):state==='active'?'กำลังดำเนินการ':'รอดำเนินการ'}</span>
       </div>${state==='done'?pkSsbHtml(step.key):''}${pkArrHtml(step.key)}${devvRecHtml(step.key)}
       ${state==='active'?`<div class="tl-body">${buildForm(step.key)}</div>`:''}
+      ${pv?`<button type="button" class="devv-pv-btn" onclick="devvPeekToggle('${step.key}')">${pvOpen?'▲ ซ่อนหน้าต่างนี้':'👁️ ดูหน้าต่างนี้'}</button>${pvOpen?devvPeekHtml(step.key):''}`:''}
     `;
     wrap.appendChild(dot);wrap.appendChild(line);wrap.appendChild(card);
     tl.appendChild(wrap);
